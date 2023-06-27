@@ -84,7 +84,7 @@ func NewMessageService(ip string, port int, me types.Address, pk []byte, useMdns
 		libp2p.Identity(messageKey),
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%d", ip, port)),
 		libp2p.Transport(tcp.NewTCPTransport),
-		libp2p.NoSecurity,
+		// libp2p.NoSecurity, // Use default security options (Noise + TLS)
 		libp2p.DefaultMuxers,
 	}
 	host, err := libp2p.New(options...)
@@ -111,6 +111,10 @@ func NewMessageService(ip string, port int, me types.Address, pk []byte, useMdns
 		err = mdns.Start()
 		ms.checkError(err)
 	}
+
+	fmt.Println("P2PMessageService started with Peer Id:", ms.p2pHost.ID())
+	fmt.Println("Address:", ms.me.Hex())
+
 	return ms
 }
 

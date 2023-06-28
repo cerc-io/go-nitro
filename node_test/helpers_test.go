@@ -74,6 +74,7 @@ func setupMessageService(tc TestCase, tp TestParticipant, si sharedTestInfrastru
 		ms := p2pms.NewMessageService(
 			"127.0.0.1",
 			int(tp.Port),
+			int(tp.WSPort),
 			tp.Address(),
 			tp.PrivateKey,
 			logWriter,

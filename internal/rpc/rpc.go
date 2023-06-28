@@ -23,7 +23,7 @@ import (
 )
 
 func InitChainServiceAndRunRpcServer(pkString string, chainOpts chain.ChainOpts,
-	useDurableStore bool, durableStoreFolder string, useNats bool, msgPort int, rpcPort int,
+	useDurableStore bool, durableStoreFolder string, useNats bool, msgPort int, wsMsgPort int, rpcPort int,
 	bootPeers []string,
 ) (*rpc.RpcServer, *node.Node, *p2pms.P2PMessageService, error) {
 	if pkString == "" {
@@ -40,7 +40,7 @@ func InitChainServiceAndRunRpcServer(pkString string, chainOpts chain.ChainOpts,
 	if useNats {
 		transportType = transport.Nats
 	}
-	rpcServer, node, messageService, err := RunRpcServer(pk, chainService, useDurableStore, durableStoreFolder, msgPort, rpcPort, transportType, os.Stdout, bootPeers)
+	rpcServer, node, messageService, err := RunRpcServer(pk, chainService, useDurableStore, durableStoreFolder, msgPort, wsMsgPort, rpcPort, transportType, os.Stdout, bootPeers)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -50,7 +50,7 @@ func InitChainServiceAndRunRpcServer(pkString string, chainOpts chain.ChainOpts,
 }
 
 func RunRpcServer(pk []byte, chainService chainservice.ChainService,
-	useDurableStore bool, durableStoreFolder string, msgPort int, rpcPort int, transportType transport.TransportType, logDestination *os.File,
+	useDurableStore bool, durableStoreFolder string, msgPort int, wsMsgPort int, rpcPort int, transportType transport.TransportType, logDestination *os.File,
 	bootPeers []string,
 ) (*rpc.RpcServer, *node.Node, *p2pms.P2PMessageService, error) {
 	me := crypto.GetAddressFromSecretKeyBytes(pk)
@@ -77,8 +77,8 @@ func RunRpcServer(pk []byte, chainService chainservice.ChainService,
 		ourStore = store.NewMemStore(pk)
 	}
 
-	logger.Info().Msg("Initializing message service on port " + fmt.Sprint(msgPort) + "...")
-	messageService := p2pms.NewMessageService("127.0.0.1", msgPort, *ourStore.GetAddress(), pk, logDestination, bootPeers)
+	logger.Info().Msg("Initializing message service on port " + fmt.Sprint(msgPort) + " and websocket port " + fmt.Sprint(wsMsgPort) + "...")
+	messageService := p2pms.NewMessageService("127.0.0.1", msgPort, wsMsgPort, *ourStore.GetAddress(), pk, logDestination, bootPeers)
 	node := node.New(
 		messageService,
 		chainService,

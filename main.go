@@ -27,6 +27,7 @@ func main() {
 		VPA_ADDRESS           = "vpaaddress"
 		CA_ADDRESS            = "caaddress"
 		MSG_PORT              = "msgport"
+		WS_MSG_PORT           = "wsmsgport"
 		RPC_PORT              = "rpcport"
 		GUI_PORT              = "guiport"
 		BOOT_PEERS            = "bootpeers"
@@ -42,7 +43,7 @@ func main() {
 		DURABLE_STORE_FOLDER = "durablestorefolder"
 	)
 	var pkString, chainUrl, chainAuthToken, naAddress, vpaAddress, caAddress, chainPk, durableStoreFolder, bootPeers string
-	var msgPort, rpcPort, guiPort int
+	var msgPort, wsMsgPort, rpcPort, guiPort int
 	var useNats, useDurableStore bool
 
 	flags := []cli.Flag{
@@ -117,6 +118,13 @@ func main() {
 			Destination: &msgPort,
 		}),
 		altsrc.NewIntFlag(&cli.IntFlag{
+			Name:        WS_MSG_PORT,
+			Usage:       "Specifies the websocket port for the message service.",
+			Value:       5005,
+			Category:    "Connectivity:",
+			Destination: &wsMsgPort,
+		}),
+		altsrc.NewIntFlag(&cli.IntFlag{
 			Name:        RPC_PORT,
 			Usage:       "Specifies the tcp port for the rpc server.",
 			Value:       4005,
@@ -164,7 +172,7 @@ func main() {
 			if bootPeers != "" {
 				peerSlice = strings.Split(bootPeers, ",")
 			}
-			rpcServer, _, _, err := rpc.InitChainServiceAndRunRpcServer(pkString, chainOpts, useDurableStore, durableStoreFolder, useNats, msgPort, rpcPort, peerSlice)
+			rpcServer, _, _, err := rpc.InitChainServiceAndRunRpcServer(pkString, chainOpts, useDurableStore, durableStoreFolder, useNats, msgPort, wsMsgPort, rpcPort, peerSlice)
 			if err != nil {
 				return err
 			}

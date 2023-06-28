@@ -18,6 +18,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
+	"github.com/libp2p/go-libp2p/p2p/transport/websocket"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/statechannels/go-nitro/internal/logging"
 	"github.com/statechannels/go-nitro/internal/safesync"
@@ -44,7 +45,8 @@ const (
 
 type MessageOpts struct {
 	PkBytes   []byte
-	Port      int
+	TcpPort   int
+	WsMsgPort int
 	BootPeers []string
 	PublicIp  string
 	SCAddr    types.Address
@@ -81,7 +83,7 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 	ms.checkError(err)
 
 	addressFactory := func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
-		extMultiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", opts.PublicIp, opts.Port))
+		extMultiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", opts.PublicIp, opts.TcpPort))
 		if err != nil {
 			ms.logger.Error("failed to create publicIp multiaddress", "err", err)
 			return addrs
@@ -94,10 +96,15 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 	options := []libp2p.Option{
 		libp2p.Identity(messageKey),
 		libp2p.AddrsFactory(addressFactory),
-		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%d", "0.0.0.0", opts.Port)),
+		libp2p.ListenAddrStrings(
+			fmt.Sprintf("/ip4/%s/tcp/%d", opts.PublicIp, opts.TcpPort),
+			fmt.Sprintf("/ip4/%s/tcp/%d/ws", opts.PublicIp, opts.WsMsgPort),
+		),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.NATPortMap(),
 		libp2p.EnableNATService(),
+		libp2p.Transport(websocket.New),
+		// libp2p.NoSecurity, // Use default security options (Noise + TLS)
 		libp2p.DefaultMuxers,
 	}
 	host, err := libp2p.New(options...)

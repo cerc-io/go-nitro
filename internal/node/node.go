@@ -18,7 +18,7 @@ func InitializeNode(chainOpts chainservice.ChainOpts, storeOpts store.StoreOpts,
 		return nil, nil, nil, nil, err
 	}
 
-	slog.Info("Initializing message service on port " + fmt.Sprint(messageOpts.Port) + "...")
+	slog.Info("Initializing message service", "tcp port", messageOpts.TcpPort, "web socket port", messageOpts.WsMsgPort)
 	messageOpts.SCAddr = *ourStore.GetAddress()
 	messageService := p2pms.NewMessageService(messageOpts)
 

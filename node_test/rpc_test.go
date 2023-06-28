@@ -114,7 +114,7 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 	// Set up the intermediaries
 	if n > 2 {
 		for i := 1; i < n-1; i++ {
-			rpcClient, msg, cleanup := setupNitroNodeWithRPCClient(t, actors[i].PrivateKey, 3105+i, 4105+i, chainServices[i], connectionType, []string{})
+			rpcClient, msg, cleanup := setupNitroNodeWithRPCClient(t, actors[i].PrivateKey, 3105+i, 4105+i, 5105+i, chainServices[i], connectionType, []string{})
 			clients[i] = rpcClient
 			msgServices[i] = msg
 			bootPeers = append(bootPeers, msg.MultiAddr)
@@ -124,7 +124,7 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 
 	// Set up the first and last client
 	for i := 0; i < n; i = i + (n - 1) {
-		rpcClient, msg, cleanup := setupNitroNodeWithRPCClient(t, actors[i].PrivateKey, 3105+i, 4105+i, chainServices[i], connectionType, bootPeers)
+		rpcClient, msg, cleanup := setupNitroNodeWithRPCClient(t, actors[i].PrivateKey, 3105+i, 5105+i, 4105+i, chainServices[i], connectionType, bootPeers)
 		clients[i] = rpcClient
 		msgServices[i] = msg
 		defer cleanup()
@@ -392,6 +392,7 @@ func setupNitroNodeWithRPCClient(
 	t *testing.T,
 	pkBytes []byte,
 	msgPort int,
+	wsMsgPort int,
 	rpcPort int,
 	chain *chainservice.MockChainService,
 	connectionType transport.TransportType,
@@ -410,7 +411,8 @@ func setupNitroNodeWithRPCClient(
 	slog.Info("Initializing message service on port " + fmt.Sprint(msgPort) + "...")
 	messageService := p2pms.NewMessageService(p2pms.MessageOpts{
 		PkBytes:   pkBytes,
-		Port:      msgPort,
+		TcpPort:   msgPort,
+		WsMsgPort: wsMsgPort,
 		BootPeers: bootPeers,
 		PublicIp:  "127.0.0.1",
 		SCAddr:    *ourStore.GetAddress(),

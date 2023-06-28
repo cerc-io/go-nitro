@@ -120,7 +120,7 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 
 	// Set up the first and last client
 	for i := 0; i < n; i = i + (n - 1) {
-		rpcClient, msg, cleanup := setupNitroNodeWithRPCClient(t, actors[i].PrivateKey, 3105+i, 4105+i, chainServices[i], connectionType, bootPeers)
+		rpcClient, msg, cleanup := setupNitroNodeWithRPCClient(t, actors[i].PrivateKey, 3105+i, 5105+i, 4105+i, chainServices[i], connectionType, bootPeers)
 		clients[i] = rpcClient
 		msgServices[i] = msg
 		defer cleanup()
@@ -388,6 +388,7 @@ func setupNitroNodeWithRPCClient(
 	t *testing.T,
 	pk []byte,
 	msgPort int,
+	wsMsgPort int,
 	rpcPort int,
 	chain *chainservice.MockChainService,
 	connectionType transport.TransportType,
@@ -396,7 +397,7 @@ func setupNitroNodeWithRPCClient(
 	var err error
 
 	dataFolder, cleanupData := testhelpers.GenerateTempStoreFolder()
-	rpcServer, _, messageService, err := interRpc.RunRpcServer(pk, chain, true, dataFolder, msgPort, rpcPort, connectionType, bootPeers)
+	rpcServer, _, messageService, err := interRpc.RunRpcServer(pk, chain, false, dataFolder, msgPort, wsMsgPort, rpcPort, connectionType, bootPeers)
 	if err != nil {
 		t.Fatal(err)
 	}

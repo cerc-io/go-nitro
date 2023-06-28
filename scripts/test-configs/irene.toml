@@ -3,6 +3,7 @@
 usedurablestore = true
 
 msgport = 3006
+wsmsgport = 5006
 rpcport = 4006
 
 pk = "febb3b74b0b52d0976f6571d555f4ac8b91c308dfa25c7b58d1e6a7c3f50c781"

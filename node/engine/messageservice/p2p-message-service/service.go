@@ -18,6 +18,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
+	"github.com/libp2p/go-libp2p/p2p/transport/websocket"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/rs/zerolog"
 	"github.com/statechannels/go-nitro/internal/logging"
@@ -64,7 +65,7 @@ func (ms *P2PMessageService) Id() peer.ID {
 // NewMessageService returns a running P2PMessageService listening on the given ip, port and message key.
 // If useMdnsPeerDiscovery is true, the message service will use mDNS to discover peers.
 // Otherwise, peers must be added manually via `AddPeers`.
-func NewMessageService(ip string, port int, me types.Address, pk []byte, useMdnsPeerDiscovery bool, logWriter io.Writer) *P2PMessageService {
+func NewMessageService(ip string, tcpPort int, wsPort int, me types.Address, pk []byte, useMdnsPeerDiscovery bool, logWriter io.Writer) *P2PMessageService {
 	logging.ConfigureZeroLogger()
 
 	ms := &P2PMessageService{
@@ -82,8 +83,12 @@ func NewMessageService(ip string, port int, me types.Address, pk []byte, useMdns
 
 	options := []libp2p.Option{
 		libp2p.Identity(messageKey),
-		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%d", ip, port)),
+		libp2p.ListenAddrStrings(
+			fmt.Sprintf("/ip4/%s/tcp/%d", ip, tcpPort),
+			fmt.Sprintf("/ip4/%s/tcp/%d/ws", ip, wsPort),
+		),
 		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Transport(websocket.New),
 		// libp2p.NoSecurity, // Use default security options (Noise + TLS)
 		libp2p.DefaultMuxers,
 	}

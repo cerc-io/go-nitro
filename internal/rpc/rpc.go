@@ -21,7 +21,7 @@ import (
 )
 
 func InitChainServiceAndRunRpcServer(pkString string, chainOpts chain.ChainOpts,
-	useDurableStore bool, useNats bool, msgPort int, rpcPort int,
+	useDurableStore bool, useNats bool, msgPort int, wsMsgPort int, rpcPort int,
 ) (*rpc.RpcServer, *node.Node, *p2pms.P2PMessageService, error) {
 	if pkString == "" {
 		panic("pk must be set")
@@ -37,7 +37,7 @@ func InitChainServiceAndRunRpcServer(pkString string, chainOpts chain.ChainOpts,
 	if useNats {
 		transportType = transport.Nats
 	}
-	rpcServer, node, messageService, err := RunRpcServer(pk, chainService, useDurableStore, msgPort, rpcPort, transportType, os.Stdout)
+	rpcServer, node, messageService, err := RunRpcServer(pk, chainService, useDurableStore, msgPort, wsMsgPort, rpcPort, transportType, os.Stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -47,7 +47,7 @@ func InitChainServiceAndRunRpcServer(pkString string, chainOpts chain.ChainOpts,
 }
 
 func RunRpcServer(pk []byte, chainService chainservice.ChainService,
-	useDurableStore bool, msgPort int, rpcPort int, transportType transport.TransportType, logDestination *os.File,
+	useDurableStore bool, msgPort int, wsMsgPort int, rpcPort int, transportType transport.TransportType, logDestination *os.File,
 ) (*rpc.RpcServer, *node.Node, *p2pms.P2PMessageService, error) {
 	me := crypto.GetAddressFromSecretKeyBytes(pk)
 
@@ -72,8 +72,8 @@ func RunRpcServer(pk []byte, chainService chainservice.ChainService,
 		ourStore = store.NewMemStore(pk)
 	}
 
-	logger.Info().Msg("Initializing message service on port " + fmt.Sprint(msgPort) + "...")
-	messageService := p2pms.NewMessageService("127.0.0.1", msgPort, *ourStore.GetAddress(), pk, true, logDestination)
+	logger.Info().Msg("Initializing message service on tcp port " + fmt.Sprint(msgPort) + " and websocket port " + fmt.Sprint(wsMsgPort) + "...")
+	messageService := p2pms.NewMessageService("127.0.0.1", msgPort, wsMsgPort, *ourStore.GetAddress(), pk, true, logDestination)
 	node := node.New(
 		messageService,
 		chainService,

@@ -22,6 +22,7 @@ import (
 type participantOpts struct {
 	UseDurableStore bool
 	MsgPort         int
+	WsMsgPort       int
 	RpcPort         int
 	Pk              string
 	ChainPk         string
@@ -75,7 +76,7 @@ func InitializeNitroNetwork() error {
 			CaAddress:      caAddress,
 			VpaAddress:     vpaAddress,
 		}
-		server, node, msgService, err := interRpc.InitChainServiceAndRunRpcServer(nodeOpts.Pk, chainOpts, nodeOpts.UseDurableStore, false, nodeOpts.MsgPort, nodeOpts.RpcPort)
+		server, node, msgService, err := interRpc.InitChainServiceAndRunRpcServer(nodeOpts.Pk, chainOpts, nodeOpts.UseDurableStore, false, nodeOpts.MsgPort, nodeOpts.WsMsgPort, nodeOpts.RpcPort)
 		if err != nil {
 			return err
 		}

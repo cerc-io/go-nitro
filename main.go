@@ -26,10 +26,11 @@ func main() {
 		VPA_ADDRESS       = "vpaaddress"
 		CA_ADDRESS        = "caaddress"
 		MSG_PORT          = "msgport"
+		WS_MSG_PORT       = "wsmsgport"
 		RPC_PORT          = "rpcport"
 	)
 	var pkString, chainUrl, chainAuthToken, naAddress, vpaAddress, caAddress, chainPk string
-	var msgPort, rpcPort int
+	var msgPort, wsMsgPort, rpcPort int
 	var useNats, useDurableStore bool
 
 	flags := []cli.Flag{
@@ -106,6 +107,13 @@ func main() {
 			Destination: &msgPort,
 		}),
 		altsrc.NewIntFlag(&cli.IntFlag{
+			Name:        WS_MSG_PORT,
+			Usage:       "Specifies the websocket port for the message service.",
+			Value:       5005,
+			Category:    "Connectivity:",
+			Destination: &wsMsgPort,
+		}),
+		altsrc.NewIntFlag(&cli.IntFlag{
 			Name:        RPC_PORT,
 			Usage:       "Specifies the tcp port for the rpc server.",
 			Value:       4005,
@@ -128,7 +136,7 @@ func main() {
 				CaAddress:      common.HexToAddress(caAddress),
 			}
 
-			rpcServer, _, _, err := rpc.InitChainServiceAndRunRpcServer(pkString, chainOpts, useDurableStore, useNats, msgPort, rpcPort)
+			rpcServer, _, _, err := rpc.InitChainServiceAndRunRpcServer(pkString, chainOpts, useDurableStore, useNats, msgPort, wsMsgPort, rpcPort)
 			if err != nil {
 				return err
 			}

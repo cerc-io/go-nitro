@@ -60,9 +60,9 @@ func executeRpcTest(t *testing.T, connectionType transport.TransportType) {
 	chainServiceB := chainservice.NewMockChainService(chain, ta.Bob.Address())
 	chainServiceI := chainservice.NewMockChainService(chain, ta.Irene.Address())
 
-	rpcClientA, msgA, cleanupFnA := setupNitroNodeWithRPCClient(t, ta.Alice.PrivateKey, 3005, 4005, chainServiceA, logDestination, connectionType)
-	rpcClientB, msgB, cleanupFnB := setupNitroNodeWithRPCClient(t, ta.Bob.PrivateKey, 3006, 4006, chainServiceB, logDestination, connectionType)
-	rpcClientI, msgI, cleanupFnC := setupNitroNodeWithRPCClient(t, ta.Irene.PrivateKey, 3007, 4007, chainServiceI, logDestination, connectionType)
+	rpcClientA, msgA, cleanupFnA := setupNitroNodeWithRPCClient(t, ta.Alice.PrivateKey, 3005, 5005, 4005, chainServiceA, logDestination, connectionType)
+	rpcClientB, msgB, cleanupFnB := setupNitroNodeWithRPCClient(t, ta.Bob.PrivateKey, 3006, 5006, 4006, chainServiceB, logDestination, connectionType)
+	rpcClientI, msgI, cleanupFnC := setupNitroNodeWithRPCClient(t, ta.Irene.PrivateKey, 3007, 5007, 4007, chainServiceI, logDestination, connectionType)
 	waitForPeerInfoExchange(2, msgA, msgB, msgI)
 	defer cleanupFnA()
 	defer cleanupFnB()
@@ -185,6 +185,7 @@ func setupNitroNodeWithRPCClient(
 	t *testing.T,
 	pk []byte,
 	msgPort int,
+	wsMsgPort int,
 	rpcPort int,
 	chain *chainservice.MockChainService,
 	logDestination *os.File,
@@ -192,6 +193,7 @@ func setupNitroNodeWithRPCClient(
 ) (*rpc.RpcClient, *p2pms.P2PMessageService, func()) {
 	messageservice := p2pms.NewMessageService("127.0.0.1",
 		msgPort,
+		wsMsgPort,
 		crypto.GetAddressFromSecretKeyBytes(pk),
 		pk,
 		true,

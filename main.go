@@ -36,10 +36,11 @@ func main() {
 		VPA_ADDRESS       = "vpaaddress"
 		CA_ADDRESS        = "caaddress"
 		MSG_PORT          = "msgport"
+		WS_MSG_PORT       = "wsmsgport"
 		RPC_PORT          = "rpcport"
 	)
 	var pkString, chainUrl, naAddress, vpaAddress, caAddress, chainPk string
-	var msgPort, rpcPort int
+	var msgPort, wsMsgPort, rpcPort int
 	var useNats, useDurableStore bool
 
 	flags := []cli.Flag{
@@ -110,6 +111,13 @@ func main() {
 			Destination: &msgPort,
 		}),
 		altsrc.NewIntFlag(&cli.IntFlag{
+			Name:        WS_MSG_PORT,
+			Usage:       "Specifies the websocket port for the message service.",
+			Value:       5005,
+			Category:    "Connectivity:",
+			Destination: &wsMsgPort,
+		}),
+		altsrc.NewIntFlag(&cli.IntFlag{
 			Name:        RPC_PORT,
 			Usage:       "Specifies the tcp port for the rpc server.",
 			Value:       4005,
@@ -157,8 +165,8 @@ func main() {
 				panic(err)
 			}
 
-			fmt.Println("Initializing message service on port " + fmt.Sprint(msgPort) + "...")
-			messageservice := p2pms.NewMessageService("127.0.0.1", msgPort, *ourStore.GetAddress(), pk, true, logDestination)
+			fmt.Println("Initializing message service on tcp port " + fmt.Sprint(msgPort) + " and websocket port " + fmt.Sprint(wsMsgPort) + "...")
+			messageservice := p2pms.NewMessageService("127.0.0.1", msgPort, wsMsgPort, *ourStore.GetAddress(), pk, true, logDestination)
 			node := client.New(
 				messageservice,
 				chainService,

@@ -3,6 +3,7 @@
 usedurablestore = true
 
 msgport = 3007
+wsmsgport = 5007
 rpcport = 4007
 guiport = 5007
 

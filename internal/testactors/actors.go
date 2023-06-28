@@ -14,6 +14,7 @@ type Actor struct {
 	Role       uint
 	Name       ActorName
 	Port       uint
+	WSPort     uint
 }
 
 func (a Actor) Destination() types.Destination {
@@ -24,7 +25,10 @@ func (a Actor) Address() types.Address {
 	return crypto.GetAddressFromSecretKeyBytes(a.PrivateKey)
 }
 
-const START_PORT = 3200
+const (
+	START_PORT    = 3200
+	WS_START_PORT = 5200
+)
 
 // Alice has the address 0xAAA6628Ec44A8a742987EF3A114dDFE2D4F7aDCE
 // peerId: 16Uiu2HAmSjXJqsyBJgcBUU2HQmykxGseafSatbpq5471XmuaUqyv
@@ -33,6 +37,7 @@ var Alice Actor = Actor{
 	0,
 	"alice",
 	START_PORT + 0,
+	WS_START_PORT + 0,
 }
 
 // Bob has the address 0xBBB676f9cFF8D242e9eaC39D063848807d3D1D94
@@ -42,6 +47,7 @@ var Bob Actor = Actor{
 	2,
 	"bob",
 	START_PORT + 1,
+	WS_START_PORT + 1,
 }
 
 // Ivan has the address 0xA8d2D06aCE9c7FFc24Ee785C2695678aeCDfd7A0
@@ -51,6 +57,7 @@ var Ivan Actor = Actor{
 	2,
 	"ivan",
 	START_PORT + 2,
+	WS_START_PORT + 2,
 }
 
 // Irene has the address 0x111A00868581f73AB42FEEF67D235Ca09ca1E8db
@@ -60,4 +67,5 @@ var Irene Actor = Actor{
 	1,
 	"irene",
 	START_PORT + 3,
+	WS_START_PORT + 3,
 }

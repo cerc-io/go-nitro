@@ -4,6 +4,7 @@ usedurablestore = true
 
 guiport = 5006
 msgport = 3006
+wsmsgport = 5006
 rpcport = 4006
 
 # PeerID: 16Uiu2HAmHntR3SGeS7iF2tdeNBefSahXBhmTrqVozVLHydxzkaZn

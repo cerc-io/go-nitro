@@ -17,6 +17,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/p2p/muxer/mplex"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/libp2p/go-libp2p/p2p/transport/websocket"
 	"github.com/multiformats/go-multiaddr"
@@ -105,7 +106,7 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 		libp2p.EnableNATService(),
 		libp2p.Transport(websocket.New),
 		// libp2p.NoSecurity, // Use default security options (Noise + TLS)
-		libp2p.DefaultMuxers,
+		libp2p.Muxer(mplex.ID, mplex.DefaultTransport),
 	}
 	host, err := libp2p.New(options...)
 	ms.checkError(err)

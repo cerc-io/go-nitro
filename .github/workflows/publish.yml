@@ -1,0 +1,32 @@
+name: Publish npm package to gitea
+on:
+  release:
+    types: [published]
+jobs:
+  npm_publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [ 18.x ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: "Install dependencies and build packages"
+        run: |
+          cd ./nitro-protocol
+          yarn
+          yarn build:typescript
+      - name: Configure git.vdb.to npm registry
+        run: |
+          npm config set registry https://git.vdb.to/api/packages/cerc-io/npm/
+      - name: Authenticate to git.vdb.to registry
+        run: |
+          npm config set -- '//git.vdb.to/api/packages/cerc-io/npm/:_authToken' "${{ secrets.GITEA_PUBLISH_TOKEN }}"
+      - name: npm publish
+        run: |
+          cd ./nitro-protocol
+          npm publish

@@ -44,17 +44,5 @@ func ConnectToChain(ctx context.Context, chainUrl, chainAuthToken string, chainP
 		return nil, nil, err
 	}
 
-	// Without setting gas limit and gas price, these are known through eth_maxPriorityFeePerGas.
-	// eth_maxPriorityFeePerGas is not supported in Hardhat.
-	// https://github.com/NomicFoundation/hardhat/issues/1664
-
-	txSubmitter.GasLimit = uint64(30_000_000) // in units
-
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return nil, nil, err
-	}
-	txSubmitter.GasPrice = gasPrice
-
 	return client, txSubmitter, nil
 }

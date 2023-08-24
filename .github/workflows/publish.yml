@@ -18,8 +18,8 @@ jobs:
       - name: "Install dependencies and build packages"
         run: |
           cd ./nitro-protocol
-          yarn
-          yarn build:typescript
+          npm install --legacy-peer-deps
+          npm run build:typescript
       - name: Configure git.vdb.to npm registry
         run: |
           npm config set registry https://git.vdb.to/api/packages/cerc-io/npm/

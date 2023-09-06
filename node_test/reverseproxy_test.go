@@ -239,9 +239,9 @@ func setupNitroClients(t *testing.T, logDestination *os.File) (alice, irene, bob
 	bobChainService := chainservice.NewMockChainService(chain, ta.Bob.Address())
 	ireneChainService := chainservice.NewMockChainService(chain, ta.Irene.Address())
 
-	aliceClient, msgAlice, aliceCleanup := setupNitroNodeWithRPCClient(t, ta.Alice.PrivateKey, 3105, 4105, aliceChainService, logDestination, "ws")
-	ireneClient, msgIrene, ireneCleanup := setupNitroNodeWithRPCClient(t, ta.Irene.PrivateKey, 3106, 4106, ireneChainService, logDestination, "ws")
-	bobClient, msgBob, bobCleanup := setupNitroNodeWithRPCClient(t, ta.Bob.PrivateKey, 3107, 4107, bobChainService, logDestination, "ws")
+	aliceClient, msgAlice, aliceCleanup := setupNitroNodeWithRPCClient(t, ta.Alice.PrivateKey, 3105, 5105, 4105, aliceChainService, logDestination, "ws")
+	ireneClient, msgIrene, ireneCleanup := setupNitroNodeWithRPCClient(t, ta.Irene.PrivateKey, 3106, 5106, 4106, ireneChainService, logDestination, "ws")
+	bobClient, msgBob, bobCleanup := setupNitroNodeWithRPCClient(t, ta.Bob.PrivateKey, 3107, 5107, 4107, bobChainService, logDestination, "ws")
 
 	logger.Info().Msg("Clients created")
 

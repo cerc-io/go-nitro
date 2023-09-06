@@ -5,21 +5,18 @@ on:
 jobs:
   npm_publish:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [ 18.x ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
+        # https://github.com/NomicFoundation/hardhat/issues/3877
+      - name: Use Node.js 18.15
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "18.15.0"
       - name: "Install dependencies and build packages"
         run: |
           cd ./nitro-protocol
-          npm install --legacy-peer-deps
-          npm run build:typescript
+          npm ci --legacy-peer-deps
       - name: Configure git.vdb.to npm registry
         run: |
           npm config set registry https://git.vdb.to/api/packages/cerc-io/npm/

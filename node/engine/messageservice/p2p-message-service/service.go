@@ -34,8 +34,9 @@ type basicPeerInfo struct {
 }
 
 const (
-	DHT_PROTOCOL_PREFIX     protocol.ID = "/nitro" // use /nitro/kad/1.0.0 instead of /ipfs/kad/1.0.0
-	GENERAL_MSG_PROTOCOL_ID protocol.ID = "/nitro/msg/1.0.0"
+	DHT_PROTOCOL_PREFIX       protocol.ID = "/nitro" // use /nitro/kad/1.0.0 instead of /ipfs/kad/1.0.0
+	GENERAL_MSG_PROTOCOL_ID   protocol.ID = "/nitro/msg/1.0.0"
+	PEER_EXCHANGE_PROTOCOL_ID protocol.ID = "/nitro/peerinfo/1.0.0"
 
 	DELIMITER                = '\n'
 	BUFFER_SIZE              = 1_000
@@ -105,6 +106,7 @@ func NewMessageService(ip string, tcpPort int, wsPort int, me types.Address, pk 
 
 	ms.p2pHost = host
 	ms.p2pHost.SetStreamHandler(GENERAL_MSG_PROTOCOL_ID, ms.msgStreamHandler)
+	ms.p2pHost.SetStreamHandler(PEER_EXCHANGE_PROTOCOL_ID, ms.receivePeerInfo)
 
 	// Print out my own peerInfo
 	peerInfo := peer.AddrInfo{
@@ -234,6 +236,39 @@ func (ms *P2PMessageService) msgStreamHandler(stream network.Stream) {
 		return
 	}
 	ms.toEngine <- m
+}
+
+// receivePeerInfo receives peer info from the given stream
+func (ms *P2PMessageService) receivePeerInfo(stream network.Stream) {
+	ms.logger.Debug().Msgf("received peerInfo")
+	defer stream.Close()
+
+	// Create a buffer stream for non blocking read and write.
+	reader := bufio.NewReader(stream)
+	raw, err := reader.ReadString(DELIMITER)
+
+	// An EOF means the stream has been closed by the other side.
+	if errors.Is(err, io.EOF) {
+		return
+	}
+	if err != nil {
+		ms.logger.Err(err)
+		return
+	}
+
+	var msg *basicPeerInfo
+	err = json.Unmarshal([]byte(raw), &msg)
+	if err != nil {
+		ms.logger.Err(err)
+		return
+	}
+
+	_, foundPeer := ms.peers.LoadOrStore(msg.Address.String(), msg.Id)
+	if !foundPeer {
+		peerInfo := basicPeerInfo{msg.Id, msg.Address}
+		ms.logger.Debug().Msgf("stored new peer in map: %v", peerInfo)
+		ms.newPeerInfo <- peerInfo
+	}
 }
 
 func (ms *P2PMessageService) getPeerIdFromDht(scaddr string) (peer.ID, error) {

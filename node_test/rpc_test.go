@@ -125,7 +125,7 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 	// Set up the intermediaries
 	if n > 2 {
 		for i := 1; i < n-1; i++ {
-			rpcClient, msg, cleanup := setupNitroNodeWithRPCClient(t, actors[i].PrivateKey, 3105+i, 4105+i, chainServices[i], logDestination, connectionType, []string{})
+			rpcClient, msg, cleanup := setupNitroNodeWithRPCClient(t, actors[i].PrivateKey, 3105+i, 5105+i, 4105+i, chainServices[i], logDestination, connectionType, []string{})
 			clients[i] = rpcClient
 			msgServices[i] = msg
 			bootPeers = append(bootPeers, msg.MultiAddr)

@@ -239,7 +239,7 @@ func (ms *P2PMessageService) msgStreamHandler(stream network.Stream) {
 
 // receivePeerInfo receives peer info from the given stream
 func (ms *P2PMessageService) receivePeerInfo(stream network.Stream) {
-	ms.logger.Debug().Msgf("received peerInfo")
+	ms.logger.Info("received peerInfo")
 	defer stream.Close()
 
 	// Create a buffer stream for non blocking read and write.
@@ -251,21 +251,21 @@ func (ms *P2PMessageService) receivePeerInfo(stream network.Stream) {
 		return
 	}
 	if err != nil {
-		ms.logger.Err(err)
+		ms.logger.Error("error", "err", err)
 		return
 	}
 
 	var msg *basicPeerInfo
 	err = json.Unmarshal([]byte(raw), &msg)
 	if err != nil {
-		ms.logger.Err(err)
+		ms.logger.Error("error in unmarshalling", "err", err)
 		return
 	}
 
 	_, foundPeer := ms.peers.LoadOrStore(msg.Address.String(), msg.Id)
 	if !foundPeer {
 		peerInfo := basicPeerInfo{msg.Id, msg.Address}
-		ms.logger.Debug().Msgf("stored new peer in map: %v", peerInfo)
+		ms.logger.Info("stored new peer in map: %v", peerInfo)
 		ms.newPeerInfo <- peerInfo
 	}
 }

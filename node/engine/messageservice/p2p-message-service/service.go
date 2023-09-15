@@ -264,7 +264,7 @@ func (ms *P2PMessageService) receivePeerInfo(stream network.Stream) {
 	_, foundPeer := ms.peers.LoadOrStore(msg.Address.String(), msg.Id)
 	if !foundPeer {
 		peerInfo := basicPeerInfo{msg.Id, msg.Address}
-		ms.logger.Info("stored new peer in map: %v", peerInfo)
+		ms.logger.Info("stored new peer in map", "peerInfo", peerInfo)
 		ms.newPeerInfo <- peerInfo
 	}
 }

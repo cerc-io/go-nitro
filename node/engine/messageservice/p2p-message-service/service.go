@@ -17,7 +17,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/libp2p/go-libp2p/p2p/muxer/mplex"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/libp2p/go-libp2p/p2p/transport/websocket"
 	"github.com/multiformats/go-multiaddr"
@@ -95,7 +94,7 @@ func NewMessageService(ip string, tcpPort int, wsPort int, me types.Address, pk 
 		libp2p.EnableNATService(),
 		libp2p.Transport(websocket.New),
 		// libp2p.NoSecurity, // Use default security options (Noise + TLS)
-		libp2p.Muxer(mplex.ID, mplex.DefaultTransport),
+		libp2p.DefaultMuxers,
 	}
 	host, err := libp2p.New(options...)
 	if err != nil {
@@ -239,7 +238,7 @@ func (ms *P2PMessageService) msgStreamHandler(stream network.Stream) {
 
 // receivePeerInfo receives peer info from the given stream
 func (ms *P2PMessageService) receivePeerInfo(stream network.Stream) {
-	ms.logger.Debug().Msgf("received peerInfo")
+	ms.logger.Info("received peerInfo")
 	defer stream.Close()
 
 	// Create a buffer stream for non blocking read and write.
@@ -251,21 +250,21 @@ func (ms *P2PMessageService) receivePeerInfo(stream network.Stream) {
 		return
 	}
 	if err != nil {
-		ms.logger.Err(err)
+		ms.logger.Error("error", "err", err)
 		return
 	}
 
 	var msg *basicPeerInfo
 	err = json.Unmarshal([]byte(raw), &msg)
 	if err != nil {
-		ms.logger.Err(err)
+		ms.logger.Error("error in unmarshalling", "err", err)
 		return
 	}
 
 	_, foundPeer := ms.peers.LoadOrStore(msg.Address.String(), msg.Id)
 	if !foundPeer {
 		peerInfo := basicPeerInfo{msg.Id, msg.Address}
-		ms.logger.Debug().Msgf("stored new peer in map: %v", peerInfo)
+		ms.logger.Info("stored new peer in map", "peerInfo", peerInfo)
 		ms.newPeerInfo <- peerInfo
 	}
 }

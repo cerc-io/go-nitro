@@ -1,7 +1,6 @@
 package node
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/statechannels/go-nitro/node"

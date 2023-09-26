@@ -70,6 +70,11 @@ func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinati
 	p.reverseProxy.Rewrite = func(pr *httputil.ProxyRequest) { pr.SetURL(p.destinationUrl) }
 	p.reverseProxy.ModifyResponse = p.handleDestinationResponse
 	p.reverseProxy.ErrorHandler = p.handleError
+
+	// Setup transport with compression disabled to access content-length header in handleDestinationResponse
+	p.reverseProxy.Transport = http.DefaultTransport
+	p.reverseProxy.Transport.(*http.Transport).DisableCompression = true
+
 	// Wire up our handler to the server
 	p.server.Handler = p
 

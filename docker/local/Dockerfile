@@ -8,7 +8,7 @@ RUN go build -v -o start-reverse-payment-proxy ./cmd/start-reverse-payment-proxy
 
 FROM debian:bullseye-slim
 RUN apt-get update
-RUN apt-get install -y ca-certificates jq
+RUN apt-get install -y ca-certificates jq netcat
 RUN rm -rf /var/lib/apt/lists/*
 WORKDIR /app/
 COPY --from=builder /app/nitro .

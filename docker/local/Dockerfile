@@ -15,6 +15,6 @@ COPY --from=builder /app/nitro .
 COPY --from=builder /app/start-reverse-payment-proxy .
 COPY --from=builder /app/config.toml .
 
-EXPOSE 3005 4005
+EXPOSE 3005 4005 5005
 
 CMD ["./nitro", "--config", "./config.toml"]

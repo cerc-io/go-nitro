@@ -31,6 +31,13 @@ const (
 	ErrPayment = types.ConstError("payment error")
 )
 
+// TODO: Make configurable
+var paidRPCMethods = []string{
+	"eth_getLogs",
+	"eth_getStorageAt",
+	"eth_getBlockByHash",
+}
+
 // createPaymentError wraps an error with ErrPayment.
 func createPaymentError(err error) error {
 	return fmt.Errorf("%w: %w", ErrPayment, err)
@@ -43,11 +50,12 @@ type ReversePaymentProxy struct {
 	costPerByte  uint64
 	reverseProxy *httputil.ReverseProxy
 
-	destinationUrl *url.URL
+	destinationUrl       *url.URL
+	enablePaidRpcMethods bool
 }
 
 // NewReversePaymentProxy creates a new ReversePaymentProxy.
-func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL string, costPerByte uint64) *ReversePaymentProxy {
+func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL string, costPerByte uint64, enablePaidRpcMethods bool) *ReversePaymentProxy {
 	server := &http.Server{Addr: proxyAddress}
 	nitroClient, err := rpc.NewHttpRpcClient(nitroEndpoint)
 	if err != nil {
@@ -59,17 +67,23 @@ func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinati
 	}
 
 	p := &ReversePaymentProxy{
-		server:         server,
-		nitroClient:    nitroClient,
-		costPerByte:    costPerByte,
-		destinationUrl: destinationUrl,
-		reverseProxy:   &httputil.ReverseProxy{},
+		server:               server,
+		nitroClient:          nitroClient,
+		costPerByte:          costPerByte,
+		destinationUrl:       destinationUrl,
+		reverseProxy:         &httputil.ReverseProxy{},
+		enablePaidRpcMethods: enablePaidRpcMethods,
 	}
 
 	// Wire up our handlers to the reverse proxy
 	p.reverseProxy.Rewrite = func(pr *httputil.ProxyRequest) { pr.SetURL(p.destinationUrl) }
 	p.reverseProxy.ModifyResponse = p.handleDestinationResponse
 	p.reverseProxy.ErrorHandler = p.handleError
+
+	// Setup transport with compression disabled to access content-length header in handleDestinationResponse
+	p.reverseProxy.Transport = http.DefaultTransport
+	p.reverseProxy.Transport.(*http.Transport).DisableCompression = true
+
 	// Wire up our handler to the server
 	p.server.Handler = p
 
@@ -81,16 +95,36 @@ func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinati
 // It then delegates to the reverse proxy to handle rewriting the request and sending it to the destination
 func (p *ReversePaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	enableCORS(w, r)
-	v, err := parseVoucher(r.URL.Query())
-	if err != nil {
-		p.handleError(w, r, createPaymentError(fmt.Errorf("could not parse voucher: %w", err)))
-		return
+
+	queryParams := r.URL.Query()
+	requiresPayment := true
+
+	if p.enablePaidRpcMethods {
+		rpcMethod := queryParams.Get("method")
+		requiresPayment = false
+
+		// Check if payment is required for RPC method
+		// TODO: Check RPC method in request body
+		for _, paidRPCMethod := range paidRPCMethods {
+			if paidRPCMethod == rpcMethod {
+				requiresPayment = true
+				break
+			}
+		}
 	}
 
-	removeVoucher(r)
+	if requiresPayment {
+		v, err := parseVoucher(queryParams)
+		if err != nil {
+			p.handleError(w, r, createPaymentError(fmt.Errorf("could not parse voucher: %w", err)))
+			return
+		}
 
-	// We add the voucher to the request context so we can access it in the response handler
-	r = r.WithContext(context.WithValue(r.Context(), VOUCHER_CONTEXT_ARG, v))
+		removeVoucher(r)
+
+		// We add the voucher to the request context so we can access it in the response handler
+		r = r.WithContext(context.WithValue(r.Context(), VOUCHER_CONTEXT_ARG, v))
+	}
 
 	p.reverseProxy.ServeHTTP(w, r)
 }
@@ -111,7 +145,8 @@ func (p *ReversePaymentProxy) handleDestinationResponse(r *http.Response) error 
 
 	v, ok := r.Request.Context().Value(VOUCHER_CONTEXT_ARG).(payments.Voucher)
 	if !ok {
-		return createPaymentError(fmt.Errorf("could not fetch voucher from context"))
+		// If VOUCHER_CONTEXT_ARG does not exist the request does not need payment
+		return nil
 	}
 	cost := p.costPerByte * contentLength
 

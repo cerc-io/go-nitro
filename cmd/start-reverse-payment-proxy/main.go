@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	NITRO_ENDPOINT     = "nitroendpoint"
-	PROXY_ADDRESS      = "proxyaddress"
-	DESTINATION_URL    = "destinationurl"
-	COST_PER_BYTE      = "costperbyte"
-	FILTER_RPC_METHODS = "filterrpcmethods"
+	NITRO_ENDPOINT          = "nitroendpoint"
+	PROXY_ADDRESS           = "proxyaddress"
+	DESTINATION_URL         = "destinationurl"
+	COST_PER_BYTE           = "costperbyte"
+	ENABLE_PAID_RPC_METHODS = "enablepaidrpcmethods"
 )
 
 func main() {
@@ -50,8 +50,8 @@ func main() {
 				Aliases: []string{"c"},
 			},
 			&cli.BoolFlag{
-				Name:    FILTER_RPC_METHODS,
-				Usage:   "Flag to enable/disable filtering RPC methods that require payment",
+				Name:    ENABLE_PAID_RPC_METHODS,
+				Usage:   "Flag to enable/disable payment for RPC methods",
 				Value:   false,
 				Aliases: []string{"r"},
 			},
@@ -67,7 +67,7 @@ func main() {
 				nitroEndpoint,
 				c.String(DESTINATION_URL),
 				c.Uint64(COST_PER_BYTE),
-				c.Bool(FILTER_RPC_METHODS),
+				c.Bool(ENABLE_PAID_RPC_METHODS),
 			)
 
 			return rProxy.Start()

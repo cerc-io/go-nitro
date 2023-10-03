@@ -50,12 +50,12 @@ type ReversePaymentProxy struct {
 	costPerByte  uint64
 	reverseProxy *httputil.ReverseProxy
 
-	destinationUrl   *url.URL
-	filterRpcMethods bool
+	destinationUrl       *url.URL
+	enablePaidRpcMethods bool
 }
 
 // NewReversePaymentProxy creates a new ReversePaymentProxy.
-func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL string, costPerByte uint64, filterRpcMethods bool) *ReversePaymentProxy {
+func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL string, costPerByte uint64, enablePaidRpcMethods bool) *ReversePaymentProxy {
 	server := &http.Server{Addr: proxyAddress}
 	nitroClient, err := rpc.NewHttpRpcClient(nitroEndpoint)
 	if err != nil {
@@ -67,12 +67,12 @@ func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinati
 	}
 
 	p := &ReversePaymentProxy{
-		server:           server,
-		nitroClient:      nitroClient,
-		costPerByte:      costPerByte,
-		destinationUrl:   destinationUrl,
-		reverseProxy:     &httputil.ReverseProxy{},
-		filterRpcMethods: filterRpcMethods,
+		server:               server,
+		nitroClient:          nitroClient,
+		costPerByte:          costPerByte,
+		destinationUrl:       destinationUrl,
+		reverseProxy:         &httputil.ReverseProxy{},
+		enablePaidRpcMethods: enablePaidRpcMethods,
 	}
 
 	// Wire up our handlers to the reverse proxy
@@ -97,23 +97,23 @@ func (p *ReversePaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	enableCORS(w, r)
 
 	queryParams := r.URL.Query()
-	skipPaymentCheck := false
+	requiresPayment := true
 
-	if p.filterRpcMethods {
+	if p.enablePaidRpcMethods {
 		rpcMethod := queryParams.Get("method")
-		skipPaymentCheck = true
+		requiresPayment = false
 
 		// Check if payment is required for RPC method
 		// TODO: Check RPC method in request body
 		for _, paidRPCMethod := range paidRPCMethods {
 			if paidRPCMethod == rpcMethod {
-				skipPaymentCheck = false
+				requiresPayment = true
 				break
 			}
 		}
 	}
 
-	if !skipPaymentCheck {
+	if requiresPayment {
 		v, err := parseVoucher(queryParams)
 		if err != nil {
 			p.handleError(w, r, createPaymentError(fmt.Errorf("could not parse voucher: %w", err)))

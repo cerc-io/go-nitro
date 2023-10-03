@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	NITRO_ENDPOINT  = "nitroendpoint"
-	PROXY_ADDRESS   = "proxyaddress"
-	DESTINATION_URL = "destinationurl"
-	COST_PER_BYTE   = "costperbyte"
+	NITRO_ENDPOINT          = "nitroendpoint"
+	PROXY_ADDRESS           = "proxyaddress"
+	DESTINATION_URL         = "destinationurl"
+	COST_PER_BYTE           = "costperbyte"
+	ENABLE_PAID_RPC_METHODS = "enablepaidrpcmethods"
 
 	TLS_CERT_FILEPATH = "tlscertfilepath"
 	TLS_KEY_FILEPATH  = "tlskeyfilepath"
@@ -61,6 +62,12 @@ func main() {
 				Usage: "Filepath to the TLS private key. If not specified, TLS will not be used.",
 				Value: "",
 			},
+			&cli.BoolFlag{
+				Name:    ENABLE_PAID_RPC_METHODS,
+				Usage:   "Flag to enable/disable payment for RPC methods",
+				Value:   false,
+				Aliases: []string{"r"},
+			},
 		},
 		Action: func(c *cli.Context) error {
 			proxyEndpoint := c.String(PROXY_ADDRESS)
@@ -75,6 +82,7 @@ func main() {
 				c.Uint64(COST_PER_BYTE),
 				c.String(TLS_CERT_FILEPATH),
 				c.String(TLS_KEY_FILEPATH),
+				c.Bool(ENABLE_PAID_RPC_METHODS),
 			)
 
 			return proxy.Start()

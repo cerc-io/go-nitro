@@ -29,7 +29,7 @@ func InitializeNode(pkString string, chainOpts chain.ChainOpts,
 	}
 
 	slog.Info("Initializing message service on port " + fmt.Sprint(msgPort) + "...")
-	messageService := p2pms.NewMessageService("127.0.0.1", msgPort, wsMsgPort, *ourStore.GetAddress(), pk, bootPeers)
+	messageService := p2pms.NewMessageService("0.0.0.0", msgPort, wsMsgPort, *ourStore.GetAddress(), pk, bootPeers)
 
 	// Compare chainOpts.ChainStartBlock to lastBlockNum seen in store. The larger of the two
 	// gets passed as an argument when creating NewEthChainService

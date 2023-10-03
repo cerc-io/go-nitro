@@ -31,6 +31,7 @@ const (
 	ErrPayment = types.ConstError("payment error")
 )
 
+// TODO: Make configurable
 var paidRPCMethods = []string{
 	"eth_getLogs",
 	"eth_getStorageAt",
@@ -49,11 +50,12 @@ type ReversePaymentProxy struct {
 	costPerByte  uint64
 	reverseProxy *httputil.ReverseProxy
 
-	destinationUrl *url.URL
+	destinationUrl   *url.URL
+	filterRpcMethods bool
 }
 
 // NewReversePaymentProxy creates a new ReversePaymentProxy.
-func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL string, costPerByte uint64) *ReversePaymentProxy {
+func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL string, costPerByte uint64, filterRpcMethods bool) *ReversePaymentProxy {
 	server := &http.Server{Addr: proxyAddress}
 	nitroClient, err := rpc.NewHttpRpcClient(nitroEndpoint)
 	if err != nil {
@@ -65,11 +67,12 @@ func NewReversePaymentProxy(proxyAddress string, nitroEndpoint string, destinati
 	}
 
 	p := &ReversePaymentProxy{
-		server:         server,
-		nitroClient:    nitroClient,
-		costPerByte:    costPerByte,
-		destinationUrl: destinationUrl,
-		reverseProxy:   &httputil.ReverseProxy{},
+		server:           server,
+		nitroClient:      nitroClient,
+		costPerByte:      costPerByte,
+		destinationUrl:   destinationUrl,
+		reverseProxy:     &httputil.ReverseProxy{},
+		filterRpcMethods: filterRpcMethods,
 	}
 
 	// Wire up our handlers to the reverse proxy
@@ -94,25 +97,33 @@ func (p *ReversePaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	enableCORS(w, r)
 
 	queryParams := r.URL.Query()
-	rpcMethod := queryParams.Get("method")
+	skipPaymentCheck := false
 
-	// Check if payment is required for RPC method
-	// TODO: Check RPC method in request body
-	for _, paidRPCMethod := range paidRPCMethods {
-		if paidRPCMethod == rpcMethod {
-			v, err := parseVoucher(queryParams)
-			if err != nil {
-				p.handleError(w, r, createPaymentError(fmt.Errorf("could not parse voucher: %w", err)))
-				return
+	if p.filterRpcMethods {
+		rpcMethod := queryParams.Get("method")
+		skipPaymentCheck = true
+
+		// Check if payment is required for RPC method
+		// TODO: Check RPC method in request body
+		for _, paidRPCMethod := range paidRPCMethods {
+			if paidRPCMethod == rpcMethod {
+				skipPaymentCheck = false
+				break
 			}
-
-			removeVoucher(r)
-
-			// We add the voucher to the request context so we can access it in the response handler
-			r = r.WithContext(context.WithValue(r.Context(), VOUCHER_CONTEXT_ARG, v))
-
-			break
 		}
+	}
+
+	if !skipPaymentCheck {
+		v, err := parseVoucher(queryParams)
+		if err != nil {
+			p.handleError(w, r, createPaymentError(fmt.Errorf("could not parse voucher: %w", err)))
+			return
+		}
+
+		removeVoucher(r)
+
+		// We add the voucher to the request context so we can access it in the response handler
+		r = r.WithContext(context.WithValue(r.Context(), VOUCHER_CONTEXT_ARG, v))
 	}
 
 	p.reverseProxy.ServeHTTP(w, r)

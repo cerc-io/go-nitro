@@ -36,6 +36,7 @@ var paidRPCMethods = []string{
 	"eth_getLogs",
 	"eth_getStorageAt",
 	"eth_getBlockByHash",
+	"eth_getBlockByNumber",
 }
 
 // createPaymentError wraps an error with ErrPayment.

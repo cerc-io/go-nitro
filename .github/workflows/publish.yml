@@ -15,7 +15,7 @@ jobs:
           node-version: "18.15.0"
       - name: "Install dependencies and build packages"
         run: |
-          cd ./nitro-protocol
+          cd ./packages/nitro-protocol
           npm ci --legacy-peer-deps
       - name: Configure git.vdb.to npm registry
         run: |

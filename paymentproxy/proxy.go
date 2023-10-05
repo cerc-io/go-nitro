@@ -105,6 +105,7 @@ func (p *PaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bodyBytes, _ := io.ReadAll(r.Body)
+	// TODO: Check for content type
 	err := json.Unmarshal(bodyBytes, &ReqBody)
 	if err != nil {
 		p.handleError(w, r, createPaymentError(fmt.Errorf("Could not unmarshall request body: %w", err)))
@@ -124,7 +125,6 @@ func (p *PaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		requiresPayment = false
 
 		// Check if payment is required for RPC method
-		// TODO: Check RPC method in request body
 		for _, paidRPCMethod := range paidRPCMethods {
 			if paidRPCMethod == rpcMethod {
 				requiresPayment = true

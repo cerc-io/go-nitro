@@ -1,9 +1,12 @@
 package paymentproxy
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -97,11 +100,25 @@ func NewPaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL s
 func (p *PaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	enableCORS(w, r)
 
+	bodyBytes, _ := io.ReadAll(r.Body)
+
+	var ReqBody struct {
+		Method string `json:"method"`
+	}
+
+	err := json.Unmarshal(bodyBytes, &ReqBody)
+	if err != nil {
+		fmt.Println("Error unmarshalling request body:", err)
+		return
+	}
+
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
 	queryParams := r.URL.Query()
 	requiresPayment := true
 
 	if p.enablePaidRpcMethods {
-		rpcMethod := queryParams.Get("method")
+		rpcMethod := ReqBody.Method
 		requiresPayment = false
 
 		// Check if payment is required for RPC method

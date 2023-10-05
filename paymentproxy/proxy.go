@@ -100,27 +100,28 @@ func NewPaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL s
 func (p *PaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	enableCORS(w, r)
 
-	var ReqBody struct {
-		Method string `json:"method"`
-	}
-
-	bodyBytes, _ := io.ReadAll(r.Body)
-	// TODO: Check for content type
-	err := json.Unmarshal(bodyBytes, &ReqBody)
-	if err != nil {
-		p.handleError(w, r, createPaymentError(fmt.Errorf("could not unmarshall request body: %w", err)))
-		return
-	}
-
-	slog.Debug("Serving RPC request", "method", ReqBody.Method)
-
-	// Reassign request body as io.ReadAll consumes it
-	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
 	queryParams := r.URL.Query()
 	requiresPayment := true
 
 	if p.enablePaidRpcMethods {
+
+		var ReqBody struct {
+			Method string `json:"method"`
+		}
+
+		bodyBytes, _ := io.ReadAll(r.Body)
+		// TODO: Check for content type
+		err := json.Unmarshal(bodyBytes, &ReqBody)
+		if err != nil {
+			p.handleError(w, r, createPaymentError(fmt.Errorf("could not unmarshall request body: %w", err)))
+			return
+		}
+
+		slog.Debug("Serving RPC request", "method", ReqBody.Method)
+
+		// Reassign request body as io.ReadAll consumes it
+		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
 		rpcMethod := ReqBody.Method
 		requiresPayment = false
 

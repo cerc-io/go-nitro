@@ -104,34 +104,7 @@ func (p *PaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requiresPayment := true
 
 	if p.enablePaidRpcMethods {
-
-		var ReqBody struct {
-			Method string `json:"method"`
-		}
-
-		bodyBytes, _ := io.ReadAll(r.Body)
-		// TODO: Check for content type
-		err := json.Unmarshal(bodyBytes, &ReqBody)
-		if err != nil {
-			p.handleError(w, r, createPaymentError(fmt.Errorf("could not unmarshall request body: %w", err)))
-			return
-		}
-
-		slog.Debug("Serving RPC request", "method", ReqBody.Method)
-
-		// Reassign request body as io.ReadAll consumes it
-		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
-		rpcMethod := ReqBody.Method
-		requiresPayment = false
-
-		// Check if payment is required for RPC method
-		for _, paidRPCMethod := range paidRPCMethods {
-			if paidRPCMethod == rpcMethod {
-				requiresPayment = true
-				break
-			}
-		}
+		requiresPayment = isPaymentRequired(r)
 	}
 
 	if requiresPayment {
@@ -223,6 +196,43 @@ func (p *PaymentProxy) Stop() error {
 	}
 
 	return p.nitroClient.Close()
+}
+
+// Helper method to parse request and determine whether it qualifies for a payment
+// Payment is required for a request if:
+//   - "Content-Type" header is set to "application/json"
+//   - Request body has non-empty "jsonrpc" and "method" fields
+func isPaymentRequired(r *http.Request) bool {
+	if r.Header.Get("Content-Type") != "application/json" {
+		return false
+	}
+
+	var ReqBody struct {
+		JsonRpc string `json:"jsonrpc"`
+		Method  string `json:"method"`
+	}
+	bodyBytes, _ := io.ReadAll(r.Body)
+
+	err := json.Unmarshal(bodyBytes, &ReqBody)
+	if err != nil || ReqBody.JsonRpc == "" || ReqBody.Method == "" {
+		return false
+	}
+
+	slog.Debug("Serving RPC request", "method", ReqBody.Method)
+
+	// Reassign request body as io.ReadAll consumes it
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	rpcMethod := ReqBody.Method
+
+	// Check if payment is required for RPC method
+	for _, paidRPCMethod := range paidRPCMethods {
+		if paidRPCMethod == rpcMethod {
+			return true
+		}
+	}
+
+	return false
 }
 
 // parseVoucher takes in an a collection of query params and parses out a voucher.

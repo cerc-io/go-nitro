@@ -1,9 +1,12 @@
 package paymentproxy
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -101,11 +104,28 @@ func (p *PaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requiresPayment := true
 
 	if p.enablePaidRpcMethods {
-		rpcMethod := queryParams.Get("method")
+
+		var ReqBody struct {
+			Method string `json:"method"`
+		}
+
+		bodyBytes, _ := io.ReadAll(r.Body)
+		// TODO: Check for content type
+		err := json.Unmarshal(bodyBytes, &ReqBody)
+		if err != nil {
+			p.handleError(w, r, createPaymentError(fmt.Errorf("could not unmarshall request body: %w", err)))
+			return
+		}
+
+		slog.Debug("Serving RPC request", "method", ReqBody.Method)
+
+		// Reassign request body as io.ReadAll consumes it
+		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		rpcMethod := ReqBody.Method
 		requiresPayment = false
 
 		// Check if payment is required for RPC method
-		// TODO: Check RPC method in request body
 		for _, paidRPCMethod := range paidRPCMethods {
 			if paidRPCMethod == rpcMethod {
 				requiresPayment = true

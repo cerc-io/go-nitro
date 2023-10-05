@@ -108,7 +108,7 @@ func (p *PaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: Check for content type
 	err := json.Unmarshal(bodyBytes, &ReqBody)
 	if err != nil {
-		p.handleError(w, r, createPaymentError(fmt.Errorf("Could not unmarshall request body: %w", err)))
+		p.handleError(w, r, createPaymentError(fmt.Errorf("could not unmarshall request body: %w", err)))
 		return
 	}
 

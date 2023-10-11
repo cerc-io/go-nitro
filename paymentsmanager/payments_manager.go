@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/types"
 	"golang.org/x/exp/slog"
@@ -29,16 +30,8 @@ type InFlightVoucher struct {
 	amount  *big.Int
 }
 
-type NitroPaymentsHelper interface {
-	loadPaymentChannelBalances() *expirable.LRU[types.Destination, *big.Int]
-
-	getReceivedVouchers() <-chan payments.Voucher
-
-	getChannelCounterparty(channelId types.Destination) (common.Address, error)
-}
-
 type PaymentsManager struct {
-	NitroPaymentsHelper
+	nitro node.Node
 
 	receivedVouchersCache *expirable.LRU[common.Address, *expirable.LRU[common.Hash, InFlightVoucher]]
 
@@ -48,8 +41,8 @@ type PaymentsManager struct {
 	quitChan chan bool
 }
 
-func NewPaymentsManager() (PaymentsManager, error) {
-	pm := PaymentsManager{}
+func NewPaymentsManager(nitro node.Node) (PaymentsManager, error) {
+	pm := PaymentsManager{nitro: nitro}
 
 	pm.receivedVouchersCache = expirable.NewLRU[common.Address, *expirable.LRU[common.Hash, InFlightVoucher]](
 		DEFAULT_LRU_CACHE_MAX_ACCOUNTS,
@@ -64,7 +57,10 @@ func NewPaymentsManager() (PaymentsManager, error) {
 	)
 
 	// Load existing open payment channels with amount paid so far from the stored state
-	pm.paidSoFarOnChannel = pm.loadPaymentChannelBalances()
+	err := pm.loadPaymentChannels()
+	if err != nil {
+		return PaymentsManager{}, err
+	}
 
 	return pm, nil
 }
@@ -129,7 +125,7 @@ func (pm *PaymentsManager) run() {
 	slog.Info("starting voucher subscription...")
 	for {
 		select {
-		case voucher := <-pm.getReceivedVouchers():
+		case voucher := <-pm.nitro.ReceivedVouchers():
 			payer, err := pm.getChannelCounterparty(voucher.ChannelId)
 			if err != nil {
 				// TODO: Handle
@@ -169,4 +165,18 @@ func (pm *PaymentsManager) run() {
 			return
 		}
 	}
+}
+
+func (pm *PaymentsManager) getChannelCounterparty(channelId types.Destination) (common.Address, error) {
+	paymentChannel, err := pm.nitro.GetPaymentChannel(channelId)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	return paymentChannel.Balance.Payer, nil
+}
+
+func (pm *PaymentsManager) loadPaymentChannels() error {
+	// TODO: Implement
+	return nil
 }

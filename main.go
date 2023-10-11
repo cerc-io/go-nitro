@@ -16,6 +16,7 @@ import (
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/node/engine/store"
+	"github.com/statechannels/go-nitro/paymentsmanager"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
@@ -251,8 +252,9 @@ func main() {
 			if err != nil {
 				return err
 			}
-			var cert tls.Certificate
+			paymentsManager := paymentsmanager.PaymentsManager{}
 
+			var cert tls.Certificate
 			if tlsCertFilepath != "" && tlsKeyFilepath != "" {
 				cert, err = tls.LoadX509KeyPair(tlsCertFilepath, tlsKeyFilepath)
 				if err != nil {
@@ -260,7 +262,7 @@ func main() {
 				}
 			}
 
-			rpcServer, err := rpc.InitializeRpcServer(node, rpcPort, useNats, &cert)
+			rpcServer, err := rpc.InitializeRpcServer(paymentsManager, node, rpcPort, useNats, &cert)
 			if err != nil {
 				return err
 			}

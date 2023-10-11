@@ -6,13 +6,14 @@ import (
 	"log/slog"
 
 	"github.com/statechannels/go-nitro/node"
+	"github.com/statechannels/go-nitro/paymentsmanager"
 	"github.com/statechannels/go-nitro/rpc"
 	"github.com/statechannels/go-nitro/rpc/transport"
 	httpTransport "github.com/statechannels/go-nitro/rpc/transport/http"
 	"github.com/statechannels/go-nitro/rpc/transport/nats"
 )
 
-func InitializeRpcServer(node *node.Node, rpcPort int, useNats bool, cert *tls.Certificate) (*rpc.RpcServer, error) {
+func InitializeRpcServer(paymentManager paymentsmanager.PaymentsManager, node *node.Node, rpcPort int, useNats bool, cert *tls.Certificate) (*rpc.RpcServer, error) {
 	var transport transport.Responder
 	var err error
 
@@ -27,7 +28,7 @@ func InitializeRpcServer(node *node.Node, rpcPort int, useNats bool, cert *tls.C
 		return nil, err
 	}
 
-	rpcServer, err := rpc.NewRpcServer(node, transport)
+	rpcServer, err := rpc.NewRpcServer(paymentManager, node, transport)
 	if err != nil {
 		return nil, err
 	}

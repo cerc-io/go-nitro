@@ -1,6 +1,8 @@
 package serde
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/statechannels/go-nitro/node/query"
@@ -30,6 +32,7 @@ const (
 	GetAllLedgerChannelsMethod        RequestMethod = "get_all_ledger_channels"
 	CreateVoucherRequestMethod        RequestMethod = "create_voucher"
 	ReceiveVoucherRequestMethod       RequestMethod = "receive_voucher"
+	ValidateVoucherRequestMethod      RequestMethod = "validate_voucher"
 )
 
 type NotificationMethod string
@@ -63,6 +66,12 @@ type GetPaymentChannelsByLedgerRequest struct {
 	LedgerId types.Destination
 }
 
+type ValidateVoucherRequest struct {
+	VoucherHash   common.Hash
+	SignerAddress common.Address
+	Value         *big.Int
+}
+
 type (
 	NoPayloadRequest = struct{}
 )
@@ -78,7 +87,8 @@ type RequestPayload interface {
 		GetPaymentChannelRequest |
 		GetPaymentChannelsByLedgerRequest |
 		NoPayloadRequest |
-		payments.Voucher
+		payments.Voucher |
+		ValidateVoucherRequest
 }
 
 type NotificationPayload interface {
@@ -104,6 +114,11 @@ type (
 	GetPaymentChannelsByLedgerResponse = []query.PaymentChannelInfo
 )
 
+type ValidateVoucherResponse struct {
+	IsPaymentReceived   bool
+	IsOfSufficientValue bool
+}
+
 type ResponsePayload interface {
 	directfund.ObjectiveResponse |
 		protocols.ObjectiveId |
@@ -116,7 +131,8 @@ type ResponsePayload interface {
 		payments.Voucher |
 		common.Address |
 		string |
-		payments.ReceiveVoucherSummary
+		payments.ReceiveVoucherSummary |
+		ValidateVoucherResponse
 }
 
 type JsonRpcSuccessResponse[T ResponsePayload] struct {

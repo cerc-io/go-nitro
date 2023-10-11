@@ -1,0 +1,172 @@
+package paymentsmanager
+
+import (
+	"math/big"
+	"sync"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/statechannels/go-nitro/payments"
+	"github.com/statechannels/go-nitro/types"
+	"golang.org/x/exp/slog"
+)
+
+const (
+	DEFAULT_LRU_CACHE_MAX_ACCOUNTS             = 1000
+	DEFAULT_LRU_CACHE_ACCOUNT_TTL              = 30 * 60 // 30mins
+	DEFAULT_LRU_CACHE_MAX_VOUCHERS_PER_ACCOUNT = 1000
+	DEFAULT_LRU_CACHE_VOUCHER_TTL              = 5 * 60 // 5mins
+	DEFAULT_LRU_CACHE_MAX_PAYMENT_CHANNELS     = 10000
+	DEFAULT_LRU_CACHE_PAYMENT_CHANNEL_TTL      = DEFAULT_LRU_CACHE_ACCOUNT_TTL
+
+	DEFAULT_VOUCHER_CHECK_INTERVAL = 2
+	DEFAULT_VOUCHER_CHECK_ATTEMPTS = 5
+)
+
+type InFlightVoucher struct {
+	voucher payments.Voucher
+	amount  *big.Int
+}
+
+type NitroPaymentsHelper interface {
+	loadPaymentChannelBalances() *expirable.LRU[types.Destination, *big.Int]
+
+	getReceivedVouchers() <-chan payments.Voucher
+
+	getChannelCounterparty(channelId types.Destination) (common.Address, error)
+}
+
+type PaymentsManager struct {
+	NitroPaymentsHelper
+
+	receivedVouchersCache *expirable.LRU[common.Address, *expirable.LRU[common.Hash, InFlightVoucher]]
+
+	paidSoFarOnChannel *expirable.LRU[types.Destination, *big.Int]
+
+	// Used to signal shutdown of the service
+	quitChan chan bool
+}
+
+func NewPaymentsManager() (PaymentsManager, error) {
+	pm := PaymentsManager{}
+
+	pm.receivedVouchersCache = expirable.NewLRU[common.Address, *expirable.LRU[common.Hash, InFlightVoucher]](
+		DEFAULT_LRU_CACHE_MAX_ACCOUNTS,
+		nil,
+		time.Second*DEFAULT_LRU_CACHE_ACCOUNT_TTL,
+	)
+
+	pm.paidSoFarOnChannel = expirable.NewLRU[types.Destination, *big.Int](
+		DEFAULT_LRU_CACHE_MAX_PAYMENT_CHANNELS,
+		nil,
+		time.Second*DEFAULT_LRU_CACHE_PAYMENT_CHANNEL_TTL,
+	)
+
+	// Load existing open payment channels with amount paid so far from the stored state
+	pm.paidSoFarOnChannel = pm.loadPaymentChannelBalances()
+
+	return pm, nil
+}
+
+func (pm *PaymentsManager) Start(wg *sync.WaitGroup) {
+	slog.Info("starting payments manager")
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		pm.run()
+	}()
+}
+
+func (pm *PaymentsManager) Stop() error {
+	slog.Info("stopping payments manager")
+	close(pm.quitChan)
+	return nil
+}
+
+func (pm *PaymentsManager) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) (bool, bool) {
+	// Check the payments map for required voucher
+	var isPaymentReceived, isOfSufficientValue bool
+	for i := 0; i < DEFAULT_VOUCHER_CHECK_ATTEMPTS; i++ {
+		isPaymentReceived, isOfSufficientValue = pm.checkVoucherInCache(voucherHash, signerAddress, value)
+
+		if isPaymentReceived {
+			return true, isOfSufficientValue
+		}
+
+		// Retry after an interval if voucher not found
+		slog.Debug("Payment from %s not found, retrying after %d sec...", signerAddress, DEFAULT_VOUCHER_CHECK_INTERVAL)
+		time.Sleep(DEFAULT_VOUCHER_CHECK_INTERVAL * time.Second)
+	}
+
+	return false, false
+}
+
+// Check for a given payment voucher in LRU cache map
+// Returns whether the voucher was found, whether it was of sufficient value
+func (pm *PaymentsManager) checkVoucherInCache(voucherHash common.Hash, signerAddress common.Address, minRequiredValue *big.Int) (bool, bool) {
+	vouchersMap, ok := pm.receivedVouchersCache.Get(signerAddress)
+	if !ok {
+		return false, false
+	}
+
+	receivedVoucher, ok := vouchersMap.Get(voucherHash)
+	if !ok {
+		return false, false
+	}
+
+	if receivedVoucher.amount.Cmp(minRequiredValue) < 0 {
+		return true, false
+	}
+
+	// Delete the voucher from map after consuming it
+	vouchersMap.Remove(voucherHash)
+	return true, true
+}
+
+func (pm *PaymentsManager) run() {
+	slog.Info("starting voucher subscription...")
+	for {
+		select {
+		case voucher := <-pm.getReceivedVouchers():
+			payer, err := pm.getChannelCounterparty(voucher.ChannelId)
+			if err != nil {
+				// TODO: Handle
+				panic(err)
+			}
+
+			paidSoFar, ok := pm.paidSoFarOnChannel.Get(voucher.ChannelId)
+			if !ok {
+				paidSoFar = big.NewInt(0)
+			}
+
+			paymentAmount := big.NewInt(0).Sub(voucher.Amount, paidSoFar)
+			pm.paidSoFarOnChannel.Add(voucher.ChannelId, voucher.Amount)
+			slog.Info("Received a voucher", "payer", payer.String(), "amount", paymentAmount.String())
+
+			vouchersMap, ok := pm.receivedVouchersCache.Get(payer)
+			if !ok {
+				vouchersMap = expirable.NewLRU[common.Hash, InFlightVoucher](
+					DEFAULT_LRU_CACHE_MAX_VOUCHERS_PER_ACCOUNT,
+					nil,
+					DEFAULT_LRU_CACHE_VOUCHER_TTL,
+				)
+
+				pm.receivedVouchersCache.Add(payer, vouchersMap)
+			}
+
+			voucherHash, err := voucher.Hash()
+			if err != nil {
+				// TODO: Handle
+				panic(err)
+			}
+
+			vouchersMap.Add(voucherHash, InFlightVoucher{voucher: voucher, amount: paymentAmount})
+		case <-pm.quitChan:
+			slog.Info("stopping voucher subscription loop")
+			// TODO: stop the nitro node if that means anything
+			return
+		}
+	}
+}

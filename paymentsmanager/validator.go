@@ -2,6 +2,7 @@ package paymentsmanager
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -9,8 +10,9 @@ import (
 )
 
 var (
-	ERR_PAYMENT_NOT_RECEIVED = errors.New("Payment not received")
-	ERR_AMOUNT_INSUFFICIENT  = errors.New("Payment amount insufficient")
+	ERR_PAYMENT              = "Payment error:"
+	ERR_PAYMENT_NOT_RECEIVED = errors.New(fmt.Sprintf("%s payment not received", ERR_PAYMENT))
+	ERR_AMOUNT_INSUFFICIENT  = errors.New(fmt.Sprintf("%s amount insufficient", ERR_PAYMENT))
 )
 
 type VoucherValidator interface {

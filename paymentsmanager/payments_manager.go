@@ -56,6 +56,8 @@ func NewPaymentsManager(nitro *node.Node) (PaymentsManager, error) {
 		time.Second*DEFAULT_LRU_CACHE_PAYMENT_CHANNEL_TTL,
 	)
 
+	pm.quitChan = make(chan bool)
+
 	// Load existing open payment channels with amount paid so far from the stored state
 	err := pm.loadPaymentChannels()
 	if err != nil {

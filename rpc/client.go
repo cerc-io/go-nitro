@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"sync"
 	"time"
 
@@ -79,6 +80,8 @@ type RpcClientApi interface {
 
 	// PaymentChannelUpdatesChan returns a channel that receives payment channel updates for the given payment channel id
 	PaymentChannelUpdatesChan(paymentChannelId types.Destination) <-chan query.PaymentChannelInfo
+
+	ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) (serde.ValidateVoucherResponse, error)
 }
 
 // rpcClient is the implementation
@@ -163,6 +166,12 @@ func (rc *rpcClient) CreateVoucher(chId types.Destination, amount uint64) (payme
 // It can be used to add a voucher that was sent outside of the go-nitro system.
 func (rc *rpcClient) ReceiveVoucher(v payments.Voucher) (payments.ReceiveVoucherSummary, error) {
 	return waitForAuthorizedRequest[payments.Voucher, payments.ReceiveVoucherSummary](rc, serde.ReceiveVoucherRequestMethod, v)
+}
+
+func (rc *rpcClient) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) (serde.ValidateVoucherResponse, error) {
+	req := serde.ValidateVoucherRequest{VoucherHash: voucherHash, SignerAddress: signerAddress, Value: value}
+
+	return waitForAuthorizedRequest[serde.ValidateVoucherRequest, serde.ValidateVoucherResponse](rc, serde.ValidateVoucherRequestMethod, req)
 }
 
 func (rc *rpcClient) GetPaymentChannel(chId types.Destination) (query.PaymentChannelInfo, error) {

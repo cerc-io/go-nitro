@@ -58,7 +58,9 @@ func extractAndValidateVoucher(r *http.Request, validator VoucherValidator, quer
 	}
 
 	// Determine signer from the voucher hash and signature
-	signer, err := crypto.RecoverEthereumMessageSigner(common.Hex2Bytes(vhash), crypto.SplitSignature(common.Hex2Bytes(vsig)))
+	vhashBytes := common.Hex2Bytes(strings.TrimPrefix(vhash, "0x"))
+	signature := crypto.SplitSignature(common.Hex2Bytes(strings.TrimPrefix(vsig, "0x")))
+	signer, err := crypto.RecoverEthereumMessageSigner(vhashBytes, signature)
 	if err != nil {
 		return r, ERR_UNABLE_TO_RECOVER_SIGNER
 	}

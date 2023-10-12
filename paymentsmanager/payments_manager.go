@@ -31,7 +31,7 @@ type InFlightVoucher struct {
 }
 
 type PaymentsManager struct {
-	nitro node.Node
+	nitro *node.Node
 
 	receivedVouchersCache *expirable.LRU[common.Address, *expirable.LRU[common.Hash, InFlightVoucher]]
 
@@ -41,7 +41,7 @@ type PaymentsManager struct {
 	quitChan chan bool
 }
 
-func NewPaymentsManager(nitro node.Node) (PaymentsManager, error) {
+func NewPaymentsManager(nitro *node.Node) (PaymentsManager, error) {
 	pm := PaymentsManager{nitro: nitro}
 
 	pm.receivedVouchersCache = expirable.NewLRU[common.Address, *expirable.LRU[common.Hash, InFlightVoucher]](

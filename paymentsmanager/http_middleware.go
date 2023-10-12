@@ -73,7 +73,7 @@ func extractAndValidateVoucher(r *http.Request, validator VoucherValidator, quer
 		return r, err
 	}
 
-	slog.Info("Serving a paid RPC request", "method", rpcMethod, "sender", signer)
+	slog.Info("Serving a paid RPC request", "method", rpcMethod, "sender", signer.Hex())
 	return r, nil
 }
 

@@ -21,9 +21,9 @@ const (
 )
 
 var (
-	ERR_HEADER_MISSING           = errors.New("Payment header x-payment not set")
-	ERR_INVALID_PAYMENT_HEADER   = errors.New("Invalid payment header format")
-	ERR_UNABLE_TO_RECOVER_SIGNER = errors.New("Unable to recover the voucher signer")
+	ErrHeaderMissing         = errors.New("payment header x-payment not set")
+	ErrInvalidPaymentHeader  = errors.New("invalid payment header format")
+	ErrUnableToRecoverSigner = errors.New("unable to recover the voucher signer")
 )
 
 // HTTPMiddleware: extracts and validates vouchers from RPC requests
@@ -32,7 +32,7 @@ func HTTPMiddleware(next http.Handler, validator VoucherValidator, queryRates ma
 		// Validate voucher
 		r, err := extractAndValidateVoucher(r, validator, queryRates)
 		if err != nil {
-			if strings.Contains(err.Error(), ERR_PAYMENT) {
+			if strings.Contains(err.Error(), ErrPayment) {
 				http.Error(w, err.Error(), http.StatusPaymentRequired)
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -63,7 +63,7 @@ func extractAndValidateVoucher(r *http.Request, validator VoucherValidator, quer
 	// Extract voucher details from the header
 	paymentHeader := r.Header.Get(PAYMENT_HEADER_KEY)
 	if paymentHeader == "" {
-		return r, ERR_HEADER_MISSING
+		return r, ErrHeaderMissing
 	}
 
 	re := regexp.MustCompile(PAYMENT_HEADER_REGEX)
@@ -74,7 +74,7 @@ func extractAndValidateVoucher(r *http.Request, validator VoucherValidator, quer
 		vhash = match[1]
 		vsig = match[2]
 	} else {
-		return r, ERR_INVALID_PAYMENT_HEADER
+		return r, ErrInvalidPaymentHeader
 	}
 
 	// Determine signer from the voucher hash and signature
@@ -82,7 +82,7 @@ func extractAndValidateVoucher(r *http.Request, validator VoucherValidator, quer
 	signature := crypto.SplitSignature(common.Hex2Bytes(strings.TrimPrefix(vsig, "0x")))
 	signer, err := crypto.RecoverEthereumMessageSigner(vhashBytes, signature)
 	if err != nil {
-		return r, ERR_UNABLE_TO_RECOVER_SIGNER
+		return r, ErrUnableToRecoverSigner
 	}
 
 	// Remove the payment header from the request

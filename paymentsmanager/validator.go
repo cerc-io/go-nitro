@@ -5,13 +5,12 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/statechannels/go-nitro/rpc"
 )
 
 var (
-	ERR_PAYMENT              = "Payment error:"
-	ERR_PAYMENT_NOT_RECEIVED = fmt.Errorf("%s payment not received", ERR_PAYMENT)
-	ERR_AMOUNT_INSUFFICIENT  = fmt.Errorf("%s amount insufficient", ERR_PAYMENT)
+	ErrPayment            = "Payment error:"
+	ErrPaymentNotReceived = fmt.Errorf("%s payment not received", ErrPayment)
+	ErrAmountInsufficient = fmt.Errorf("%s amount insufficient", ErrPayment)
 )
 
 // Voucher validator interface to be satisfied by implementations
@@ -31,11 +30,11 @@ func (v InProcessVoucherValidator) ValidateVoucher(voucherHash common.Hash, sign
 	isPaymentReceived, isOfSufficientValue := v.PaymentsManager.ValidateVoucher(voucherHash, signerAddress, value)
 
 	if !isPaymentReceived {
-		return ERR_PAYMENT_NOT_RECEIVED
+		return ErrPaymentNotReceived
 	}
 
 	if !isOfSufficientValue {
-		return ERR_AMOUNT_INSUFFICIENT
+		return ErrAmountInsufficient
 	}
 
 	return nil
@@ -45,7 +44,7 @@ var _ VoucherValidator = &RemoteVoucherValidator{}
 
 // When go-nitro is running remotely
 type RemoteVoucherValidator struct {
-	client rpc.RpcClientApi //nolint:unused
+	// client rpc.RpcClientApi
 }
 
 func (r RemoteVoucherValidator) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) error {

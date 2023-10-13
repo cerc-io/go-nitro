@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/statechannels/go-nitro/internal/chain"
 	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/engine"
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
@@ -15,7 +14,7 @@ import (
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 )
 
-func InitializeNode(pkString string, chainOpts chain.ChainOpts,
+func InitializeNode(pkString string, chainOpts chainservice.ChainOpts,
 	useDurableStore bool, durableStoreFolder string, msgPort int, wsMsgPort int, bootPeers []string,
 ) (*node.Node, *store.Store, *p2pms.P2PMessageService, chainservice.ChainService, error) {
 	if pkString == "" {

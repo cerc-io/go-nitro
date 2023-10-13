@@ -26,6 +26,26 @@ var (
 	ERR_UNABLE_TO_RECOVER_SIGNER = errors.New("Unable to recover the voucher signer")
 )
 
+// HTTPMiddleware: extracts and validates vouchers from RPC requests
+func HTTPMiddleware(next http.Handler, validator VoucherValidator, queryRates map[string]*big.Int) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Validate voucher
+		r, err := extractAndValidateVoucher(r, validator, queryRates)
+		if err != nil {
+			if strings.Contains(err.Error(), ERR_PAYMENT) {
+				http.Error(w, err.Error(), http.StatusPaymentRequired)
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+
+			return
+		}
+
+		// Let the request move ahead after voucher validation
+		next.ServeHTTP(w, r)
+	})
+}
+
 func extractAndValidateVoucher(r *http.Request, validator VoucherValidator, queryRates map[string]*big.Int) (*http.Request, error) {
 	// Determine RPC method from the request
 	isRpcCall, rpcMethod := isRpcCall(r)
@@ -73,28 +93,8 @@ func extractAndValidateVoucher(r *http.Request, validator VoucherValidator, quer
 		return r, err
 	}
 
-	slog.Info("Serving a paid RPC request", "method", rpcMethod, "sender", signer.Hex())
+	slog.Info("Serving a paid RPC request", "method", rpcMethod, "cost", queryCost, "sender", signer.Hex())
 	return r, nil
-}
-
-// HTTPMiddleware http connection metric reader
-func HTTPMiddleware(next http.Handler, validator VoucherValidator, queryRates map[string]*big.Int) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Validate voucher
-		r, err := extractAndValidateVoucher(r, validator, queryRates)
-		if err != nil {
-			if strings.Contains(err.Error(), ERR_PAYMENT) {
-				http.Error(w, err.Error(), http.StatusPaymentRequired)
-			} else {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			}
-
-			return
-		}
-
-		// Let the request move ahead after voucher validation
-		next.ServeHTTP(w, r)
-	})
 }
 
 // Helper method to parse request and determine whether it's a RPC call

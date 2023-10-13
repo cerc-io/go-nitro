@@ -18,6 +18,7 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
+// TODO: Remove in further rebasing
 // type ChainOpts struct {
 // 	ChainUrl        string
 // 	ChainStartBlock uint64

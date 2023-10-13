@@ -30,11 +30,16 @@ type InFlightVoucher struct {
 	amount  *big.Int
 }
 
+// Struct representing the payments manager service
 type PaymentsManager struct {
 	nitro *node.Node
 
+	// In-memory LRU cache of vouchers received on payment channels
+	// Map: payer -> voucher hash -> InFlightVoucher (voucher, delta amount)
 	receivedVouchersCache *expirable.LRU[string, *expirable.LRU[string, InFlightVoucher]]
 
+	// LRU map to keep track of amounts paid so far on payment channels
+	// Map: channel id -> amount paid so far
 	paidSoFarOnChannel *expirable.LRU[string, *big.Int]
 
 	// Used to signal shutdown of the service
@@ -68,7 +73,7 @@ func NewPaymentsManager(nitro *node.Node) (PaymentsManager, error) {
 }
 
 func (pm *PaymentsManager) Start(wg *sync.WaitGroup) {
-	slog.Info("starting payments manager")
+	slog.Info("starting payments manager...")
 
 	wg.Add(1)
 	go func() {
@@ -78,7 +83,7 @@ func (pm *PaymentsManager) Start(wg *sync.WaitGroup) {
 }
 
 func (pm *PaymentsManager) Stop() error {
-	slog.Info("stopping payments manager")
+	slog.Info("stopping payments manager...")
 	close(pm.quitChan)
 	return nil
 }
@@ -94,7 +99,7 @@ func (pm *PaymentsManager) ValidateVoucher(voucherHash common.Hash, signerAddres
 		}
 
 		// Retry after an interval if voucher not found
-		slog.Debug("Payment from %s not found, retrying after %d sec...", signerAddress, DEFAULT_VOUCHER_CHECK_INTERVAL)
+		slog.Info("Payment from %s not found, retrying after %d sec...", signerAddress, DEFAULT_VOUCHER_CHECK_INTERVAL)
 		time.Sleep(DEFAULT_VOUCHER_CHECK_INTERVAL * time.Second)
 	}
 
@@ -163,7 +168,6 @@ func (pm *PaymentsManager) run() {
 			vouchersMap.Add(voucherHash.Hex(), InFlightVoucher{voucher: voucher, amount: paymentAmount})
 		case <-pm.quitChan:
 			slog.Info("stopping voucher subscription loop")
-			// TODO: Stop the nitro node?
 			return
 		}
 	}

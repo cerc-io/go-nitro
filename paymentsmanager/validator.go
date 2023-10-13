@@ -1,7 +1,6 @@
 package paymentsmanager
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -11,20 +10,24 @@ import (
 
 var (
 	ERR_PAYMENT              = "Payment error:"
-	ERR_PAYMENT_NOT_RECEIVED = errors.New(fmt.Sprintf("%s payment not received", ERR_PAYMENT))
-	ERR_AMOUNT_INSUFFICIENT  = errors.New(fmt.Sprintf("%s amount insufficient", ERR_PAYMENT))
+	ERR_PAYMENT_NOT_RECEIVED = fmt.Errorf("%s payment not received", ERR_PAYMENT)
+	ERR_AMOUNT_INSUFFICIENT  = fmt.Errorf("%s amount insufficient", ERR_PAYMENT)
 )
 
+// Voucher validator interface to be satisfied by implementations
+// using in / out of process Nitro nodes
 type VoucherValidator interface {
 	ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) error
 }
 
+var _ VoucherValidator = &InProcessVoucherValidator{}
+
 // When go-nitro is running in-process
-type InProcessValidator struct {
+type InProcessVoucherValidator struct {
 	PaymentsManager
 }
 
-func (v InProcessValidator) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) error {
+func (v InProcessVoucherValidator) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) error {
 	isPaymentReceived, isOfSufficientValue := v.PaymentsManager.ValidateVoucher(voucherHash, signerAddress, value)
 
 	if !isPaymentReceived {
@@ -38,12 +41,14 @@ func (v InProcessValidator) ValidateVoucher(voucherHash common.Hash, signerAddre
 	return nil
 }
 
+var _ VoucherValidator = &RemoteVoucherValidator{}
+
 // When go-nitro is running remotely
-type RemoteValidator struct {
-	client rpc.RpcClientApi
+type RemoteVoucherValidator struct {
+	client rpc.RpcClientApi //nolint:unused
 }
 
-func (r RemoteValidator) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) error {
+func (r RemoteVoucherValidator) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) error {
 	// TODO: Implement
 	return nil
 }

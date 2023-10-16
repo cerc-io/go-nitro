@@ -75,7 +75,7 @@ func newRpcServerWithoutNotifications(nitroNode *nitro.Node, trans transport.Res
 	return rs, nil
 }
 
-func NewRpcServer(paymentManager paymentsmanager.PaymentsManager, nitroNode *nitro.Node, trans transport.Responder) (*RpcServer, error) {
+func NewRpcServer(nitroNode *nitro.Node, paymentManager paymentsmanager.PaymentsManager, trans transport.Responder) (*RpcServer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	rs := &RpcServer{
 		paymentManager: paymentManager,
@@ -190,7 +190,7 @@ func (rs *RpcServer) registerHandlers() (err error) {
 			})
 		case serde.ValidateVoucherRequestMethod:
 			return processRequest(rs, permRead, requestData, func(req serde.ValidateVoucherRequest) (serde.ValidateVoucherResponse, error) {
-				isPaymentReceived, isOfSufficientValue := rs.paymentManager.ValidateVoucher(req.VoucherHash, req.SignerAddress, req.Value)
+				isPaymentReceived, isOfSufficientValue := rs.paymentManager.ValidateVoucher(req.VoucherHash, req.Signer, big.NewInt(int64(req.Value)))
 				response := serde.ValidateVoucherResponse{IsPaymentReceived: isPaymentReceived, IsOfSufficientValue: isOfSufficientValue}
 				return response, nil
 			})

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math/big"
 	"sync"
 	"time"
 
@@ -81,7 +80,7 @@ type RpcClientApi interface {
 	// PaymentChannelUpdatesChan returns a channel that receives payment channel updates for the given payment channel id
 	PaymentChannelUpdatesChan(paymentChannelId types.Destination) <-chan query.PaymentChannelInfo
 
-	ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) (serde.ValidateVoucherResponse, error)
+	ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value uint64) (serde.ValidateVoucherResponse, error)
 }
 
 // rpcClient is the implementation
@@ -168,8 +167,8 @@ func (rc *rpcClient) ReceiveVoucher(v payments.Voucher) (payments.ReceiveVoucher
 	return waitForAuthorizedRequest[payments.Voucher, payments.ReceiveVoucherSummary](rc, serde.ReceiveVoucherRequestMethod, v)
 }
 
-func (rc *rpcClient) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) (serde.ValidateVoucherResponse, error) {
-	req := serde.ValidateVoucherRequest{VoucherHash: voucherHash, SignerAddress: signerAddress, Value: value}
+func (rc *rpcClient) ValidateVoucher(voucherHash common.Hash, signer common.Address, value uint64) (serde.ValidateVoucherResponse, error) {
+	req := serde.ValidateVoucherRequest{VoucherHash: voucherHash, Signer: signer, Value: value}
 
 	return waitForAuthorizedRequest[serde.ValidateVoucherRequest, serde.ValidateVoucherResponse](rc, serde.ValidateVoucherRequestMethod, req)
 }

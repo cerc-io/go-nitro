@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"log/slog"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,7 +15,18 @@ type RemoteVoucherValidator struct {
 }
 
 func (r RemoteVoucherValidator) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) error {
-	res, _ := r.Client.ValidateVoucher(voucherHash, signerAddress, value)
-	slog.Info("Response from server after validatin", "res", res)
+	res, err := r.Client.ValidateVoucher(voucherHash, signerAddress, value.Uint64())
+	if err != nil {
+		return err
+	}
+
+	if !res.IsPaymentReceived {
+		return paymentsmanager.ERR_PAYMENT_NOT_RECEIVED
+	}
+
+	if !res.IsOfSufficientValue {
+		return paymentsmanager.ERR_AMOUNT_INSUFFICIENT
+	}
+
 	return nil
 }

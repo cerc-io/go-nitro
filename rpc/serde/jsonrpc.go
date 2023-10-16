@@ -1,8 +1,6 @@
 package serde
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/statechannels/go-nitro/node/query"
@@ -67,9 +65,9 @@ type GetPaymentChannelsByLedgerRequest struct {
 }
 
 type ValidateVoucherRequest struct {
-	VoucherHash   common.Hash
-	SignerAddress common.Address
-	Value         *big.Int
+	VoucherHash common.Hash
+	Signer      common.Address
+	Value       uint64
 }
 
 type (

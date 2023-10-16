@@ -21,11 +21,11 @@ func (r RemoteVoucherValidator) ValidateVoucher(voucherHash common.Hash, signerA
 	}
 
 	if !res.IsPaymentReceived {
-		return paymentsmanager.ERR_PAYMENT_NOT_RECEIVED
+		return paymentsmanager.ErrPaymentNotReceived
 	}
 
 	if !res.IsOfSufficientValue {
-		return paymentsmanager.ERR_AMOUNT_INSUFFICIENT
+		return paymentsmanager.ErrAmountInsufficient
 	}
 
 	return nil

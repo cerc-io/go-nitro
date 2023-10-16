@@ -289,8 +289,6 @@ func main() {
 			signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 			<-stopChan // wait for interrupt or terminate signal
 
-			paymentsManager.Stop()
-			wg.Wait()
 			return rpcServer.Close()
 		},
 	}

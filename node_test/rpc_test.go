@@ -25,6 +25,7 @@ import (
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/node/engine/store"
 	"github.com/statechannels/go-nitro/node/query"
+	"github.com/statechannels/go-nitro/paymentsmanager"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
 	"github.com/statechannels/go-nitro/rpc"
@@ -440,7 +441,8 @@ func setupNitroNodeWithRPCClient(
 		panic(err)
 	}
 
-	rpcServer, err := interRpc.InitializeRpcServer(&node, rpcPort, useNats, &cert)
+	paymentsManager := paymentsmanager.PaymentsManager{}
+	rpcServer, err := interRpc.InitializeRpcServer(&node, paymentsManager, rpcPort, useNats, &cert)
 	if err != nil {
 		t.Fatal(err)
 	}

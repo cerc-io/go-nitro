@@ -99,7 +99,7 @@ func (pm *PaymentsManager) ValidateVoucher(voucherHash common.Hash, signerAddres
 		}
 
 		// Retry after an interval if voucher not found
-		slog.Info("Payment from %s not found, retrying after %d sec...", signerAddress, DEFAULT_VOUCHER_CHECK_INTERVAL)
+		slog.Info("Payment not found, retrying...", "payer", signerAddress, "retryInterval", DEFAULT_VOUCHER_CHECK_INTERVAL)
 		time.Sleep(DEFAULT_VOUCHER_CHECK_INTERVAL * time.Second)
 	}
 

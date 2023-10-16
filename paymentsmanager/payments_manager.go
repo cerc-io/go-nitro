@@ -1,6 +1,7 @@
 package paymentsmanager
 
 import (
+	"log/slog"
 	"math/big"
 	"sync"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/types"
-	"golang.org/x/exp/slog"
 )
 
 const (
@@ -167,7 +167,7 @@ func (pm *PaymentsManager) run() {
 
 			vouchersMap.Add(voucherHash.Hex(), InFlightVoucher{voucher: voucher, amount: paymentAmount})
 		case <-pm.quitChan:
-			slog.Info("stopping voucher subscription loop")
+			slog.Info("stopping voucher subscription loop...")
 			return
 		}
 	}

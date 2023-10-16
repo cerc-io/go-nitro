@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -252,7 +253,22 @@ func main() {
 			if err != nil {
 				return err
 			}
-			paymentsManager := paymentsmanager.PaymentsManager{}
+
+			paymentsManager, err := paymentsmanager.NewPaymentsManager(node)
+			if err != nil {
+				return err
+			}
+
+			wg := new(sync.WaitGroup)
+			defer wg.Wait()
+
+			paymentsManager.Start(wg)
+			defer func() {
+				err := paymentsManager.Stop()
+				if err != nil {
+					panic(err)
+				}
+			}()
 
 			var cert tls.Certificate
 			if tlsCertFilepath != "" && tlsKeyFilepath != "" {

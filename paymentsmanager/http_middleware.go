@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"regexp"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/crypto"
-	"golang.org/x/exp/slog"
 )
 
 const (

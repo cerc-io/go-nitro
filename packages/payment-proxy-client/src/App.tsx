@@ -105,7 +105,7 @@ export default function App() {
   const [selectedFile, setSelectedFile] = useState<AvailableFile>(files[0]);
   useEffect(() => {
     console.time("Connect to Nitro Node");
-    NitroRpcClient.CreateHttpNitroClient(url)
+    NitroRpcClient.CreateHttpNitroClient(url, true)
       .then(
         (c) => setNitroClient(c),
         (e) => {

@@ -18,10 +18,13 @@ export class HttpTransport {
   Notifications: EventEmitter<NotificationMethod, NotificationParams>;
   isSecure: boolean;
 
-  public static async createTransport(server: string, isSecure: boolean): Promise<Transport> {
-    let wsPrefix = 'ws://'
+  public static async createTransport(
+    server: string,
+    isSecure: boolean
+  ): Promise<Transport> {
+    let wsPrefix = "ws://";
     if (isSecure) {
-      wsPrefix = 'wss://'
+      wsPrefix = "wss://";
     }
 
     // eslint-disable-next-line new-cap
@@ -43,9 +46,9 @@ export class HttpTransport {
   public async sendRequest<K extends RequestMethod>(
     req: RPCRequestAndResponses[K][0]
   ): Promise<unknown> {
-    let httpPrefix = 'http://'
+    let httpPrefix = "http://";
     if (this.isSecure) {
-      httpPrefix = 'https://'
+      httpPrefix = "https://";
     }
 
     const url = new URL(`${httpPrefix}${this.server}`).toString();

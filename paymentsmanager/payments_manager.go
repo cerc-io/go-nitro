@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/statechannels/go-nitro/node"
+	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/types"
 )
@@ -183,6 +184,25 @@ func (pm *PaymentsManager) getChannelCounterparty(channelId types.Destination) (
 }
 
 func (pm *PaymentsManager) loadPaymentChannels() error {
-	// TODO: Implement
+	ledgerChannels, err := pm.nitro.GetAllLedgerChannels()
+	if err != nil {
+		return err
+	}
+
+	for _, ledgerChannel := range ledgerChannels {
+		if ledgerChannel.Status == query.Open {
+			paymentChannels, err := pm.nitro.GetPaymentChannelsByLedger(ledgerChannel.ID)
+			if err != nil {
+				return err
+			}
+
+			for _, paymentChannel := range paymentChannels {
+				if paymentChannel.Status == query.Open {
+					pm.paidSoFarOnChannel.Add(paymentChannel.ID.String(), (*big.Int)(paymentChannel.Balance.PaidSoFar))
+				}
+			}
+		}
+	}
+
 	return nil
 }

@@ -200,14 +200,12 @@ func main() {
 		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:        TLS_CERT_FILEPATH,
 			Usage:       "Filepath to the TLS certificate. If not specified, TLS will not be used with the RPC transport.",
-			Value:       "./tls/statechannels.org.pem",
 			Category:    TLS_CATEGORY,
 			Destination: &tlsCertFilepath,
 		}),
 		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:        TLS_KEY_FILEPATH,
 			Usage:       "Filepath to the TLS private key. If not specified, TLS will not be used with the RPC transport.",
-			Value:       "./tls/statechannels.org_key.pem",
 			Category:    TLS_CATEGORY,
 			Destination: &tlsKeyFilepath,
 		}),
@@ -270,15 +268,15 @@ func main() {
 				}
 			}()
 
-			var cert tls.Certificate
+			var cert *tls.Certificate
 			if tlsCertFilepath != "" && tlsKeyFilepath != "" {
-				cert, err = tls.LoadX509KeyPair(tlsCertFilepath, tlsKeyFilepath)
+				*cert, err = tls.LoadX509KeyPair(tlsCertFilepath, tlsKeyFilepath)
 				if err != nil {
 					panic(err)
 				}
 			}
 
-			rpcServer, err := rpc.InitializeRpcServer(node, paymentsManager, rpcPort, useNats, &cert)
+			rpcServer, err := rpc.InitializeRpcServer(node, paymentsManager, rpcPort, useNats, cert)
 			if err != nil {
 				return err
 			}

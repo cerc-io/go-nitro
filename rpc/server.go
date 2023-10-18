@@ -12,6 +12,7 @@ import (
 	nitro "github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/payments"
+	"github.com/statechannels/go-nitro/paymentsmanager"
 	"github.com/statechannels/go-nitro/protocols"
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
@@ -25,11 +26,12 @@ import (
 
 // RpcServer handles nitro rpc requests and executes them on the nitro node
 type RpcServer struct {
-	transport transport.Responder
-	node      *nitro.Node
-	logger    *slog.Logger
-	cancel    context.CancelFunc
-	wg        *sync.WaitGroup
+	transport      transport.Responder
+	paymentManager paymentsmanager.PaymentsManager
+	node           *nitro.Node
+	logger         *slog.Logger
+	cancel         context.CancelFunc
+	wg             *sync.WaitGroup
 }
 
 func (rs *RpcServer) Url() string {
@@ -73,14 +75,15 @@ func newRpcServerWithoutNotifications(nitroNode *nitro.Node, trans transport.Res
 	return rs, nil
 }
 
-func NewRpcServer(nitroNode *nitro.Node, trans transport.Responder) (*RpcServer, error) {
+func NewRpcServer(nitroNode *nitro.Node, paymentManager paymentsmanager.PaymentsManager, trans transport.Responder) (*RpcServer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	rs := &RpcServer{
-		transport: trans,
-		node:      nitroNode,
-		cancel:    cancel,
-		wg:        &sync.WaitGroup{},
-		logger:    logging.LoggerWithAddress(slog.Default(), *nitroNode.Address),
+		paymentManager: paymentManager,
+		transport:      trans,
+		node:           nitroNode,
+		cancel:         cancel,
+		wg:             &sync.WaitGroup{},
+		logger:         logging.LoggerWithAddress(slog.Default(), *nitroNode.Address),
 	}
 
 	rs.wg.Add(1)
@@ -184,6 +187,12 @@ func (rs *RpcServer) registerHandlers() (err error) {
 					return []query.PaymentChannelInfo{}, err
 				}
 				return rs.node.GetPaymentChannelsByLedger(req.LedgerId)
+			})
+		case serde.ValidateVoucherRequestMethod:
+			return processRequest(rs, permRead, requestData, func(req serde.ValidateVoucherRequest) (serde.ValidateVoucherResponse, error) {
+				isPaymentReceived, isOfSufficientValue := rs.paymentManager.ValidateVoucher(req.VoucherHash, req.Signer, big.NewInt(int64(req.Value)))
+				response := serde.ValidateVoucherResponse{IsPaymentReceived: isPaymentReceived, IsOfSufficientValue: isOfSufficientValue}
+				return response, nil
 			})
 		default:
 			errRes := serde.NewJsonRpcErrorResponse(jsonrpcReq.Id, serde.MethodNotFoundError)

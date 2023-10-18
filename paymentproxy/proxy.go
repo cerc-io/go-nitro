@@ -63,7 +63,7 @@ type PaymentProxy struct {
 func NewPaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL string, costPerByte uint64, certFilePath, certKeyPath string, enablePaidRpcMethods bool) *PaymentProxy {
 	server := &http.Server{Addr: proxyAddress}
 
-	nitroClient, err := rpc.NewHttpRpcClient(nitroEndpoint)
+	nitroClient, err := rpc.NewHttpRpcClient(nitroEndpoint, true)
 	if err != nil {
 		panic(err)
 	}

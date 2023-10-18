@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,6 +17,7 @@ import (
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/node/engine/store"
+	"github.com/statechannels/go-nitro/paymentsmanager"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
@@ -198,14 +200,12 @@ func main() {
 		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:        TLS_CERT_FILEPATH,
 			Usage:       "Filepath to the TLS certificate. If not specified, TLS will not be used with the RPC transport.",
-			Value:       "./tls/statechannels.org.pem",
 			Category:    TLS_CATEGORY,
 			Destination: &tlsCertFilepath,
 		}),
 		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:        TLS_KEY_FILEPATH,
 			Usage:       "Filepath to the TLS private key. If not specified, TLS will not be used with the RPC transport.",
-			Value:       "./tls/statechannels.org_key.pem",
 			Category:    TLS_CATEGORY,
 			Destination: &tlsKeyFilepath,
 		}),
@@ -251,16 +251,33 @@ func main() {
 			if err != nil {
 				return err
 			}
-			var cert tls.Certificate
 
-			if tlsCertFilepath != "" && tlsKeyFilepath != "" {
-				cert, err = tls.LoadX509KeyPair(tlsCertFilepath, tlsKeyFilepath)
+			paymentsManager, err := paymentsmanager.NewPaymentsManager(node)
+			if err != nil {
+				return err
+			}
+
+			wg := new(sync.WaitGroup)
+			defer wg.Wait()
+
+			paymentsManager.Start(wg)
+			defer func() {
+				err := paymentsManager.Stop()
 				if err != nil {
 					panic(err)
 				}
+			}()
+
+			var cert *tls.Certificate
+			if tlsCertFilepath != "" && tlsKeyFilepath != "" {
+				loadedCert, err := tls.LoadX509KeyPair(tlsCertFilepath, tlsKeyFilepath)
+				if err != nil {
+					panic(err)
+				}
+				cert = &loadedCert
 			}
 
-			rpcServer, err := rpc.InitializeRpcServer(node, rpcPort, useNats, &cert)
+			rpcServer, err := rpc.InitializeRpcServer(node, paymentsManager, rpcPort, useNats, cert)
 			if err != nil {
 				return err
 			}

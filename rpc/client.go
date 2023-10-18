@@ -79,6 +79,8 @@ type RpcClientApi interface {
 
 	// PaymentChannelUpdatesChan returns a channel that receives payment channel updates for the given payment channel id
 	PaymentChannelUpdatesChan(paymentChannelId types.Destination) <-chan query.PaymentChannelInfo
+
+	ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value uint64) (serde.ValidateVoucherResponse, error)
 }
 
 // rpcClient is the implementation
@@ -138,8 +140,8 @@ func NewRpcClient(trans transport.Requester) (RpcClientApi, error) {
 }
 
 // NewHttpRpcClient creates a new rpcClient using an http transport
-func NewHttpRpcClient(rpcServerUrl string) (RpcClientApi, error) {
-	transport, err := http.NewHttpTransportAsClient(rpcServerUrl, 10*time.Millisecond)
+func NewHttpRpcClient(rpcServerUrl string, isSecure bool) (RpcClientApi, error) {
+	transport, err := http.NewHttpTransportAsClient(rpcServerUrl, isSecure, 10*time.Millisecond)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +165,12 @@ func (rc *rpcClient) CreateVoucher(chId types.Destination, amount uint64) (payme
 // It can be used to add a voucher that was sent outside of the go-nitro system.
 func (rc *rpcClient) ReceiveVoucher(v payments.Voucher) (payments.ReceiveVoucherSummary, error) {
 	return waitForAuthorizedRequest[payments.Voucher, payments.ReceiveVoucherSummary](rc, serde.ReceiveVoucherRequestMethod, v)
+}
+
+func (rc *rpcClient) ValidateVoucher(voucherHash common.Hash, signer common.Address, value uint64) (serde.ValidateVoucherResponse, error) {
+	req := serde.ValidateVoucherRequest{VoucherHash: voucherHash, Signer: signer, Value: value}
+
+	return waitForAuthorizedRequest[serde.ValidateVoucherRequest, serde.ValidateVoucherResponse](rc, serde.ValidateVoucherRequestMethod, req)
 }
 
 func (rc *rpcClient) GetPaymentChannel(chId types.Destination) (query.PaymentChannelInfo, error) {

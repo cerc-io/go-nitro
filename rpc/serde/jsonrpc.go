@@ -113,8 +113,8 @@ type (
 )
 
 type ValidateVoucherResponse struct {
-	IsPaymentReceived   bool
-	IsOfSufficientValue bool
+	IsValid bool
+	Reason  string
 }
 
 type ResponsePayload interface {

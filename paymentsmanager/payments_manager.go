@@ -1,6 +1,7 @@
 package paymentsmanager
 
 import (
+	"fmt"
 	"log/slog"
 	"math/big"
 	"sync"
@@ -24,6 +25,12 @@ const (
 
 	DEFAULT_VOUCHER_CHECK_INTERVAL = 2
 	DEFAULT_VOUCHER_CHECK_ATTEMPTS = 5
+)
+
+var (
+	ERR_PAYMENT              = "Payment error:"
+	ERR_PAYMENT_NOT_RECEIVED = fmt.Sprintf("%s payment not received", ERR_PAYMENT)
+	ERR_AMOUNT_INSUFFICIENT  = fmt.Sprintf("%s amount insufficient", ERR_PAYMENT)
 )
 
 type InFlightVoucher struct {
@@ -89,14 +96,17 @@ func (pm *PaymentsManager) Stop() error {
 	return nil
 }
 
-func (pm *PaymentsManager) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) (bool, bool) {
+func (pm *PaymentsManager) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) (bool, string) {
 	// Check the payments map for required voucher
 	var isPaymentReceived, isOfSufficientValue bool
 	for i := 0; i < DEFAULT_VOUCHER_CHECK_ATTEMPTS; i++ {
 		isPaymentReceived, isOfSufficientValue = pm.checkVoucherInCache(voucherHash, signerAddress, value)
 
 		if isPaymentReceived {
-			return true, isOfSufficientValue
+			if !isOfSufficientValue {
+				return false, ERR_AMOUNT_INSUFFICIENT
+			}
+			return true, ""
 		}
 
 		// Retry after an interval if voucher not found
@@ -104,7 +114,7 @@ func (pm *PaymentsManager) ValidateVoucher(voucherHash common.Hash, signerAddres
 		time.Sleep(DEFAULT_VOUCHER_CHECK_INTERVAL * time.Second)
 	}
 
-	return false, false
+	return false, ERR_PAYMENT_NOT_RECEIVED
 }
 
 // Check for a given payment voucher in LRU cache map

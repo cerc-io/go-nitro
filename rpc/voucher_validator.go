@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -20,12 +21,8 @@ func (r RemoteVoucherValidator) ValidateVoucher(voucherHash common.Hash, signerA
 		return err
 	}
 
-	if !res.IsPaymentReceived {
-		return paymentsmanager.ErrPaymentNotReceived
-	}
-
-	if !res.IsOfSufficientValue {
-		return paymentsmanager.ErrAmountInsufficient
+	if !res.IsValid {
+		return fmt.Errorf(res.Reason)
 	}
 
 	return nil

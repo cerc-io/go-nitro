@@ -27,14 +27,10 @@ type InProcessVoucherValidator struct {
 }
 
 func (v InProcessVoucherValidator) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) error {
-	isPaymentReceived, isOfSufficientValue := v.PaymentsManager.ValidateVoucher(voucherHash, signerAddress, value)
+	isValid, reason := v.PaymentsManager.ValidateVoucher(voucherHash, signerAddress, value)
 
-	if !isPaymentReceived {
-		return ErrPaymentNotReceived
-	}
-
-	if !isOfSufficientValue {
-		return ErrAmountInsufficient
+	if !isValid {
+		return fmt.Errorf(reason)
 	}
 
 	return nil

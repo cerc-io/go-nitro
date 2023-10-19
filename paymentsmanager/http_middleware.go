@@ -32,7 +32,7 @@ func HTTPMiddleware(next http.Handler, validator VoucherValidator, queryRates ma
 		// Validate voucher
 		r, err := extractAndValidateVoucher(r, validator, queryRates)
 		if err != nil {
-			if strings.Contains(err.Error(), ErrPayment) {
+			if isPaymentError(err) {
 				http.Error(w, err.Error(), http.StatusPaymentRequired)
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -123,4 +123,8 @@ func isRpcCall(r *http.Request) (bool, string) {
 	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	return true, ReqBody.Method
+}
+
+func isPaymentError(err error) bool {
+	return strings.HasPrefix(err.Error(), ERR_PAYMENT)
 }

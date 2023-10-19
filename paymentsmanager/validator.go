@@ -27,10 +27,10 @@ type InProcessVoucherValidator struct {
 }
 
 func (v InProcessVoucherValidator) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) error {
-	isValid, reason := v.PaymentsManager.ValidateVoucher(voucherHash, signerAddress, value)
+	success, errCode := v.PaymentsManager.ValidateVoucher(voucherHash, signerAddress, value)
 
-	if !isValid {
-		return fmt.Errorf(reason)
+	if !success {
+		return fmt.Errorf(errCode)
 	}
 
 	return nil

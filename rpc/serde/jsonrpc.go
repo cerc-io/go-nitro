@@ -113,8 +113,8 @@ type (
 )
 
 type ValidateVoucherResponse struct {
-	IsValid bool
-	Reason  string
+	Success   bool
+	ErrorCode string
 }
 
 type ResponsePayload interface {

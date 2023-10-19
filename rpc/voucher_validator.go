@@ -21,8 +21,8 @@ func (r RemoteVoucherValidator) ValidateVoucher(voucherHash common.Hash, signerA
 		return err
 	}
 
-	if !res.IsValid {
-		return fmt.Errorf(res.Reason)
+	if !res.Success {
+		return fmt.Errorf(res.ErrorCode)
 	}
 
 	return nil

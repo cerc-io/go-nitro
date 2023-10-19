@@ -1,7 +1,6 @@
 package paymentsmanager
 
 import (
-	"fmt"
 	"log/slog"
 	"math/big"
 	"sync"
@@ -28,9 +27,8 @@ const (
 )
 
 var (
-	ERR_PAYMENT              = "Payment error:"
-	ERR_PAYMENT_NOT_RECEIVED = fmt.Sprintf("%s payment not received", ERR_PAYMENT)
-	ERR_AMOUNT_INSUFFICIENT  = fmt.Sprintf("%s amount insufficient", ERR_PAYMENT)
+	ERR_PAYMENT_NOT_RECEIVED        = "ERR_PAYMENT_NOT_RECEIVED"
+	ERR_PAYMENT_AMOUNT_INSUFFICIENT = "ERR_PAYMENT_AMOUNT_INSUFFICIENT"
 )
 
 type InFlightVoucher struct {
@@ -104,7 +102,7 @@ func (pm *PaymentsManager) ValidateVoucher(voucherHash common.Hash, signerAddres
 
 		if isPaymentReceived {
 			if !isOfSufficientValue {
-				return false, ERR_AMOUNT_INSUFFICIENT
+				return false, ERR_PAYMENT_AMOUNT_INSUFFICIENT
 			}
 			return true, ""
 		}

@@ -190,8 +190,8 @@ func (rs *RpcServer) registerHandlers() (err error) {
 			})
 		case serde.ValidateVoucherRequestMethod:
 			return processRequest(rs, permRead, requestData, func(req serde.ValidateVoucherRequest) (serde.ValidateVoucherResponse, error) {
-				isValid, reason := rs.paymentManager.ValidateVoucher(req.VoucherHash, req.Signer, big.NewInt(int64(req.Value)))
-				response := serde.ValidateVoucherResponse{IsValid: isValid, Reason: reason}
+				success, errCode := rs.paymentManager.ValidateVoucher(req.VoucherHash, req.Signer, big.NewInt(int64(req.Value)))
+				response := serde.ValidateVoucherResponse{Success: success, ErrorCode: errCode}
 				return response, nil
 			})
 		default:

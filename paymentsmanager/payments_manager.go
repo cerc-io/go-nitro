@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/statechannels/go-nitro/node"
+	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/types"
 )
@@ -23,6 +24,11 @@ const (
 
 	DEFAULT_VOUCHER_CHECK_INTERVAL = 2
 	DEFAULT_VOUCHER_CHECK_ATTEMPTS = 5
+)
+
+var (
+	ERR_PAYMENT_NOT_RECEIVED        = "ERR_PAYMENT_NOT_RECEIVED"
+	ERR_PAYMENT_AMOUNT_INSUFFICIENT = "ERR_PAYMENT_AMOUNT_INSUFFICIENT"
 )
 
 type InFlightVoucher struct {
@@ -88,14 +94,17 @@ func (pm *PaymentsManager) Stop() error {
 	return nil
 }
 
-func (pm *PaymentsManager) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) (bool, bool) {
+func (pm *PaymentsManager) ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value *big.Int) (bool, string) {
 	// Check the payments map for required voucher
 	var isPaymentReceived, isOfSufficientValue bool
 	for i := 0; i < DEFAULT_VOUCHER_CHECK_ATTEMPTS; i++ {
 		isPaymentReceived, isOfSufficientValue = pm.checkVoucherInCache(voucherHash, signerAddress, value)
 
 		if isPaymentReceived {
-			return true, isOfSufficientValue
+			if !isOfSufficientValue {
+				return false, ERR_PAYMENT_AMOUNT_INSUFFICIENT
+			}
+			return true, ""
 		}
 
 		// Retry after an interval if voucher not found
@@ -103,7 +112,7 @@ func (pm *PaymentsManager) ValidateVoucher(voucherHash common.Hash, signerAddres
 		time.Sleep(DEFAULT_VOUCHER_CHECK_INTERVAL * time.Second)
 	}
 
-	return false, false
+	return false, ERR_PAYMENT_NOT_RECEIVED
 }
 
 // Check for a given payment voucher in LRU cache map
@@ -183,6 +192,25 @@ func (pm *PaymentsManager) getChannelCounterparty(channelId types.Destination) (
 }
 
 func (pm *PaymentsManager) loadPaymentChannels() error {
-	// TODO: Implement
+	ledgerChannels, err := pm.nitro.GetAllLedgerChannels()
+	if err != nil {
+		return err
+	}
+
+	for _, ledgerChannel := range ledgerChannels {
+		if ledgerChannel.Status == query.Open {
+			paymentChannels, err := pm.nitro.GetPaymentChannelsByLedger(ledgerChannel.ID)
+			if err != nil {
+				return err
+			}
+
+			for _, paymentChannel := range paymentChannels {
+				if paymentChannel.Status == query.Open {
+					pm.paidSoFarOnChannel.Add(paymentChannel.ID.String(), (*big.Int)(paymentChannel.Balance.PaidSoFar))
+				}
+			}
+		}
+	}
+
 	return nil
 }

@@ -7,12 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var (
-	ErrPayment            = "Payment error:"
-	ErrPaymentNotReceived = fmt.Errorf("%s payment not received", ErrPayment)
-	ErrAmountInsufficient = fmt.Errorf("%s amount insufficient", ErrPayment)
-)
-
 // Voucher validator interface to be satisfied by implementations
 // using in / out of process Nitro nodes
 type VoucherValidator interface {

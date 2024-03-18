@@ -112,8 +112,8 @@ type VoucherSchemaType = JTDDataType<typeof voucherSchema>;
 
 const receiveVoucherSchema = {
   properties: {
-    Total: { type: "uint32" },
-    Delta: { type: "uint32" },
+    Total: { type: "string" },
+    Delta: { type: "string" },
   },
 } as const;
 
@@ -258,7 +258,6 @@ function getJsonRpcResult(response: unknown): JsonRpcSchemaType {
   if (validate(response)) {
     return response as JsonRpcSchemaType;
   }
-  console.log(response);
   throw new Error(
     `Invalid json rpc response: ${JSON.stringify(
       validate.errors

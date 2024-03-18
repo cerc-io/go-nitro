@@ -85,11 +85,11 @@ export function generateRequest<
 }
 
 export function getLocalRPCUrl(port: number): string {
-  return getCustomRPCUrl("127.0.0.1", port);
+  return `127.0.0.1:${port}/${RPC_PATH}`;
 }
 
-export function getCustomRPCUrl(server: string, port: number): string {
-  return `${server}:${port}/${RPC_PATH}`;
+export function getCustomRPCUrl(host: string, port: number): string {
+  return `${host}:${port}/${RPC_PATH}`;
 }
 
 export async function logOutChannelUpdates(rpcClient: NitroRpcClient) {

@@ -16,15 +16,19 @@ import { Transport } from ".";
 
 export class HttpTransport {
   Notifications: EventEmitter<NotificationMethod, NotificationParams>;
+  isSecure: boolean;
 
   public static async createTransport(
     server: string,
-    isSecure = true
+    isSecure: boolean
   ): Promise<Transport> {
+    let wsPrefix = "ws://";
+    if (isSecure) {
+      wsPrefix = "wss://";
+    }
+
     // eslint-disable-next-line new-cap
-    const ws = new w3cwebsocket(
-      `${isSecure ? "wss" : "ws"}://${server}/subscribe`
-    );
+    const ws = new w3cwebsocket(`${wsPrefix}${server}/subscribe`);
 
     // throw any websocket errors so we don't fail silently
     ws.onerror = (e) => {
@@ -42,9 +46,12 @@ export class HttpTransport {
   public async sendRequest<K extends RequestMethod>(
     req: RPCRequestAndResponses[K][0]
   ): Promise<unknown> {
-    const url = new URL(
-      `${this.isSecure ? "https" : "http"}://${this.server}`
-    ).toString();
+    let httpPrefix = "http://";
+    if (this.isSecure) {
+      httpPrefix = "https://";
+    }
+
+    const url = new URL(`${httpPrefix}${this.server}`).toString();
 
     const result = await axios.post(url.toString(), JSON.stringify(req));
 
@@ -58,9 +65,8 @@ export class HttpTransport {
   private ws: w3cwebsocket;
 
   private server: string;
-  private isSecure: boolean;
 
-  private constructor(ws: w3cwebsocket, server: string, isSecure = true) {
+  private constructor(ws: w3cwebsocket, server: string, isSecure: boolean) {
     this.ws = ws;
     this.server = server;
     this.isSecure = isSecure;

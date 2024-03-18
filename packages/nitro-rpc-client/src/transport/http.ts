@@ -19,10 +19,10 @@ export class HttpTransport {
 
   public static async createTransport(
     server: string,
-    tls = true
+    isSecure = true
   ): Promise<Transport> {
     // eslint-disable-next-line new-cap
-    const ws = new w3cwebsocket(`${tls ? "wss" : "ws"}://${server}/subscribe`);
+    const ws = new w3cwebsocket(`${isSecure ? "wss" : "ws"}://${server}/subscribe`);
 
     // throw any websocket errors so we don't fail silently
     ws.onerror = (e) => {
@@ -33,7 +33,7 @@ export class HttpTransport {
     // Wait for onopen to fire so we know the connection is ready
     await new Promise<void>((resolve) => (ws.onopen = () => resolve()));
 
-    const transport = new HttpTransport(ws, server, tls);
+    const transport = new HttpTransport(ws, server, isSecure);
     return transport;
   }
 
@@ -41,7 +41,7 @@ export class HttpTransport {
     req: RPCRequestAndResponses[K][0]
   ): Promise<unknown> {
     const url = new URL(
-      `${this.tls ? "https" : "http"}://${this.server}`
+      `${this.isSecure ? "https" : "http"}://${this.server}`
     ).toString();
 
     const result = await axios.post(url.toString(), JSON.stringify(req));
@@ -56,12 +56,12 @@ export class HttpTransport {
   private ws: w3cwebsocket;
 
   private server: string;
-  private tls: boolean;
+  private isSecure: boolean;
 
-  private constructor(ws: w3cwebsocket, server: string, tls = true) {
+  private constructor(ws: w3cwebsocket, server: string, isSecure = true) {
     this.ws = ws;
     this.server = server;
-    this.tls = tls;
+    this.isSecure = isSecure;
 
     this.Notifications = new EventEmitter();
     this.ws.onmessage = (event) => {

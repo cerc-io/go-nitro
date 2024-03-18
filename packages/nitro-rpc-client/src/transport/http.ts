@@ -17,9 +17,12 @@ import { Transport } from ".";
 export class HttpTransport {
   Notifications: EventEmitter<NotificationMethod, NotificationParams>;
 
-  public static async createTransport(server: string): Promise<Transport> {
+  public static async createTransport(
+    server: string,
+    tls = true
+  ): Promise<Transport> {
     // eslint-disable-next-line new-cap
-    const ws = new w3cwebsocket(`wss://${server}/subscribe`);
+    const ws = new w3cwebsocket(`${tls ? "wss" : "ws"}://${server}/subscribe`);
 
     // throw any websocket errors so we don't fail silently
     ws.onerror = (e) => {
@@ -30,14 +33,16 @@ export class HttpTransport {
     // Wait for onopen to fire so we know the connection is ready
     await new Promise<void>((resolve) => (ws.onopen = () => resolve()));
 
-    const transport = new HttpTransport(ws, server);
+    const transport = new HttpTransport(ws, server, tls);
     return transport;
   }
 
   public async sendRequest<K extends RequestMethod>(
     req: RPCRequestAndResponses[K][0]
   ): Promise<unknown> {
-    const url = new URL(`https://${this.server}`).toString();
+    const url = new URL(
+      `${this.tls ? "https" : "http"}://${this.server}`
+    ).toString();
 
     const result = await axios.post(url.toString(), JSON.stringify(req));
 
@@ -51,10 +56,12 @@ export class HttpTransport {
   private ws: w3cwebsocket;
 
   private server: string;
+  private tls: boolean;
 
-  private constructor(ws: w3cwebsocket, server: string) {
+  private constructor(ws: w3cwebsocket, server: string, tls = true) {
     this.ws = ws;
     this.server = server;
+    this.tls = tls;
 
     this.Notifications = new EventEmitter();
     this.ws.onmessage = (event) => {

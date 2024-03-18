@@ -1,12 +1,17 @@
 #!/usr/bin/env ts-node
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable @typescript-eslint/no-shadow */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 
 import { NitroRpcClient } from "./rpc-client";
-import { compactJson, getLocalRPCUrl, logOutChannelUpdates } from "./utils";
+import { compactJson, getCustomRPCUrl, logOutChannelUpdates } from "./utils";
+
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
 
 yargs(hideBin(process.argv))
   .scriptName("nitro-rpc-client")
@@ -18,6 +23,18 @@ yargs(hideBin(process.argv))
       type: "boolean",
       description: "Whether channel notifications are printed to the console",
     },
+    h: {
+      alias: "host",
+      default: "127.0.0.1",
+      type: "string",
+      description: "Custom hostname",
+    },
+    s: {
+      alias: "isSecure",
+      default: true,
+      type: "boolean",
+      description: "Is it a secured connection",
+    },
   })
   .command(
     "version",
@@ -25,9 +42,12 @@ yargs(hideBin(process.argv))
     async () => {},
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
       const version = await rpcClient.GetVersion();
       console.log(version);
@@ -41,9 +61,12 @@ yargs(hideBin(process.argv))
     async () => {},
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
       const address = await rpcClient.GetAddress();
       console.log(address);
@@ -57,9 +80,12 @@ yargs(hideBin(process.argv))
     async () => {},
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
       const ledgers = await rpcClient.GetAllLedgerChannels();
       for (const ledger of ledgers) {
@@ -82,9 +108,12 @@ yargs(hideBin(process.argv))
 
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
       const paymentChans = await rpcClient.GetPaymentChannelsByLedger(
         yargs.ledgerId
@@ -115,9 +144,12 @@ yargs(hideBin(process.argv))
     },
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
@@ -146,9 +178,12 @@ yargs(hideBin(process.argv))
     },
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
@@ -179,9 +214,12 @@ yargs(hideBin(process.argv))
     },
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
@@ -220,9 +258,12 @@ yargs(hideBin(process.argv))
     },
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
 
       if (yargs.n) logOutChannelUpdates(rpcClient);
@@ -248,13 +289,16 @@ yargs(hideBin(process.argv))
     },
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
 
       const ledgerInfo = await rpcClient.GetLedgerChannel(yargs.channelId);
-      console.log(ledgerInfo);
+      console.log(compactJson(ledgerInfo));
       await rpcClient.Close();
       process.exit(0);
     }
@@ -271,14 +315,17 @@ yargs(hideBin(process.argv))
     },
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
       const paymentChannelInfo = await rpcClient.GetPaymentChannel(
         yargs.channelId
       );
-      console.log(paymentChannelInfo);
+      console.log(compactJson(paymentChannelInfo));
       await rpcClient.Close();
       process.exit(0);
     }
@@ -301,9 +348,12 @@ yargs(hideBin(process.argv))
     },
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
@@ -311,7 +361,7 @@ yargs(hideBin(process.argv))
         yargs.channelId,
         yargs.amount
       );
-      console.log(paymentChannelInfo);
+      console.log(compactJson(paymentChannelInfo));
       await rpcClient.Close();
       process.exit(0);
     }
@@ -334,9 +384,12 @@ yargs(hideBin(process.argv))
     },
     async (yargs) => {
       const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getLocalRPCUrl(rpcPort)
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
@@ -344,7 +397,35 @@ yargs(hideBin(process.argv))
         yargs.channelId,
         yargs.amount
       );
-      console.log(voucher);
+      console.log(compactJson(voucher));
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
+    "receive-voucher <voucher>",
+    "Receive a payment voucher",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("voucher", {
+        describe: "voucher JSON",
+        type: "string",
+        demandOption: true,
+      });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+      if (yargs.n) logOutChannelUpdates(rpcClient);
+
+      const voucher = JSON.parse(yargs.voucher);
+      const result = await rpcClient.ReceiveVoucher(voucher);
+      console.log(compactJson(result));
       await rpcClient.Close();
       process.exit(0);
     }

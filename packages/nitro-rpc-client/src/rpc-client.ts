@@ -240,13 +240,14 @@ export class NitroRpcClient implements RpcClientApi {
   /**
    * Creates an RPC client that uses HTTP/WS as the transport.
    *
-   * @param url - The URL of the HTTP/WS server
+   * @param server - The server[:port] of the HTTP/WS server
    * @returns A NitroRpcClient that uses WS as the transport
    */
   public static async CreateHttpNitroClient(
-    url: string
+    server: string,
+    tls = true
   ): Promise<NitroRpcClient> {
-    const transport = await HttpTransport.createTransport(url);
+    const transport = await HttpTransport.createTransport(server, tls);
     const rpcClient = new NitroRpcClient(transport);
     rpcClient.authToken = await rpcClient.getAuthToken();
     return rpcClient;

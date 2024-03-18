@@ -22,7 +22,9 @@ export class HttpTransport {
     isSecure = true
   ): Promise<Transport> {
     // eslint-disable-next-line new-cap
-    const ws = new w3cwebsocket(`${isSecure ? "wss" : "ws"}://${server}/subscribe`);
+    const ws = new w3cwebsocket(
+      `${isSecure ? "wss" : "ws"}://${server}/subscribe`
+    );
 
     // throw any websocket errors so we don't fail silently
     ws.onerror = (e) => {

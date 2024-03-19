@@ -85,7 +85,7 @@ export function generateRequest<
 }
 
 export function getLocalRPCUrl(port: number): string {
-  return `127.0.0.1:${port}/${RPC_PATH}`;
+  return getCustomRPCUrl("127.0.0.1", port);
 }
 
 export function getCustomRPCUrl(host: string, port: number): string {

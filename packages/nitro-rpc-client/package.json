@@ -5,6 +5,7 @@
   "repository": "https://github.com/statechannels/nitro-rpc-client.git",
   "license": "MIT",
   "author": "Alex Gap",
+  "type": "module",
   "main": "dist/src/index.js",
   "bin": "bin/nitro-rpc-client.js",
   "scripts": {
@@ -52,6 +53,5 @@
   },
   "engines": {
     "node": ">=18.5.0"
-  },
-  "type": "module"
+  }
 }

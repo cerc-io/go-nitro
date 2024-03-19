@@ -71,7 +71,6 @@ export class HttpTransport {
 
     this.Notifications = new EventEmitter();
     this.ws.onmessage = (event) => {
-      console.log(event.data.toString());
       const data = JSON.parse(event.data.toString());
       const validatedResult = getAndValidateNotification(
         data.params.payload,

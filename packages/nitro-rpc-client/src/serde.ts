@@ -258,7 +258,6 @@ function getJsonRpcResult(response: unknown): JsonRpcSchemaType {
   if (validate(response)) {
     return response as JsonRpcSchemaType;
   }
-  console.log(response);
   throw new Error(
     `Invalid json rpc response: ${JSON.stringify(
       validate.errors

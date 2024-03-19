@@ -6,8 +6,8 @@
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 
-import { NitroRpcClient } from "./rpc-client";
-import { compactJson, getCustomRPCUrl, logOutChannelUpdates } from "./utils";
+import { NitroRpcClient } from "./rpc-client.js";
+import { compactJson, getCustomRPCUrl, logOutChannelUpdates } from "./utils.js";
 
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();

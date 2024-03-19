@@ -1,7 +1,7 @@
 import https from "https";
 
 import axios from "axios";
-import { w3cwebsocket } from "websocket";
+import websocket from "websocket";
 import { EventEmitter } from "eventemitter3";
 
 import {
@@ -9,8 +9,8 @@ import {
   NotificationParams,
   RequestMethod,
   RPCRequestAndResponses,
-} from "../types";
-import { getAndValidateNotification } from "../serde";
+} from "../types.js";
+import { getAndValidateNotification } from "../serde.js";
 
 import { Transport } from ".";
 
@@ -22,7 +22,7 @@ export class HttpTransport {
     isSecure = true
   ): Promise<Transport> {
     // eslint-disable-next-line new-cap
-    const ws = new w3cwebsocket(
+    const ws = new websocket.w3cwebsocket(
       `${isSecure ? "wss" : "ws"}://${server}/subscribe`
     );
 
@@ -55,18 +55,23 @@ export class HttpTransport {
     this.ws.close(1000);
   }
 
-  private ws: w3cwebsocket;
+  private ws: websocket.w3cwebsocket;
 
   private server: string;
   private isSecure: boolean;
 
-  private constructor(ws: w3cwebsocket, server: string, isSecure = true) {
+  private constructor(
+    ws: websocket.w3cwebsocket,
+    server: string,
+    isSecure = true
+  ) {
     this.ws = ws;
     this.server = server;
     this.isSecure = isSecure;
 
     this.Notifications = new EventEmitter();
     this.ws.onmessage = (event) => {
+      console.log(event.data.toString());
       const data = JSON.parse(event.data.toString());
       const validatedResult = getAndValidateNotification(
         data.params.payload,

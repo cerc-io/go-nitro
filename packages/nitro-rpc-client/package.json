@@ -6,7 +6,7 @@
   "license": "MIT",
   "author": "Alex Gap",
   "main": "dist/src/index.js",
-  "bin": "bin/nitro-rpc-client",
+  "bin": "bin/nitro-rpc-client.js",
   "scripts": {
     "build": "tsc -b .",
     "lint": "yarn lint:eslint && yarn lint:misc --check",
@@ -38,7 +38,7 @@
     "@typescript-eslint/parser": "^5.59.0",
     "eslint": "^7.17.0",
     "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-jest": "^26.8.2",
     "eslint-plugin-jsdoc": "^39.2.9",
     "eslint-plugin-node": "^11.1.0",
@@ -53,5 +53,6 @@
   },
   "engines": {
     "node": ">=18.5.0"
-  }
+  },
+  "type": "module"
 }

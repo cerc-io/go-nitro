@@ -1,4 +1,4 @@
-import Ajv, { JTDDataType } from "ajv/dist/jtd";
+import Ajv, { JTDDataType } from "ajv/dist/jtd.js";
 
 import {
   ChannelStatus,
@@ -7,7 +7,7 @@ import {
   RPCNotification,
   RPCRequestAndResponses,
   RequestMethod,
-} from "./types";
+} from "./types.js";
 
 const ajv = new Ajv();
 

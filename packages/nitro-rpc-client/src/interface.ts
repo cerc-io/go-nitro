@@ -6,7 +6,7 @@ import {
   PaymentPayload,
   ReceiveVoucherResult,
   Voucher,
-} from "./types";
+} from "./types.js";
 
 interface ledgerChannelApi {
   /**

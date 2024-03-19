@@ -1,11 +1,11 @@
-import { NitroRpcClient } from "./rpc-client";
+import { NitroRpcClient } from "./rpc-client.js";
 import {
   LedgerChannelInfo,
   Outcome,
   PaymentChannelInfo,
   RequestMethod,
   RPCRequestAndResponses,
-} from "./types";
+} from "./types.js";
 
 export const RPC_PATH = "api/v1";
 

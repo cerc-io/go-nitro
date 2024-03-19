@@ -6,11 +6,11 @@ import {
   RequestMethod,
   RPCNotification,
   RPCRequestAndResponses,
-} from "../types";
+} from "../types.js";
 
-export { HttpTransport } from "./http";
+export { HttpTransport } from "./http.js";
 
-export { NatsTransport } from "./nats";
+export { NatsTransport } from "./nats.js";
 
 /**
  * NotificationHandler is a function that takes a notification and does something with it.

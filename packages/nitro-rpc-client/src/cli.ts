@@ -88,9 +88,7 @@ yargs(hideBin(process.argv))
         isSecure
       );
       const ledgers = await rpcClient.GetAllLedgerChannels();
-      for (const ledger of ledgers) {
-        console.log(`${compactJson(ledger)}`);
-      }
+      console.log(`${compactJson(ledgers)}`);
       await rpcClient.Close();
       process.exit(0);
     }
@@ -118,9 +116,7 @@ yargs(hideBin(process.argv))
       const paymentChans = await rpcClient.GetPaymentChannelsByLedger(
         yargs.ledgerId
       );
-      for (const p of paymentChans) {
-        console.log(`${compactJson(p)}`);
-      }
+      console.log(`${compactJson(paymentChans)}`);
       await rpcClient.Close();
       process.exit(0);
     }

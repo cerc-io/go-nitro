@@ -1,8 +1,8 @@
+import cors from '@fastify/cors';
 import {NitroRpcClient} from '@statechannels/nitro-rpc-client';
 import {Voucher} from '@statechannels/nitro-rpc-client/src/types.js';
 import crypto from 'crypto';
 import Fastify from 'fastify';
-import cors from '@fastify/cors'
 
 import {Config} from './config.js';
 import {Logger} from './log/index.js';
@@ -85,9 +85,9 @@ fastify.get('/auth/:token', async (req: any, res: any) => {
   const token = tokenByValue.get(req.params.token);
   if (token && token.checkedSub(1n)) {
     return token;
-  } else {
-    res.code(401);
-  }
+  } 
+  res.code(401);
+  
 });
 
 fastify.get('/pay/address', async (req: any, res: any) => {

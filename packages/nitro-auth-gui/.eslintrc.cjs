@@ -1,17 +1,50 @@
 /* global module */
 module.exports = {
-  env: {
-    browser: true,
-    es2020: true,
-  },
-  ignorePatterns: ["!.storybook"],
-  extends: ["plugin:react-hooks/recommended", "plugin:storybook/recommended"],
-  parserOptions: {
-    ecmaVersion: "latest",
-    sourceType: "module",
-  },
-  plugins: ["react-refresh"],
+  root: true,
+  ignorePatterns: [
+    "!.prettierrc.js",
+    "**/!.eslintrc.js",
+    "**/dist*/",
+    "**/*__GENERATED__*",
+    "**/build",
+    "**/public",
+    "**/.cache",
+    "**/styles",
+  ],
+  parser: "@typescript-eslint/parser",
+  plugins: [
+    "@typescript-eslint",
+    "prettier",
+    // We enforce certain rules on how imports are handled
+    "import",
+  ],
+  extends: [
+    "eslint:recommended",
+    "plugin:prettier/recommended",
+    "plugin:import/errors",
+    "plugin:import/warnings",
+    "plugin:import/typescript",
+    "plugin:@typescript-eslint/recommended",
+  ],
   rules: {
-    "react-refresh/only-export-components": "warn",
+    "no-self-compare": "error",
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+    ],
+    "import/order": [
+      1,
+      {
+        groups: [
+          "builtin",
+          "external",
+          "internal",
+          "parent",
+          "sibling",
+          "index",
+        ],
+        "newlines-between": "always",
+      },
+    ],
   },
 };

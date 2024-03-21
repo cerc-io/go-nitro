@@ -1,0 +1,46 @@
+{
+  "name": "eth-api-gateway",
+  "version": "0.1.0",
+  "description": "eth API gateway/proxy",
+  "bin": "dist/server.js",
+  "main": "./src/index.js",
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "agentkeepalive": "^4.5.0",
+    "debug": "^4.3.4",
+    "express-async-handler": "^1.2.0",
+    "fastify": "^4.26.0",
+    "fetch-h2": "^3.0.2",
+    "json-stable-stringify": "^1.0.2",
+    "lru-cache": "^10.0.1",
+    "node-fetch": "2",
+    "prom-client": "^14.2.0",
+    "redis": "^4.6.8",
+    "web3": "^1.8.2"
+  },
+  "devDependencies": {
+    "@statechannels/nitro-rpc-client": "workspace:*",
+    "@types/debug": "^4.1.7",
+    "@types/express": "^4.17.17",
+    "@types/json-stable-stringify": "^1.0.34",
+    "@types/node": "^18.7.6",
+    "@types/node-fetch": "2",
+    "@types/request": "^2.48.8",
+    "@typescript-eslint/eslint-plugin": "^5.33.1",
+    "@typescript-eslint/parser": "^5.33.1",
+    "eslint": "^8.22.0",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2"
+  },
+  "scripts": {
+    "start": "NODE_ENV=production node dist/server.js",
+    "dev": "DEBUG='cerc:nitro:*' ts-node --esm src/server.ts",
+    "clean": "rm -rf dist",
+    "build": "tsc --skipLibCheck",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix"
+  },
+  "author": "cerc.io",
+  "type": "module"
+}

@@ -46,7 +46,10 @@ function App() {
 
   useEffect(() => {
     getRpcHost().then((rpcHost) => {
-      NitroRpcClient.CreateHttpNitroClient(rpcHost + "/api/v1").then((c) => {
+      NitroRpcClient.CreateHttpNitroClient(
+        rpcHost + "/api/v1",
+        window.location.protocol == "https"
+      ).then((c) => {
         setNitroClient(c);
         fetchAndSetLedgerChannels(c, setLedgerChannels);
         c.Notifications.on("objective_completed", () =>

@@ -264,9 +264,9 @@ export class NitroRpcClient implements RpcClientApi {
    */
   public static async CreateHttpNitroClient(
     server: string,
-    tls = true
+    isSecure = true
   ): Promise<NitroRpcClient> {
-    const transport = await HttpTransport.createTransport(server, tls);
+    const transport = await HttpTransport.createTransport(server, isSecure);
     const rpcClient = new NitroRpcClient(transport);
     rpcClient.authToken = await rpcClient.getAuthToken();
     return rpcClient;

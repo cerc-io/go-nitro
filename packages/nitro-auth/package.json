@@ -37,7 +37,7 @@
     "start": "NODE_ENV=production node dist/server.js",
     "dev": "DEBUG='cerc:nitro:*' ts-node --esm src/server.ts",
     "clean": "rm -rf dist",
-    "build": "tsc --skipLibCheck",
+    "build": "yarn clean && tsc --skipLibCheck",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix"
   },

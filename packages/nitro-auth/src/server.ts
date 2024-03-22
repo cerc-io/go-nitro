@@ -83,11 +83,16 @@ const tokenByValue = new Map<string, AuthToken>();
 
 fastify.get('/auth/:token', async (req: any, res: any) => {
   const token = tokenByValue.get(req.params.token);
-  if (token && token.checkedSub(1n)) {
-    return token;
-  } 
+  if (token) {
+    if (token.checkedSub(1n)) {
+      return token;
+    } else {
+      res.code(402);
+      return '402 Payment Required';
+    }
+  }
   res.code(401);
-  
+  return '401 Unauthorized';
 });
 
 fastify.get('/pay/address', async (req: any, res: any) => {

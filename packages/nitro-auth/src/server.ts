@@ -86,10 +86,10 @@ fastify.get('/auth/:token', async (req: any, res: any) => {
   if (token) {
     if (token.checkedSub(1n)) {
       return token;
-    } else {
-      res.code(402);
-      return '402 Payment Required';
-    }
+    } 
+    res.code(402);
+    return '402 Payment Required';
+    
   }
   res.code(401);
   return '401 Unauthorized';

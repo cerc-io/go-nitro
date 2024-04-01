@@ -30,6 +30,10 @@ type ChainOpts struct {
 	NaAddress       common.Address
 	VpaAddress      common.Address
 	CaAddress       common.Address
+	GasPrice        *big.Int
+	GasFeeCap       *big.Int
+	GasTipCap       *big.Int
+	GasLimit        uint64
 }
 
 var (
@@ -117,6 +121,10 @@ func NewEthChainService(chainOpts ChainOpts) (ChainService, error) {
 	if err != nil {
 		panic(err)
 	}
+	txSigner.GasLimit = chainOpts.GasLimit
+	txSigner.GasPrice = chainOpts.GasPrice
+	txSigner.GasFeeCap = chainOpts.GasFeeCap
+	txSigner.GasTipCap = chainOpts.GasTipCap
 
 	na, err := NitroAdjudicator.NewNitroAdjudicator(chainOpts.NaAddress, ethClient)
 	if err != nil {
@@ -228,10 +236,10 @@ func (ecs *EthChainService) defaultTxOpts() *bind.TransactOpts {
 		From:      ecs.txSigner.From,
 		Nonce:     ecs.txSigner.Nonce,
 		Signer:    ecs.txSigner.Signer,
+		GasPrice:  ecs.txSigner.GasPrice,
 		GasFeeCap: ecs.txSigner.GasFeeCap,
 		GasTipCap: ecs.txSigner.GasTipCap,
 		GasLimit:  ecs.txSigner.GasLimit,
-		GasPrice:  ecs.txSigner.GasPrice,
 	}
 }
 
@@ -241,6 +249,9 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 	case protocols.DepositTransaction:
 		for tokenAddress, amount := range tx.Deposit {
 			txOpts := ecs.defaultTxOpts()
+			ecs.logger.Info("tx opts", "from", txOpts.From, "nonce", txOpts.Nonce,
+				"gasFeeCap", txOpts.GasFeeCap, "gasTipCap", txOpts.GasTipCap,
+				"gasLimit", txOpts.GasLimit, "gasPrice", txOpts.GasPrice)
 			ethTokenAddress := common.Address{}
 			if tokenAddress == ethTokenAddress {
 				txOpts.Value = amount
@@ -256,7 +267,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				// TODO: wait for the Approve tx to be mined before continuing
 			}
 			holdings, err := ecs.na.Holdings(&bind.CallOpts{}, tokenAddress, tx.ChannelId())
-			ecs.logger.Debug("existing holdings", "holdings", holdings)
+			ecs.logger.Info("existing holdings", "holdings", holdings)
 
 			if err != nil {
 				return err

@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"log"
 	"log/slog"
+	"math/big"
 	"os"
 	"os/signal"
 	"strings"
@@ -31,6 +32,10 @@ func main() {
 		USE_NATS              = "usenats"
 		CHAIN_URL             = "chainurl"
 		CHAIN_START_BLOCK     = "chainstartblock"
+		GAS_PRICE             = "gasprice"
+		GAS_FEE_CAP           = "gasfeecap"
+		GAS_TIP_CAP           = "gastipcap"
+		GAS_LIMIT             = "gaslimit"
 		CHAIN_AUTH_TOKEN      = "chainauthtoken"
 		NA_ADDRESS            = "naaddress"
 		VPA_ADDRESS           = "vpaaddress"
@@ -59,7 +64,7 @@ func main() {
 	)
 	var pkString, chainUrl, chainAuthToken, naAddress, vpaAddress, caAddress, chainPk, durableStoreFolder, bootPeers, publicIp string
 	var msgPort, wsMsgPort, rpcPort, guiPort int
-	var chainStartBlock uint64
+	var chainStartBlock, gasPrice, gasFeeCap, gasTipCap, gasLimit uint64
 	var useNats, useDurableStore bool
 
 	var tlsCertFilepath, tlsKeyFilepath string
@@ -128,6 +133,38 @@ func main() {
 			Category:    CONNECTIVITY_CATEGORY,
 			Destination: &chainStartBlock,
 			EnvVars:     []string{"CHAIN_START_BLOCK"},
+		}),
+		altsrc.NewUint64Flag(&cli.Uint64Flag{
+			Name:        GAS_PRICE,
+			Usage:       "Gas price",
+			Value:       0,
+			Category:    CONNECTIVITY_CATEGORY,
+			Destination: &gasPrice,
+			EnvVars:     []string{"GAS_PRICE"},
+		}),
+		altsrc.NewUint64Flag(&cli.Uint64Flag{
+			Name:        GAS_LIMIT,
+			Usage:       "Gas limit",
+			Value:       0,
+			Category:    CONNECTIVITY_CATEGORY,
+			Destination: &gasLimit,
+			EnvVars:     []string{"GAS_LIMIT"},
+		}),
+		altsrc.NewUint64Flag(&cli.Uint64Flag{
+			Name:        GAS_FEE_CAP,
+			Usage:       "Gas fee cap",
+			Value:       0,
+			Category:    CONNECTIVITY_CATEGORY,
+			Destination: &gasFeeCap,
+			EnvVars:     []string{"GAS_FEE_CAP"},
+		}),
+		altsrc.NewUint64Flag(&cli.Uint64Flag{
+			Name:        GAS_TIP_CAP,
+			Usage:       "Gas tip cap",
+			Value:       0,
+			Category:    CONNECTIVITY_CATEGORY,
+			Destination: &gasTipCap,
+			EnvVars:     []string{"GAS_TIP_CAP"},
 		}),
 		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:        NA_ADDRESS,
@@ -216,6 +253,17 @@ func main() {
 		Flags:  flags,
 		Before: altsrc.InitInputSourceWithContext(flags, altsrc.NewTomlSourceFromFlagFunc(CONFIG)),
 		Action: func(cCtx *cli.Context) error {
+			var nGasPrice, nGasFeeCap, nGasTipCap *big.Int = nil, nil, nil
+			if gasPrice > 0 {
+				nGasPrice = new(big.Int).SetUint64(gasPrice)
+			}
+			if gasFeeCap > 0 {
+				nGasFeeCap = new(big.Int).SetUint64(gasFeeCap)
+			}
+			if gasTipCap > 0 {
+				nGasTipCap = new(big.Int).SetUint64(gasTipCap)
+			}
+
 			chainOpts := chainservice.ChainOpts{
 				ChainUrl:        chainUrl,
 				ChainStartBlock: chainStartBlock,
@@ -224,6 +272,10 @@ func main() {
 				NaAddress:       common.HexToAddress(naAddress),
 				VpaAddress:      common.HexToAddress(vpaAddress),
 				CaAddress:       common.HexToAddress(caAddress),
+				GasPrice:        nGasPrice,
+				GasFeeCap:       nGasFeeCap,
+				GasTipCap:       nGasTipCap,
+				GasLimit:        gasLimit,
 			}
 
 			storeOpts := store.StoreOpts{

@@ -213,7 +213,7 @@ function App() {
             <button
               onClick={() => {
                 setCreating(true);
-                nitroClient!.CreateLedgerChannel(theirNitroAddress, 5_000_000);
+                nitroClient!.CreateLedgerChannel(theirNitroAddress, 100_000);
               }}
               disabled={creating || !myNitroAddress || !theirNitroAddress}
             >

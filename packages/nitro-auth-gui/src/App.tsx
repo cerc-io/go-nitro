@@ -10,11 +10,13 @@ import "./App.css";
 async function updateChannels(
   nitroClient: NitroRpcClient,
   setFocusedLedgerChannel: (l: LedgerChannelInfo | null) => void,
-  setFocusedPaymentChannel: (p: PaymentChannelInfo | null) => void
+  setFocusedPaymentChannel: (p: PaymentChannelInfo | null) => void,
+  setCreatingLedgerChannel: (v: boolean) => void,
+  setCreatingPaymentChannel: (v: boolean) => void
 ) {
-  setFocusedPaymentChannel(null);
-  setFocusedPaymentChannel(null);
-
+  if (!nitroClient) {
+    return;
+  }
   const ledgerChannels = (await nitroClient.GetAllLedgerChannels()).filter(
     (lc) => lc.Status == "Open"
   );
@@ -44,7 +46,13 @@ async function updateChannels(
   }
 
   setFocusedPaymentChannel(focusedPaymentChannel);
+  if (focusedPaymentChannel) {
+    setCreatingPaymentChannel(false);
+  }
   setFocusedLedgerChannel(focusedLedgerChannel);
+  if (focusedLedgerChannel) {
+    setCreatingLedgerChannel(false);
+  }
 }
 
 async function pay(
@@ -84,7 +92,7 @@ function getTargetUrl(targetUrl?: string): string {
     return import.meta.env.VITE_TARGET_URL;
   }
 
-  return window.location.href;
+  return "http://localhost:5678";
 }
 
 async function send(url: string): Promise<any> {
@@ -120,7 +128,13 @@ function App() {
   const [focusedPaymentChannel, setFocusedPaymentChannel] =
     useState<PaymentChannelInfo | null>(null);
   const [token, setToken] = useState<any>(null);
-  const [creating, setCreating] = useState<boolean>(false);
+  const [creatingLedgerChannel, setCreatingLedgerChannel] =
+    useState<boolean>(false);
+  const [creatingPaymentChannel, setCreatingPaymentChannel] =
+    useState<boolean>(false);
+
+  let updateEverything = async () => {};
+  let updateInterval: NodeJS.Timeout | undefined;
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -133,6 +147,18 @@ function App() {
         nitroUrl?.protocol == "https"
       ).then((c) => {
         setNitroClient(c);
+        updateEverything = async () =>
+          updateChannels(
+            c,
+            setFocusedLedgerChannel,
+            setFocusedPaymentChannel,
+            setCreatingLedgerChannel,
+            setCreatingPaymentChannel
+          );
+        if (updateInterval) {
+          clearInterval(updateInterval);
+        }
+        updateInterval = setInterval(updateEverything, 1000);
       });
     }, 1000);
 
@@ -142,19 +168,8 @@ function App() {
   useEffect(() => {
     if (nitroClient) {
       nitroClient.GetAddress().then((a) => setMyNitroAddress(a));
-      updateChannels(
-        nitroClient,
-        setFocusedLedgerChannel,
-        setFocusedPaymentChannel
-      );
-      nitroClient.Notifications.on("objective_completed", async () => {
-        updateChannels(
-          nitroClient,
-          setFocusedLedgerChannel,
-          setFocusedPaymentChannel
-        );
-        setCreating(false);
-      });
+      updateEverything();
+      nitroClient.Notifications.on("objective_completed", updateEverything);
     }
   }, [nitroClient]);
 
@@ -167,11 +182,7 @@ function App() {
         response.text().then((v) => {
           setTheirNitroAddress(v);
           if (nitroClient) {
-            updateChannels(
-              nitroClient,
-              setFocusedLedgerChannel,
-              setFocusedPaymentChannel
-            );
+            updateEverything();
           }
         });
       });
@@ -208,36 +219,62 @@ function App() {
         <div id="ledger-channel" className="info-line">
           Ledger Channel:{" "}
           {focusedLedgerChannel ? (
-            focusedLedgerChannel.ID
+            <span>
+              {focusedLedgerChannel.ID}{" "}
+              <button
+                onClick={() =>
+                  nitroClient!.CloseLedgerChannel(focusedLedgerChannel.ID)
+                }
+              >
+                Close
+              </button>
+            </span>
           ) : (
             <button
               onClick={() => {
-                setCreating(true);
+                setCreatingPaymentChannel(true);
                 nitroClient!.CreateLedgerChannel(theirNitroAddress, 100_000);
               }}
-              disabled={creating || !myNitroAddress || !theirNitroAddress}
+              disabled={
+                creatingPaymentChannel || !myNitroAddress || !theirNitroAddress
+              }
             >
-              {creating ? "Please wait ..." : "Create"}
+              {creatingPaymentChannel ? "Please wait ..." : "Create"}
             </button>
           )}
+        </div>
+        <div id="ledger-balance" className="info-line">
+          Ledger Balance:{" "}
+          {focusedLedgerChannel
+            ? `${focusedLedgerChannel.Balance.TheirBalance} / ${focusedLedgerChannel.Balance.MyBalance}`
+            : ""}
         </div>
         <div id="payment-channel" className="info-line">
           Payment Channel:{" "}
           {focusedPaymentChannel ? (
-            focusedPaymentChannel.ID
+            <span>
+              {focusedPaymentChannel.ID}{" "}
+              <button
+                onClick={() =>
+                  nitroClient!.ClosePaymentChannel(focusedPaymentChannel.ID)
+                }
+              >
+                Close
+              </button>
+            </span>
           ) : (
             <button
               onClick={() => {
-                setCreating(true);
+                setCreatingLedgerChannel(true);
                 nitroClient!.CreatePaymentChannel(
                   theirNitroAddress,
                   [],
-                  Number(focusedLedgerChannel!.Balance.MyBalance / 5n)
+                  Number(100)
                 );
               }}
-              disabled={creating || !focusedLedgerChannel}
+              disabled={creatingLedgerChannel || !focusedLedgerChannel}
             >
-              {creating ? "Please wait ..." : "Create"}
+              {creatingLedgerChannel ? "Please wait ..." : "Create"}
             </button>
           )}
         </div>
@@ -296,12 +333,7 @@ function App() {
                         focusedPaymentChannel,
                         10,
                         setToken
-                      );
-                      updateChannels(
-                        nitroClient!,
-                        setFocusedLedgerChannel,
-                        setFocusedPaymentChannel
-                      );
+                      ).then(() => updateEverything());
                     }}
                   >
                     {token ? "Renew Token" : "Obtain Token"}

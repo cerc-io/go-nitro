@@ -32,6 +32,7 @@ module.exports = {
       "error",
       { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
     ],
+    "@typescript-eslint/no-empty-function": "off",
     "import/order": [
       1,
       {

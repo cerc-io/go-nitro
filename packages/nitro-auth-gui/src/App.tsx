@@ -194,7 +194,7 @@ function App() {
   return (
     <>
       <div id="top-group">
-        <h2>Account Details</h2>
+        <h2>Nitro Details</h2>
         <table>
           <tbody>
             <tr>
@@ -341,7 +341,7 @@ function App() {
         </table>
       </div>
       <div id="mid-group">
-        <h2>RPC Request</h2>
+        <h2>Ethereum API</h2>
         <table width="100%">
           <tbody>
             <tr>

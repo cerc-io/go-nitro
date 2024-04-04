@@ -194,101 +194,154 @@ function App() {
   return (
     <>
       <div id="top-group">
-        <div id="my-server" className="info-line">
-          My Nitro Server:{" "}
-          <input
-            type="text"
-            onChange={(e) => setMyNitroRpcUrl(e.target.value)}
-            value={myNitroRpcUrl?.toString()}
-          />
-        </div>
-        <div id="my-address" className="info-line">
-          My Nitro Address: {myNitroAddress}
-        </div>
-        <div id="target-server" className="info-line">
-          Their ETH/Payment Server:{" "}
-          <input
-            type="text"
-            onChange={(e) => setTargetServerUrl(e.target.value)}
-            value={targetServerUrl?.toString()}
-          />
-        </div>
-        <div id="their-address" className="info-line">
-          Their Nitro Address: {theirNitroAddress}
-        </div>
-        <div id="ledger-channel" className="info-line">
-          Ledger Channel:{" "}
-          {focusedLedgerChannel ? (
-            <span>
-              {focusedLedgerChannel.ID}{" "}
-              <button
-                onClick={() =>
-                  nitroClient!.CloseLedgerChannel(focusedLedgerChannel.ID)
-                }
-              >
-                Close
-              </button>
-            </span>
-          ) : (
-            <button
-              onClick={() => {
-                setCreatingPaymentChannel(true);
-                nitroClient!.CreateLedgerChannel(theirNitroAddress, 100_000);
-              }}
-              disabled={
-                creatingPaymentChannel || !myNitroAddress || !theirNitroAddress
-              }
-            >
-              {creatingPaymentChannel ? "Please wait ..." : "Create"}
-            </button>
-          )}
-        </div>
-        <div id="ledger-balance" className="info-line">
-          Ledger Balance:{" "}
-          {focusedLedgerChannel
-            ? `${focusedLedgerChannel.Balance.TheirBalance} / ${focusedLedgerChannel.Balance.MyBalance}`
-            : ""}
-        </div>
-        <div id="payment-channel" className="info-line">
-          Payment Channel:{" "}
-          {focusedPaymentChannel ? (
-            <span>
-              {focusedPaymentChannel.ID}{" "}
-              <button
-                onClick={() =>
-                  nitroClient!.ClosePaymentChannel(focusedPaymentChannel.ID)
-                }
-              >
-                Close
-              </button>
-            </span>
-          ) : (
-            <button
-              onClick={() => {
-                setCreatingLedgerChannel(true);
-                nitroClient!.CreatePaymentChannel(
-                  theirNitroAddress,
-                  [],
-                  Number(100)
-                );
-              }}
-              disabled={creatingLedgerChannel || !focusedLedgerChannel}
-            >
-              {creatingLedgerChannel ? "Please wait ..." : "Create"}
-            </button>
-          )}
-        </div>
-        <div id="payment-balance" className="info-line">
-          Channel Balance:{" "}
-          {focusedPaymentChannel
-            ? `${focusedPaymentChannel.Balance.PaidSoFar} / ${focusedPaymentChannel.Balance.RemainingFunds}`
-            : ""}
-        </div>
-        <div id="payment-balance" className="info-line">
-          Token: {token && `${token.token} (balance ${token.balance})`}
-        </div>
+        <h2>Account Details</h2>
+        <table>
+          <tbody>
+            <tr>
+              <td className="key">Nitro Server</td>
+              <td className="value">
+                <input
+                  type="text"
+                  onChange={(e) => setMyNitroRpcUrl(e.target.value)}
+                  value={myNitroRpcUrl?.toString()}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="key">My Address</td>
+              <td className="value">{myNitroAddress}</td>
+            </tr>
+            <tr>
+              <td className="key">Payment Server</td>
+              <td className="value">
+                <input
+                  type="text"
+                  onChange={(e) => setTargetServerUrl(e.target.value)}
+                  value={targetServerUrl?.toString()}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="key">Payment Address</td>
+              <td className="value">{theirNitroAddress}</td>
+            </tr>
+            <tr>
+              <td className="key">Ledger Channel</td>
+              <td className="value">
+                {focusedLedgerChannel ? (
+                  <span>
+                    {focusedLedgerChannel.ID}{" "}
+                    <button
+                      onClick={() =>
+                        nitroClient!.CloseLedgerChannel(focusedLedgerChannel.ID)
+                      }
+                    >
+                      Close
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setCreatingLedgerChannel(true);
+                      nitroClient!.CreateLedgerChannel(
+                        theirNitroAddress,
+                        100_000
+                      );
+                    }}
+                    disabled={
+                      creatingLedgerChannel ||
+                      !myNitroAddress ||
+                      !theirNitroAddress
+                    }
+                  >
+                    {creatingLedgerChannel ? "Please wait ..." : "Create"}
+                  </button>
+                )}
+              </td>
+            </tr>
+            <tr>
+              <td className="key">Ledger Balance</td>
+              <td className="value">
+                {focusedLedgerChannel
+                  ? `${focusedLedgerChannel.Balance.TheirBalance} / ${focusedLedgerChannel.Balance.MyBalance}`
+                  : ""}
+              </td>
+            </tr>
+            <tr>
+              <td className="key">Payment Channel</td>
+              <td className="value">
+                {focusedPaymentChannel ? (
+                  <span>
+                    {focusedPaymentChannel.ID}{" "}
+                    <button
+                      onClick={() =>
+                        nitroClient!.ClosePaymentChannel(
+                          focusedPaymentChannel.ID
+                        )
+                      }
+                    >
+                      Close
+                    </button>
+                  </span>
+                ) : focusedLedgerChannel ? (
+                  <button
+                    onClick={() => {
+                      setCreatingPaymentChannel(true);
+                      nitroClient!.CreatePaymentChannel(
+                        theirNitroAddress,
+                        [],
+                        Number(100)
+                      );
+                    }}
+                    disabled={
+                      creatingPaymentChannel ||
+                      creatingLedgerChannel ||
+                      !focusedLedgerChannel
+                    }
+                  >
+                    {creatingPaymentChannel || creatingLedgerChannel
+                      ? "Please wait ..."
+                      : "Create"}
+                  </button>
+                ) : (
+                  ""
+                )}
+              </td>
+            </tr>
+            <tr>
+              <td className="key">Channel Balance</td>
+              <td className="value">
+                {focusedPaymentChannel
+                  ? `${focusedPaymentChannel.Balance.PaidSoFar} / ${focusedPaymentChannel.Balance.RemainingFunds}`
+                  : ""}
+              </td>
+            </tr>
+            <tr>
+              <td className="key">API Token</td>
+              <td className="value">
+                {token && `${token.token}`}{" "}
+                {focusedPaymentChannel && (
+                  <button
+                    onClick={() => {
+                      pay(
+                        nitroClient,
+                        targetServerUrl,
+                        focusedPaymentChannel,
+                        10,
+                        setToken
+                      ).then(() => updateEverything());
+                    }}
+                  >
+                    {token ? `Renew (${token.balance})` : "Obtain"}
+                  </button>
+                )}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
       <div id="mid-group">
+        <h2>RPC Request</h2>
         <table width="100%">
           <tbody>
             <tr>
@@ -324,21 +377,6 @@ function App() {
                 >
                   Send Request
                 </button>
-                {focusedPaymentChannel && (
-                  <button
-                    onClick={() => {
-                      pay(
-                        nitroClient,
-                        targetServerUrl,
-                        focusedPaymentChannel,
-                        10,
-                        setToken
-                      ).then(() => updateEverything());
-                    }}
-                  >
-                    {token ? "Renew Token" : "Obtain Token"}
-                  </button>
-                )}
               </td>
             </tr>
           </tbody>

@@ -77,6 +77,11 @@ button:hover {
   color: white;
 }
 
+button:hover:disabled {
+  background-color: #DDD; /* Green */
+  color: white;
+}
+
 .empty {
   background-color: #ec3535; /* Green */
   color: white;

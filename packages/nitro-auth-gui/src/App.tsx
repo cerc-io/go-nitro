@@ -322,7 +322,7 @@ function App() {
                 {token && `${token.token}`}{" "}
                 {focusedPaymentChannel && (
                   <button
-                    className={token && 0 == token.balance ? "empty" : ""}
+                    className={token && (0 == token.balance || 0n == focusedPaymentChannel.Balance.RemainingFunds) ? "empty" : ""}
                     onClick={() => {
                       pay(
                         nitroClient,
@@ -332,6 +332,7 @@ function App() {
                         setToken
                       ).then(() => updateEverything());
                     }}
+                    disabled={0n == focusedPaymentChannel.Balance.RemainingFunds}
                   >
                     {token ? `Renew (${token.balance})` : "Obtain"}
                   </button>

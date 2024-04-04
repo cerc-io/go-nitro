@@ -322,6 +322,7 @@ function App() {
                 {token && `${token.token}`}{" "}
                 {focusedPaymentChannel && (
                   <button
+                    className={token && 0 == token.balance ? "empty" : ""}
                     onClick={() => {
                       pay(
                         nitroClient,

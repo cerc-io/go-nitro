@@ -67,13 +67,18 @@ button {
   color: white;
 }
 
-button:hover {
-  background-color: #04AA6D; /* Green */
+button:disabled {
+  background-color: #DDD; /* Green */
   color: white;
 }
 
-button:disabled {
-  background-color: #DDD; /* Green */
+button:hover {
+  background-color: #f8881e; /* Green */
+  color: white;
+}
+
+.empty {
+  background-color: #ec3535; /* Green */
   color: white;
 }
 

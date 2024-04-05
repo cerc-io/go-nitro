@@ -198,7 +198,7 @@ function App() {
         <table>
           <tbody>
             <tr>
-              <td className="key">Nitro Server</td>
+              <td className="key">Consumer Nitro Node</td>
               <td className="value">
                 <input
                   type="text"
@@ -208,11 +208,11 @@ function App() {
               </td>
             </tr>
             <tr>
-              <td className="key">My Address</td>
+              <td className="key">Consumer Address</td>
               <td className="value">{myNitroAddress}</td>
             </tr>
             <tr>
-              <td className="key">Payment Server</td>
+              <td className="key">Provider Endpoint</td>
               <td className="value">
                 <input
                   type="text"
@@ -222,7 +222,7 @@ function App() {
               </td>
             </tr>
             <tr>
-              <td className="key">Payment Address</td>
+              <td className="key">Provider Address</td>
               <td className="value">{theirNitroAddress}</td>
             </tr>
             <tr>

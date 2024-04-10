@@ -324,7 +324,7 @@ function App() {
                   <button
                     className={
                       token &&
-                      (0 == token.balance ||
+                      (token.used >= token.total ||
                         0n == focusedPaymentChannel.Balance.RemainingFunds)
                         ? "empty"
                         : ""
@@ -342,7 +342,7 @@ function App() {
                       0n == focusedPaymentChannel.Balance.RemainingFunds
                     }
                   >
-                    {token ? `Renew (${token.balance})` : "Obtain"}
+                    {token ? `Renew (${token.total - token.used})` : "Obtain"}
                   </button>
                 )}
               </td>
@@ -379,8 +379,8 @@ function App() {
                 <button
                   onClick={() => {
                     send(`${targetServerUrl}/eth/${token ? token.token : ""}`);
-                    if (token.balance > 0) {
-                      token.balance -= 1;
+                    if (token.used < token.total) {
+                      token.used += 1;
                       setToken({ ...token });
                     }
                   }}

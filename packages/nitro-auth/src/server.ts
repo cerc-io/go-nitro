@@ -28,35 +28,39 @@ const genToken = () => {
 class AuthToken {
   private _channel: string;
   public _value: string;
-  public _balance: bigint;
+  public _used: bigint;
+  public _total: bigint;
 
-  constructor(channel: string, balance = 0n, value?: string) {
+  constructor(channel: string, total = 0n, used = 0n, value?: string) {
     this._channel = channel;
-    this._balance = balance;
+    this._total = total;
+    this._used = used;
     this._value = value ?? genToken();
   }
 
   public add(delta: bigint) {
-    this._balance += delta;
-    return this._balance;
+    this._total += delta;
+    return this._total;
   }
 
-  public sub(delta: bigint) {
-    this._balance -= delta;
-    return this._balance;
-  }
-
-  public checkedSub(delta: bigint) {
-    if (delta <= this.balance) {
-      this.sub(delta);
+  public use(amount: bigint) {
+    if (amount + this._used <= this._total) {
+      this._used += amount;
       return true;
     }
-
     return false;
   }
 
-  get balance() {
-    return this._balance;
+  public updateTotal(t: bigint) {
+    if (t > this._total) {
+      this._total = t;
+      return true;
+    }
+    return false;
+  }
+
+  get remainder() {
+    return this._total - this._used;
   }
 
   get value() {
@@ -70,7 +74,8 @@ class AuthToken {
   toJSON() {
     return {
       token: this.value,
-      balance: Number(this.balance),
+      total: Number(this._total),
+      used: Number(this._used),
       channel: this.channel
     };
   }
@@ -84,12 +89,12 @@ const tokenByValue = new Map<string, AuthToken>();
 fastify.get('/auth/:token', async (req: any, res: any) => {
   const token = tokenByValue.get(req.params.token);
   if (token) {
-    if (token.checkedSub(1n)) {
+    if (token.use(1n)) {
       return token;
-    } 
+    }
     res.code(402);
     return '402 Payment Required';
-    
+
   }
   res.code(401);
   return '401 Unauthorized';
@@ -102,18 +107,23 @@ fastify.get('/pay/address', async (req: any, res: any) => {
 
 fastify.post('/pay/receive', async (req: any, res: any) => {
   const voucher: Voucher = req.body;
-  const result = await nitro.ReceiveVoucher(voucher);
-  if (result.Delta <= 0n) {
+  let result;
+
+  try {
+    result = await nitro.ReceiveVoucher(voucher);
+  } catch (e) {
     res.status(400).send();
+    return;
   }
 
   let token = tokenByChannel.get(voucher.ChannelId);
   if (!token) {
-    token = new AuthToken(voucher.ChannelId);
+    token = new AuthToken(voucher.ChannelId, result.Total);
     tokenByChannel.set(voucher.ChannelId, token);
     tokenByValue.set(token.value, token);
+  } else {
+    token.updateTotal(result.Total);
   }
-  token.add(result.Delta);
 
   return token;
 });

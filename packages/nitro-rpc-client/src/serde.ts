@@ -9,7 +9,7 @@ import {
   RequestMethod,
 } from "./types.js";
 
-const ajv = new Ajv();
+const ajv = new Ajv({ int32range: false });
 
 const jsonRpcSchema = {
   properties: {
@@ -202,7 +202,10 @@ export function getAndValidateResult<T extends RequestMethod>(
       return validateAndConvertResult(
         paymentSchema,
         result,
-        (result: PaymentSchemaType) => result
+        (result: PaymentSchemaType) => ({
+          Amount: BigInt(result.Amount),
+          Channel: result.Channel,
+        })
       );
     case "receive_voucher":
       return validateAndConvertResult(
@@ -217,11 +220,11 @@ export function getAndValidateResult<T extends RequestMethod>(
       return validateAndConvertResult(
         voucherSchema,
         result,
-        (result: VoucherSchemaType) => {
-          return {
-            ...result,
-          };
-        }
+        (result: VoucherSchemaType) => ({
+          ChannelId: result.ChannelId,
+          Signature: result.Signature,
+          Amount: BigInt(result.Amount),
+        })
       );
 
     default:

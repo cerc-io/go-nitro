@@ -3,6 +3,7 @@ import {NitroRpcClient} from '@statechannels/nitro-rpc-client';
 import {Voucher} from '@statechannels/nitro-rpc-client/src/types.js';
 import crypto from 'crypto';
 import Fastify from 'fastify';
+import JSONBig from 'json-bigint';
 
 import {Config} from './config.js';
 import {Logger} from './log/index.js';
@@ -18,6 +19,20 @@ const fastify: any = Fastify({
 
 await fastify.register(cors, {
   origin: true
+});
+
+fastify.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
+  try {
+    const json = JSONBig.parse(body);
+    done(null, json);
+  } catch (err) {
+    err.statusCode = 400;
+    done(err, undefined);
+  }
+});
+
+fastify.setSerializerCompiler(({ schema, method, url, httpStatus, contentType }) => {
+  return data => JSONBig.stringify(data);
 });
 
 const genToken = () => {
@@ -74,21 +89,22 @@ class AuthToken {
   toJSON() {
     return {
       token: this.value,
-      total: Number(this._total),
-      used: Number(this._used),
+      total: this._total,
+      used: this._used,
       channel: this.channel
     };
   }
 }
 
-const nitro = await NitroRpcClient.CreateHttpNitroClient(`${Config.RPC_HOST}:${Config.RPC_PORT}/api/v1`, Config.RPC_SECURE);
-
 const tokenByChannel = new Map<string, AuthToken>();
 const tokenByValue = new Map<string, AuthToken>();
+const nitro = await NitroRpcClient.CreateHttpNitroClient(`${Config.RPC_HOST}:${Config.RPC_PORT}/api/v1`, Config.RPC_SECURE);
 
 fastify.get('/auth/:token', async (req: any, res: any) => {
+  metrics.incCounter('get_auth_token');
   const token = tokenByValue.get(req.params.token);
   if (token) {
+    metrics.incCounter(`get_auth_${token.channel}`);
     if (token.use(1n)) {
       return token;
     }
@@ -101,31 +117,53 @@ fastify.get('/auth/:token', async (req: any, res: any) => {
 });
 
 fastify.get('/pay/address', async (req: any, res: any) => {
+  metrics.incCounter('get_pay_address');
   const result = await nitro.GetAddress();
   return result;
 });
 
-fastify.post('/pay/receive', async (req: any, res: any) => {
-  const voucher: Voucher = req.body;
-  let result;
+fastify.post('/pay/receive',
+  {
+    schema: {
+      response: {
+        '2xx': {
+          token: { type: 'string' },
+          total: { type: 'number' },
+          used: { type: 'number' },
+          channel: { type: 'string' },
+        }
+      }
+    },
+    validatorCompiler: () => () => true,
+  },
+  async (req: any, res: any) => {
+    metrics.incCounter('post_pay_receive');
+    const voucher: Voucher = req.body;
+    let result;
 
-  try {
-    result = await nitro.ReceiveVoucher(voucher);
-  } catch (e) {
-    res.status(400).send();
-    return;
-  }
+    try {
+      result = await nitro.ReceiveVoucher(voucher);
+    } catch (e) {
+      console.error(e);
+      res.status(400).send();
+      return;
+    }
 
-  let token = tokenByChannel.get(voucher.ChannelId);
-  if (!token) {
-    token = new AuthToken(voucher.ChannelId, result.Total);
-    tokenByChannel.set(voucher.ChannelId, token);
-    tokenByValue.set(token.value, token);
-  } else {
-    token.updateTotal(result.Total);
-  }
+    let token = tokenByChannel.get(voucher.ChannelId);
+    if (!token) {
+      token = new AuthToken(voucher.ChannelId, result.Total);
+      tokenByChannel.set(voucher.ChannelId, token);
+      tokenByValue.set(token.value, token);
+    } else {
+      token.updateTotal(result.Total);
+    }
 
-  return token;
+    metrics.incCounter(`post_pay_receive_${token.channel}`);
+    return token;
+  });
+
+fastify.get('/metrics', async (req: any, res: any) => {
+  return metrics.render();
 });
 
 try {

@@ -1,6 +1,7 @@
 import https from "https";
 
 import axios from "axios";
+import JSONBig from "json-bigint";
 import websocket from "websocket";
 import { EventEmitter } from "eventemitter3";
 
@@ -46,7 +47,7 @@ export class HttpTransport {
       `${this.isSecure ? "https" : "http"}://${this.server}`
     ).toString();
 
-    const result = await axios.post(url.toString(), JSON.stringify(req));
+    const result = await axios.post(url.toString(), JSONBig.stringify(req));
 
     return result.data;
   }

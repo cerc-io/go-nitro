@@ -34,7 +34,7 @@ export class NitroRpcClient implements RpcClientApi {
 
   public async CreateVoucher(
     channelId: string,
-    amount: number
+    amount: bigint
   ): Promise<Voucher> {
     const payload = {
       Amount: amount,
@@ -138,7 +138,7 @@ export class NitroRpcClient implements RpcClientApi {
 
   public async CreateLedgerChannel(
     counterParty: string,
-    amount: number
+    amount: bigint
   ): Promise<ObjectiveResponse> {
     const asset = `0x${"00".repeat(20)}`;
     const payload: DirectFundPayload = {
@@ -160,7 +160,7 @@ export class NitroRpcClient implements RpcClientApi {
   public async CreatePaymentChannel(
     counterParty: string,
     intermediaries: string[],
-    amount: number
+    amount: bigint
   ): Promise<ObjectiveResponse> {
     const asset = `0x${"00".repeat(20)}`;
     const payload: VirtualFundPayload = {
@@ -180,7 +180,7 @@ export class NitroRpcClient implements RpcClientApi {
     return this.sendRequest("create_payment_channel", payload);
   }
 
-  public async Pay(channelId: string, amount: number): Promise<PaymentPayload> {
+  public async Pay(channelId: string, amount: bigint): Promise<PaymentPayload> {
     const payload = {
       Amount: amount,
       Channel: channelId,

@@ -1,3 +1,4 @@
+import JSONBig from "json-bigint";
 import { useEffect, useState } from "react";
 import { NitroRpcClient } from "@statechannels/nitro-rpc-client";
 import {
@@ -59,7 +60,7 @@ async function pay(
   nitroClient: NitroRpcClient | null,
   targetUrl: string,
   paymentChannel: PaymentChannelInfo | null,
-  amount: number,
+  amount: bigint,
   setToken: (p: any | null) => void
 ) {
   if (nitroClient && paymentChannel) {
@@ -69,7 +70,7 @@ async function pay(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(voucher),
+      body: JSONBig.stringify(voucher),
     });
     const token = await response.json();
     setToken(token);
@@ -245,7 +246,7 @@ function App() {
                       setCreatingLedgerChannel(true);
                       nitroClient!.CreateLedgerChannel(
                         theirNitroAddress,
-                        100_000
+                        100_000n
                       );
                     }}
                     disabled={
@@ -290,7 +291,7 @@ function App() {
                       nitroClient!.CreatePaymentChannel(
                         theirNitroAddress,
                         [],
-                        Number(100)
+                        100n
                       );
                     }}
                     disabled={
@@ -334,7 +335,7 @@ function App() {
                         nitroClient,
                         targetServerUrl,
                         focusedPaymentChannel,
-                        10,
+                        10n,
                         setToken
                       ).then(() => updateEverything());
                     }}
@@ -358,14 +359,14 @@ function App() {
               <td>
                 <textarea
                   id="api-send"
-                  defaultValue={JSON.stringify(
+                  defaultValue={JSONBig.stringify(
                     {
                       jsonrpc: "2.0",
                       id: 42,
                       method: "eth_blockNumber",
                       params: [],
                     },
-                    null,
+                    undefined,
                     2
                   )}
                 />

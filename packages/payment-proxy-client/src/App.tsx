@@ -142,7 +142,7 @@ export default function App() {
     const result = await nitroClient.CreatePaymentChannel(
       provider,
       [hub],
-      initialChannelBalance
+      BigInt(initialChannelBalance)
     );
 
     // TODO: If the objective completes fast enough, we might start waiting after it's already done
@@ -187,7 +187,7 @@ export default function App() {
           )
         : await fetchFile(
             selectedFile.url,
-            skipPayment ? 0 : costPerByte * selectedFile.size,
+            skipPayment ? 0n : BigInt(costPerByte * selectedFile.size),
             paymentChannelInfo.ID,
             nitroClient,
             () => {

@@ -19,6 +19,7 @@
     "@mui/material": "^5.13.0",
     "@statechannels/nitro-rpc-client": "workspace:*",
     "js-big-decimal-esm": "^1.5.1",
+    "json-bigint": "^1.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-minimal-pie-chart": "^8.4.0",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.1",
+    "@types/json-bigint": "^1.0.4",
     "@types/react": "^18.0.28",
     "@types/react-dom": "^18.0.11",
     "@typescript-eslint/eslint-plugin": "^5.57.1",

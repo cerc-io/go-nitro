@@ -47,15 +47,13 @@ export type VirtualFundPayload = {
   AppDefinition: string;
 };
 export type PaymentPayload = {
-  // todo: this should be a bigint
-  Amount: number;
+  Amount: bigint;
   Channel: string;
 };
 
 export type Voucher = {
   ChannelId: string;
-  // todo: this should be a bigint
-  Amount: number;
+  Amount: bigint;
 
   Signature: string;
 };
@@ -250,7 +248,7 @@ export type SingleAssetOutcome = {
 
 export type Allocation = {
   Destination: string;
-  Amount: number;
+  Amount: bigint;
   AllocationType: number;
   Metadata: null;
 };

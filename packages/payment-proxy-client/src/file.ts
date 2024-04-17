@@ -3,7 +3,7 @@ import { Voucher } from "@statechannels/nitro-rpc-client/src/types";
 
 export async function fetchFile(
   url: string,
-  paymentAmount: number,
+  paymentAmount: bigint,
   channelId: string,
   nitroClient: NitroRpcClient,
   updateChannelCallback: () => void
@@ -116,7 +116,7 @@ async function fetchChunk(
   nitroClient: NitroRpcClient
 ): Promise<{ data: Uint8Array; contentLength: number; fileName: string }> {
   const dataLength = stop - start + 1; // +1 because stop is inclusive
-  const chunkCost = dataLength * costPerByte;
+  const chunkCost = BigInt(dataLength * costPerByte);
 
   const voucher = await nitroClient.CreateVoucher(channelId, chunkCost);
 

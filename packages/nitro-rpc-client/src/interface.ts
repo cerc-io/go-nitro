@@ -17,7 +17,7 @@ interface ledgerChannelApi {
    */
   CreateLedgerChannel(
     counterParty: string,
-    amount: number
+    amount: bigint
   ): Promise<ObjectiveResponse>;
   /**
    * CloseLedgerChannel defunds a directly funded ledger channel.
@@ -50,7 +50,7 @@ interface paymentChannelApi {
   CreatePaymentChannel(
     counterParty: string,
     intermediaries: string[],
-    amount: number
+    amount: bigint
   ): Promise<ObjectiveResponse>;
   /**
    * ClosePaymentChannel defunds a virtually funded payment channel.
@@ -83,7 +83,7 @@ interface paymentApi {
    * @param amount The amount for the voucher
    * @returns A signed voucher
    */
-  CreateVoucher(channelId: string, amount: number): Promise<Voucher>;
+  CreateVoucher(channelId: string, amount: bigint): Promise<Voucher>;
   /**
    * Adds a voucher to the go-nitro node that was received from the other party to the channel.
    * @param voucher The voucher to add
@@ -96,7 +96,7 @@ interface paymentApi {
    * @param channelId - The ID of the payment channel to use
    * @param amount - The amount to pay
    */
-  Pay(channelId: string, amount: number): Promise<PaymentPayload>;
+  Pay(channelId: string, amount: bigint): Promise<PaymentPayload>;
 }
 
 interface syncAPI {

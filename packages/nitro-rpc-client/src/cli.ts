@@ -7,11 +7,12 @@ import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 
 import { NitroRpcClient } from "./rpc-client.js";
-import { compactJson, getCustomRPCUrl, logOutChannelUpdates } from "./utils.js";
-
-(BigInt.prototype as any).toJSON = function () {
-  return this.toString();
-};
+import {
+  JSONbn,
+  compactJson,
+  getCustomRPCUrl,
+  logOutChannelUpdates,
+} from "./utils.js";
 
 yargs(hideBin(process.argv))
   .scriptName("nitro-rpc-client")
@@ -151,7 +152,7 @@ yargs(hideBin(process.argv))
 
       const dfObjective = await rpcClient.CreateLedgerChannel(
         yargs.counterparty,
-        yargs.amount
+        BigInt(yargs.amount)
       );
       const { Id, ChannelId } = dfObjective;
 
@@ -231,7 +232,7 @@ yargs(hideBin(process.argv))
       const vfObjective = await rpcClient.CreatePaymentChannel(
         yargs.counterparty,
         intermediaries,
-        yargs.amount
+        BigInt(yargs.amount)
       );
 
       const { ChannelId, Id } = vfObjective;
@@ -355,7 +356,7 @@ yargs(hideBin(process.argv))
 
       const paymentChannelInfo = await rpcClient.Pay(
         yargs.channelId,
-        yargs.amount
+        BigInt(yargs.amount)
       );
       console.log(compactJson(paymentChannelInfo));
       await rpcClient.Close();
@@ -391,7 +392,7 @@ yargs(hideBin(process.argv))
 
       const voucher = await rpcClient.CreateVoucher(
         yargs.channelId,
-        yargs.amount
+        BigInt(yargs.amount)
       );
       console.log(compactJson(voucher));
       await rpcClient.Close();
@@ -419,7 +420,7 @@ yargs(hideBin(process.argv))
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
-      const voucher = JSON.parse(yargs.voucher);
+      const voucher = JSONbn.parse(yargs.voucher);
       const result = await rpcClient.ReceiveVoucher(voucher);
       console.log(compactJson(result));
       await rpcClient.Close();

@@ -76,6 +76,25 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "multiaddr",
+    "Get the multiaddr of the Nitro RPC server",
+    async () => {},
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+      const multiaddr = await rpcClient.GetMultiAddr();
+      console.log(multiaddr);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "get-all-ledger-channels",
     "Get all ledger channels",
     async () => {},

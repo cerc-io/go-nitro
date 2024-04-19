@@ -116,11 +116,24 @@ fastify.get('/auth/:token', async (req: any, res: any) => {
   return '401 Unauthorized';
 });
 
-fastify.get('/pay/address', async (req: any, res: any) => {
-  metrics.incCounter('get_pay_address');
-  const result = await nitro.GetAddress();
-  return result;
-});
+fastify.get('/pay/address',
+  {
+    schema: {
+      response: {
+        '2xx': {
+          address: { type: 'string' },
+          multiaddr: { type: 'array', items: {type: 'string'} },
+        }
+      }
+    }
+  },
+  async (req: any, res: any) => {
+    metrics.incCounter('get_pay_address');
+    const result = await nitro.GetAddress();
+    nitro.
+    return result;
+  }
+);
 
 fastify.post('/pay/receive',
   {

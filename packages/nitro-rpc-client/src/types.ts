@@ -87,6 +87,10 @@ export type GetAddressRequest = JsonRpcRequest<
   "get_address",
   Record<string, never>
 >;
+export type GetMultiAddrRequest = JsonRpcRequest<
+  "get_multiaddr",
+  Record<string, never>
+>;
 export type DirectFundRequest = JsonRpcRequest<
   "create_ledger_channel",
   DirectFundPayload
@@ -140,6 +144,7 @@ export type GetLedgerChannelResponse = JsonRpcResponse<LedgerChannelInfo>;
 export type VirtualFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type VersionResponse = JsonRpcResponse<string>;
 export type GetAddressResponse = JsonRpcResponse<string>;
+export type GetMultiAddrResponse = JsonRpcResponse<string>;
 export type DirectFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type DirectDefundResponse = JsonRpcResponse<string>;
 export type VirtualDefundResponse = JsonRpcResponse<string>;
@@ -160,6 +165,7 @@ export type RPCRequestAndResponses = {
   version: [VersionRequest, VersionResponse];
   create_payment_channel: [VirtualFundRequest, VirtualFundResponse];
   get_address: [GetAddressRequest, GetAddressResponse];
+  get_multiaddr: [GetMultiAddrRequest, GetMultiAddrResponse];
   get_ledger_channel: [GetLedgerChannelRequest, GetLedgerChannelResponse];
   get_payment_channel: [GetPaymentChannelRequest, GetPaymentChannelResponse];
   pay: [PaymentRequest, PaymentResponse];

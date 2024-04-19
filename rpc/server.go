@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"log/slog"
 	"math/big"
 	"sync"
@@ -28,6 +29,7 @@ import (
 type RpcServer struct {
 	transport      transport.Responder
 	paymentManager paymentsmanager.PaymentsManager
+	messageService *p2pms.P2PMessageService
 	node           *nitro.Node
 	logger         *slog.Logger
 	cancel         context.CancelFunc
@@ -40,6 +42,13 @@ func (rs *RpcServer) Url() string {
 
 func (rs *RpcServer) Address() *types.Address {
 	return rs.node.Address
+}
+
+func (rs *RpcServer) MultiAddr() string {
+	if nil != rs.messageService {
+		return rs.messageService.MultiAddr
+	}
+	return ""
 }
 
 func (rs *RpcServer) Close() error {
@@ -75,10 +84,11 @@ func newRpcServerWithoutNotifications(nitroNode *nitro.Node, trans transport.Res
 	return rs, nil
 }
 
-func NewRpcServer(nitroNode *nitro.Node, paymentManager paymentsmanager.PaymentsManager, trans transport.Responder) (*RpcServer, error) {
+func NewRpcServer(nitroNode *nitro.Node, paymentManager paymentsmanager.PaymentsManager, messageService *p2pms.P2PMessageService, trans transport.Responder) (*RpcServer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	rs := &RpcServer{
 		paymentManager: paymentManager,
+		messageService: messageService,
 		transport:      trans,
 		node:           nitroNode,
 		cancel:         cancel,
@@ -137,6 +147,10 @@ func (rs *RpcServer) registerHandlers() (err error) {
 		case serde.GetAddressMethod:
 			return processRequest(rs, permNone, requestData, func(req serde.NoPayloadRequest) (string, error) {
 				return rs.node.Address.Hex(), nil
+			})
+		case serde.GetMultiAddrMethod:
+			return processRequest(rs, permNone, requestData, func(req serde.NoPayloadRequest) (string, error) {
+				return rs.MultiAddr(), nil
 			})
 		case serde.VersionMethod:
 			return processRequest(rs, permNone, requestData, func(req serde.NoPayloadRequest) (string, error) {

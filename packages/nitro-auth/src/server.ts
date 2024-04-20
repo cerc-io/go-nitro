@@ -98,7 +98,7 @@ class AuthToken {
 
 const tokenByChannel = new Map<string, AuthToken>();
 const tokenByValue = new Map<string, AuthToken>();
-const nitro = await NitroRpcClient.CreateHttpNitroClient(`${Config.RPC_HOST}:${Config.RPC_PORT}/api/v1`, Config.RPC_SECURE);
+const nitro = await NitroRpcClient.CreateHttpNitroClient(`${Config.NITRO_RPC_HOST}:${Config.NITRO_RPC_PORT}/api/v1`, Config.NITRO_RPC_SECURE);
 const authTokenSchema = {
   schema: {
     response: {
@@ -135,16 +135,22 @@ fastify.get('/pay/address',
       response: {
         '2xx': {
           address: { type: 'string' },
-          multiaddr: { type: 'array', items: {type: 'string'} },
+          multiaddrs: { type: 'array', items: {type: 'string'} },
         }
       }
     }
   },
   async (req: any, res: any) => {
     metrics.incCounter('get_pay_address');
-    const result = await nitro.GetAddress();
-    nitro.
-    return result;
+    const address = await nitro.GetAddress();
+    const peerId = await nitro.GetPeerId();
+
+    return {
+      address,
+      multiaddrs: [
+        `/ip4/${Config.NITRO_WS_MSG_PUBLIC_IP}/tcp/${Config.NITRO_WS_MSG_PUBLIC_PORT}/ws/p2p/${peerId}`
+      ]
+    };
   }
 );
 

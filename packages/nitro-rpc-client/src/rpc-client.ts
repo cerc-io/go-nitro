@@ -213,8 +213,8 @@ export class NitroRpcClient implements RpcClientApi {
     return this.myAddress;
   }
 
-  public async GetMultiAddr(): Promise<string> {
-    return this.sendRequest("get_multiaddr", {});
+  public async GetPeerId(): Promise<string> {
+    return this.sendRequest("get_peerid", {});
   }
 
   public async GetLedgerChannel(channelId: string): Promise<LedgerChannelInfo> {

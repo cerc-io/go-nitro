@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"github.com/libp2p/go-libp2p/core/peer"
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"log/slog"
 	"math/big"
@@ -44,9 +45,9 @@ func (rs *RpcServer) Address() *types.Address {
 	return rs.node.Address
 }
 
-func (rs *RpcServer) MultiAddr() string {
+func (rs *RpcServer) PeerId() peer.ID {
 	if nil != rs.messageService {
-		return rs.messageService.MultiAddr
+		return rs.messageService.Id()
 	}
 	return ""
 }
@@ -148,9 +149,9 @@ func (rs *RpcServer) registerHandlers() (err error) {
 			return processRequest(rs, permNone, requestData, func(req serde.NoPayloadRequest) (string, error) {
 				return rs.node.Address.Hex(), nil
 			})
-		case serde.GetMultiAddrMethod:
+		case serde.GetPeerIdMethod:
 			return processRequest(rs, permNone, requestData, func(req serde.NoPayloadRequest) (string, error) {
-				return rs.MultiAddr(), nil
+				return rs.PeerId().String(), nil
 			})
 		case serde.VersionMethod:
 			return processRequest(rs, permNone, requestData, func(req serde.NoPayloadRequest) (string, error) {

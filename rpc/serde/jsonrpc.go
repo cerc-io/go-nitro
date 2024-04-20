@@ -18,7 +18,7 @@ type RequestMethod string
 const (
 	GetAuthTokenMethod                RequestMethod = "get_auth_token"
 	GetAddressMethod                  RequestMethod = "get_address"
-	GetMultiAddrMethod                RequestMethod = "get_multiaddr"
+	GetPeerIdMethod                   RequestMethod = "get_peerid"
 	VersionMethod                     RequestMethod = "version"
 	CreateLedgerChannelRequestMethod  RequestMethod = "create_ledger_channel"
 	CloseLedgerChannelRequestMethod   RequestMethod = "close_ledger_channel"

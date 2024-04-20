@@ -88,7 +88,7 @@ yargs(hideBin(process.argv))
         getCustomRPCUrl(rpcHost, rpcPort),
         isSecure
       );
-      const multiaddr = await rpcClient.GetMultiAddr();
+      const multiaddr = await rpcClient.GetPeerId();
       console.log(multiaddr);
       await rpcClient.Close();
       process.exit(0);

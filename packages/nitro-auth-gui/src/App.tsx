@@ -180,8 +180,8 @@ function App() {
       setFocusedLedgerChannel(null);
       setTheirNitroAddress("");
       fetch(targetServerUrl + "/pay/address").then((response) => {
-        response.text().then((v) => {
-          setTheirNitroAddress(v);
+        response.json().then((v: any) => {
+          setTheirNitroAddress(v?.address);
           if (nitroClient) {
             updateEverything();
           }

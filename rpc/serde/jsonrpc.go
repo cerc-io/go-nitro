@@ -77,23 +77,23 @@ type (
 
 type RequestPayload interface {
 	directfund.ObjectiveRequest |
-	directdefund.ObjectiveRequest |
-	virtualfund.ObjectiveRequest |
-	virtualdefund.ObjectiveRequest |
-	AuthRequest |
-	PaymentRequest |
-	GetLedgerChannelRequest |
-	GetPaymentChannelRequest |
-	GetPaymentChannelsByLedgerRequest |
-	NoPayloadRequest |
-	payments.Voucher |
-	ValidateVoucherRequest
+		directdefund.ObjectiveRequest |
+		virtualfund.ObjectiveRequest |
+		virtualdefund.ObjectiveRequest |
+		AuthRequest |
+		PaymentRequest |
+		GetLedgerChannelRequest |
+		GetPaymentChannelRequest |
+		GetPaymentChannelsByLedgerRequest |
+		NoPayloadRequest |
+		payments.Voucher |
+		ValidateVoucherRequest
 }
 
 type NotificationPayload interface {
 	protocols.ObjectiveId |
-	query.PaymentChannelInfo |
-	query.LedgerChannelInfo
+		query.PaymentChannelInfo |
+		query.LedgerChannelInfo
 }
 
 type Params[T RequestPayload | NotificationPayload] struct {
@@ -120,18 +120,18 @@ type ValidateVoucherResponse struct {
 
 type ResponsePayload interface {
 	directfund.ObjectiveResponse |
-	protocols.ObjectiveId |
-	virtualfund.ObjectiveResponse |
-	PaymentRequest |
-	query.PaymentChannelInfo |
-	query.LedgerChannelInfo |
-	GetAllLedgersResponse |
-	GetPaymentChannelsByLedgerResponse |
-	payments.Voucher |
-	common.Address |
-	string |
-	payments.ReceiveVoucherSummary |
-	ValidateVoucherResponse
+		protocols.ObjectiveId |
+		virtualfund.ObjectiveResponse |
+		PaymentRequest |
+		query.PaymentChannelInfo |
+		query.LedgerChannelInfo |
+		GetAllLedgersResponse |
+		GetPaymentChannelsByLedgerResponse |
+		payments.Voucher |
+		common.Address |
+		string |
+		payments.ReceiveVoucherSummary |
+		ValidateVoucherResponse
 }
 
 type JsonRpcSuccessResponse[T ResponsePayload] struct {

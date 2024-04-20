@@ -99,8 +99,21 @@ class AuthToken {
 const tokenByChannel = new Map<string, AuthToken>();
 const tokenByValue = new Map<string, AuthToken>();
 const nitro = await NitroRpcClient.CreateHttpNitroClient(`${Config.RPC_HOST}:${Config.RPC_PORT}/api/v1`, Config.RPC_SECURE);
+const authTokenSchema = {
+  schema: {
+    response: {
+      '2xx': {
+        token: { type: 'string' },
+        total: { type: 'number' },
+        used: { type: 'number' },
+        channel: { type: 'string' },
+      }
+    }
+  },
+  validatorCompiler: () => () => true,
+};
 
-fastify.get('/auth/:token', async (req: any, res: any) => {
+fastify.get('/auth/:token', authTokenSchema, async (req: any, res: any) => {
   metrics.incCounter('get_auth_token');
   const token = tokenByValue.get(req.params.token);
   if (token) {
@@ -135,45 +148,31 @@ fastify.get('/pay/address',
   }
 );
 
-fastify.post('/pay/receive',
-  {
-    schema: {
-      response: {
-        '2xx': {
-          token: { type: 'string' },
-          total: { type: 'number' },
-          used: { type: 'number' },
-          channel: { type: 'string' },
-        }
-      }
-    },
-    validatorCompiler: () => () => true,
-  },
-  async (req: any, res: any) => {
-    metrics.incCounter('post_pay_receive');
-    const voucher: Voucher = req.body;
-    let result;
+fastify.post('/pay/receive', authTokenSchema, async (req: any, res: any) => {
+  metrics.incCounter('post_pay_receive');
+  const voucher: Voucher = req.body;
+  let result;
 
-    try {
-      result = await nitro.ReceiveVoucher(voucher);
-    } catch (e) {
-      console.error(e);
-      res.status(400).send();
-      return;
-    }
+  try {
+    result = await nitro.ReceiveVoucher(voucher);
+  } catch (e) {
+    console.error(e);
+    res.status(400).send();
+    return;
+  }
 
-    let token = tokenByChannel.get(voucher.ChannelId);
-    if (!token) {
-      token = new AuthToken(voucher.ChannelId, result.Total);
-      tokenByChannel.set(voucher.ChannelId, token);
-      tokenByValue.set(token.value, token);
-    } else {
-      token.updateTotal(result.Total);
-    }
+  let token = tokenByChannel.get(voucher.ChannelId);
+  if (!token) {
+    token = new AuthToken(voucher.ChannelId, result.Total);
+    tokenByChannel.set(voucher.ChannelId, token);
+    tokenByValue.set(token.value, token);
+  } else {
+    token.updateTotal(result.Total);
+  }
 
-    metrics.incCounter(`post_pay_receive_${token.channel}`);
-    return token;
-  });
+  metrics.incCounter(`post_pay_receive_${token.channel}`);
+  return token;
+});
 
 fastify.get('/metrics', async (req: any, res: any) => {
   return metrics.render();

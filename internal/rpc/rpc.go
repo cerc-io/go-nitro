@@ -3,8 +3,9 @@ package rpc
 import (
 	"crypto/tls"
 	"fmt"
-	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"log/slog"
+
+	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 
 	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/paymentsmanager"

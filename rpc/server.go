@@ -3,12 +3,13 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"github.com/libp2p/go-libp2p/core/peer"
-	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"log/slog"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/libp2p/go-libp2p/core/peer"
+	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 
 	"github.com/statechannels/go-nitro/internal/logging"
 	nitro "github.com/statechannels/go-nitro/node"

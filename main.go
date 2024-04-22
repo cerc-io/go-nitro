@@ -299,7 +299,7 @@ func main() {
 
 			logging.SetupDefaultLogger(os.Stdout, slog.LevelDebug)
 
-			node, _, _, _, err := node.InitializeNode(chainOpts, storeOpts, messageOpts)
+			node, _, messageService, _, err := node.InitializeNode(chainOpts, storeOpts, messageOpts)
 			if err != nil {
 				return err
 			}
@@ -329,7 +329,7 @@ func main() {
 				cert = &loadedCert
 			}
 
-			rpcServer, err := rpc.InitializeRpcServer(node, paymentsManager, rpcPort, useNats, cert)
+			rpcServer, err := rpc.InitializeRpcServer(node, paymentsManager, messageService, rpcPort, useNats, cert)
 			if err != nil {
 				return err
 			}

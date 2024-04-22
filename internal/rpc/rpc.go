@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
+
 	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/paymentsmanager"
 	"github.com/statechannels/go-nitro/rpc"
@@ -13,7 +15,7 @@ import (
 	"github.com/statechannels/go-nitro/rpc/transport/nats"
 )
 
-func InitializeRpcServer(node *node.Node, paymentManager paymentsmanager.PaymentsManager, rpcPort int, useNats bool, cert *tls.Certificate) (*rpc.RpcServer, error) {
+func InitializeRpcServer(node *node.Node, paymentManager paymentsmanager.PaymentsManager, messageService *p2pms.P2PMessageService, rpcPort int, useNats bool, cert *tls.Certificate) (*rpc.RpcServer, error) {
 	var transport transport.Responder
 	var err error
 
@@ -28,7 +30,7 @@ func InitializeRpcServer(node *node.Node, paymentManager paymentsmanager.Payment
 		return nil, err
 	}
 
-	rpcServer, err := rpc.NewRpcServer(node, paymentManager, transport)
+	rpcServer, err := rpc.NewRpcServer(node, paymentManager, messageService, transport)
 	if err != nil {
 		return nil, err
 	}

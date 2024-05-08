@@ -121,7 +121,7 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     go run . -chainurl ${NITRO_CHAIN_URL} -msgport 3006 -rpcport 4006 -pk $ALICE_PK -chainpk $ALICE_CHAIN_PK -naaddress $NA_ADDRESS -vpaaddress $VPA_ADDRESS -caaddress $CA_ADDRESS -tlskeyfilepath ./tls/statechannels.org_key.pem -tlscertfilepath ./tls/statechannels.org.pem
     ```
 
-- Run go-nitro node for Bob:
+- Run go-nitro node for Bob in new terminal:
 
   - Load contract addresses from environment file to current shell session
 
@@ -140,9 +140,9 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     go run . -chainurl ${NITRO_CHAIN_URL} -msgport 3007 -rpcport 4007 -pk $BOB_PK -chainpk $BOB_CHAIN_PK -naaddress $NA_ADDRESS -vpaaddress $VPA_ADDRESS -caaddress $CA_ADDRESS  -bootpeers "/ip4/127.0.0.1/tcp/3006/p2p/16Uiu2HAmSjXJqsyBJgcBUU2HQmykxGseafSatbpq5471XmuaUqyv" -tlskeyfilepath ./tls/statechannels.org_key.pem -tlscertfilepath ./tls/statechannels.org.pem
     ```
 
-  - Provide Alice's P2P multiaddr as a bootpeer to Bob.
+    Note: Alice's P2P multiaddr is provided as bootpeer to Bob
 
-- Change directory to `packages/nitro-rpc-client`
+- In a new terminal change directory to `packages/nitro-rpc-client`
 
     ```bash
     cd packages/nitro-rpc-client
@@ -160,7 +160,14 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     npm exec -c 'nitro-rpc-client direct-fund 0xBBB676f9cFF8D242e9eaC39D063848807d3D1D94 -p 4006'
     ```
 
-- Assign ledger channel id in output log above to an environment variable
+    Example output
+
+    ```bash
+    # Objective started DirectFunding-0x16e30bfaa0a3ebcf1347ddcdd42df29dc960c75d0d3de530fb69ec0cbeebd8fa
+    # Channel Open 0x16e30bfaa0a3ebcf1347ddcdd42df29dc960c75d0d3de530fb69ec0cbeebd8fa
+    ```
+
+- Assign ledger channel id in output log above (`Channel Open <LEDGER_CHANNEL_ID>`) to an environment variable
 
     ```bash
     export LEDGER_CHANNEL_ID=<LEDGER_CHANNEL_ID>
@@ -172,7 +179,14 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     npm exec -c 'nitro-rpc-client virtual-fund 0xBBB676f9cFF8D242e9eaC39D063848807d3D1D94 -p 4006'
     ```
 
-- Assign payment channel id in output log above to an environment variable
+     Example output
+
+    ```bash
+    # Objective started VirtualFund-0x25676acc207865bd16c12eb4507784c0d1d3997945325a37e131d985a879bdab
+    # Channel Open 0x25676acc207865bd16c12eb4507784c0d1d3997945325a37e131d985a879bdab
+    ```
+
+- Assign payment channel id in output log above (`Channel Open <PAYMENT_CHANNEL_ID>`) to an environment variable
 
     ```bash
     export PAYMENT_CHANNEL_ID=<PAYMENT_CHANNEL_ID>

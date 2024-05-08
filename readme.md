@@ -45,7 +45,13 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 
 ## Steps to perform payments between two go-nitro nodes
 
-- Follow this [doc](https://book.getfoundry.sh/getting-started/installation) to set up foundry to run anvil chain.
+- Follow this [doc](https://book.getfoundry.sh/getting-started/installation) to set up foundry to run anvil chain
+
+  - Use an older foundry version to work with go-nitro
+
+    ```bash
+    foundryup --version nightly-cafc2606a2187a42b236df4aa65f4e8cdfcea970
+    ```
 
 - Start anvil chain:
 

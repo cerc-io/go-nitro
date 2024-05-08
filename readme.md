@@ -169,8 +169,8 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     Example output
 
     ```bash
-    # Objective started DirectFunding-0x16e30bfaa0a3ebcf1347ddcdd42df29dc960c75d0d3de530fb69ec0cbeebd8fa
-    # Channel Open 0x16e30bfaa0a3ebcf1347ddcdd42df29dc960c75d0d3de530fb69ec0cbeebd8fa
+    Objective started DirectFunding-0x16e30bfaa0a3ebcf1347ddcdd42df29dc960c75d0d3de530fb69ec0cbeebd8fa
+    Channel Open 0x16e30bfaa0a3ebcf1347ddcdd42df29dc960c75d0d3de530fb69ec0cbeebd8fa
     ```
 
 - Assign ledger channel id in output log above (`Channel Open <LEDGER_CHANNEL_ID>`) to an environment variable
@@ -179,17 +179,39 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     export LEDGER_CHANNEL_ID=<LEDGER_CHANNEL_ID>
     ```
 
+- Check ledger channel info:
+
+    ```bash
+    npm exec -c 'nitro-rpc-client get-ledger-channel $LEDGER_CHANNEL_ID -p 4006'
+    ```
+
+    Example output
+
+    ```bash
+    {
+      ID: '0xf6523e28b39de1e9afa65e2d29c23e22949d4d4ed55137cd208d035d4a88467f',
+      Status: 'Open',
+      Balance: {
+        AssetAddress: '0x0000000000000000000000000000000000000000',
+        Me: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+        Them: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+        MyBalance: 1000000n,
+        TheirBalance: 1000000n
+      }
+    }
+    ```
+
 - Create a virtual payment channel:
 
     ```bash
     npm exec -c 'nitro-rpc-client virtual-fund 0xBBB676f9cFF8D242e9eaC39D063848807d3D1D94 -p 4006'
     ```
 
-     Example output
+    Example output
 
     ```bash
-    # Objective started VirtualFund-0x25676acc207865bd16c12eb4507784c0d1d3997945325a37e131d985a879bdab
-    # Channel Open 0x25676acc207865bd16c12eb4507784c0d1d3997945325a37e131d985a879bdab
+    Objective started VirtualFund-0x25676acc207865bd16c12eb4507784c0d1d3997945325a37e131d985a879bdab
+    Channel Open 0x25676acc207865bd16c12eb4507784c0d1d3997945325a37e131d985a879bdab
     ```
 
 - Assign payment channel id in output log above (`Channel Open <PAYMENT_CHANNEL_ID>`) to an environment variable
@@ -198,10 +220,85 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     export PAYMENT_CHANNEL_ID=<PAYMENT_CHANNEL_ID>
     ```
 
+- Check ledger channel info:
+
+    ```bash
+    npm exec -c 'nitro-rpc-client get-ledger-channel $LEDGER_CHANNEL_ID -p 4006'
+    ```
+
+    Example output
+
+    ```bash
+    {
+      ID: '0xdf27ffafa9fbdd5f06821a755a08982adfcdc8ea7bd12638b07c279672faf8b6',
+      Status: 'Open',
+      Balance: {
+        AssetAddress: '0x0000000000000000000000000000000000000000',
+        Me: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+        Them: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+        MyBalance: 999000n,
+        TheirBalance: 999000n
+      }
+    }
+    ```
+
+- Check virtual channel info:
+
+    ```bash
+    npm exec -c 'nitro-rpc-client get-payment-channel $PAYMENT_CHANNEL_ID -p 4006'
+    ```
+
+    Example output
+
+    ```bash
+    {
+      ID: '0xc024a21a6c2626b100b9f4571e788f6c4ffedbd03ab7a2031d2db6929b375d4e',
+      Status: 'Open',
+      Balance: {
+        AssetAddress: '0x0000000000000000000000000000000000000000',
+        Payee: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+        Payer: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+        PaidSoFar: 0n,
+        RemainingFunds: 1000n
+      }
+    }
+    ```
+
 - Make payment from Alice to Bob:
 
     ```bash
     npm exec -c 'nitro-rpc-client pay $PAYMENT_CHANNEL_ID 50 -p 4006'
+    ```
+
+    Example output
+
+    ```bash
+    {
+      Amount: 50,
+      Channel: '0xc024a21a6c2626b100b9f4571e788f6c4ffedbd03ab7a2031d2db6929b375d4e'
+    }
+    ```
+
+- Check virtual channel info:
+
+    ```bash
+    npm exec -c 'nitro-rpc-client get-payment-channel $PAYMENT_CHANNEL_ID -p 4006'
+    ```
+
+    Example output
+
+    ```bash
+    {
+      ID: '0xc024a21a6c2626b100b9f4571e788f6c4ffedbd03ab7a2031d2db6929b375d4e',
+      Status: 'Open',
+      Balance: {
+        AssetAddress: '0x0000000000000000000000000000000000000000',
+        Payee: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+        Payer: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+        PaidSoFar: 50n,
+        RemainingFunds: 950n
+      }
+    }
     ```
 
 - Close the virtual payment channel:
@@ -210,11 +307,126 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     npm exec -c 'nitro-rpc-client virtual-defund $PAYMENT_CHANNEL_ID -p 4006'
     ```
 
+    Example output
+
+    ```bash
+    Objective started VirtualDefund-0xc024a21a6c2626b100b9f4571e788f6c4ffedbd03ab7a2031d2db6929b375d4e
+    Channel complete 0xc024a21a6c2626b100b9f4571e788f6c4ffedbd03ab7a2031d2db6929b375d4e
+    ```
+
+- Check virtual channel info:
+
+    ```bash
+    npm exec -c 'nitro-rpc-client get-payment-channel $PAYMENT_CHANNEL_ID -p 4006'
+    ```
+
+    Example output
+
+    ```bash
+    {
+      ID: '0xc024a21a6c2626b100b9f4571e788f6c4ffedbd03ab7a2031d2db6929b375d4e',
+      Status: 'Complete',
+      Balance: {
+        AssetAddress: '0x0000000000000000000000000000000000000000',
+        Payee: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+        Payer: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+        PaidSoFar: 50n,
+        RemainingFunds: 950n
+      }
+    }
+    ```
+
+- Check ledger channel info:
+
+    ```bash
+    npm exec -c 'nitro-rpc-client get-ledger-channel $LEDGER_CHANNEL_ID -p 4006'
+    ```
+
+    Example output
+
+    ```bash
+    {
+      ID: '0xdf27ffafa9fbdd5f06821a755a08982adfcdc8ea7bd12638b07c279672faf8b6',
+      Status: 'Open',
+      Balance: {
+        AssetAddress: '0x0000000000000000000000000000000000000000',
+        Me: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+        Them: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+        MyBalance: 999950n,
+        TheirBalance: 1000050n
+      }
+    }
+    ```
+
 - Close the ledger channel:
 
     ```bash
     npm exec -c 'nitro-rpc-client direct-defund $LEDGER_CHANNEL_ID -p 4006'
     ```
+
+- Check ledger channel info:
+
+    ```bash
+    npm exec -c 'nitro-rpc-client get-ledger-channel $LEDGER_CHANNEL_ID -p 4006'
+    ```
+
+    Example output
+
+    ```bash
+    {
+      ID: '0xf6523e28b39de1e9afa65e2d29c23e22949d4d4ed55137cd208d035d4a88467f',
+      Status: 'Complete',
+      Balance: {
+        AssetAddress: '0x0000000000000000000000000000000000000000',
+        Me: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+        Them: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+        MyBalance: 999950n,
+        TheirBalance: 1000050n
+      }
+    }
+    ```
+
+- Check on chain balance for Alice
+
+  ```bash
+  echo $(
+      printf "Result: %d" $(
+        curl -sk -X POST -H "Content-Type: application/json" --data '{
+          "jsonrpc":"2.0",
+          "method":"eth_getBalance",
+          "params": ["0xAAA6628Ec44A8a742987EF3A114dDFE2D4F7aDCE", "latest"],
+          "id":1
+        }' http://localhost:8545 | jq -r '.result'
+      )
+    )
+  ```
+
+  Example output
+
+  ```bash
+  Result: 999950
+  ```
+
+- Check on chain balance for Bob
+
+  ```bash
+  echo $(
+       printf "Result: %d" $(
+         curl -sk -X POST -H "Content-Type: application/json" --data '{
+           "jsonrpc":"2.0",
+           "method":"eth_getBalance",
+           "params": ["0xBBB676f9cFF8D242e9eaC39D063848807d3D1D94", "latest"],
+           "id":1
+         }' http://localhost:8545 | jq -r '.result'
+       )
+     )
+  ```
+
+  Example output
+
+  ```bash
+  Result: 1000050
+  ```
 
 ## License
 

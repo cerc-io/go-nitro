@@ -20,7 +20,7 @@
     "benchmark:update": "yarn hardhat run gas-benchmarks/exportBenchmarkResults.ts",
     "build:typescript": "rm -rf dist; yarn tsc",
     "contracts:deploy-goerli": "yarn hardhat deploy --network goerli --export-all addresses.json && node ./scripts/postdeploy.js",
-    "contracts:deploy-localhost": "yarn hardhat deploy --network localhost --export-all addresses.json && node ./scripts/postdeploy.js",
+    "contracts:deploy-localhost": "yarn hardhat deploy --network localhost --tags deploy-fvm --export-all addresses.json && node ./scripts/postdeploy.js",
     "contracts:node": "yarn hardhat node --no-deploy",
     "lint": "yarn lint:check",
     "lint:check": "yarn eslint \"./\" --cache && yarn solhint:check && yarn prettier:check",

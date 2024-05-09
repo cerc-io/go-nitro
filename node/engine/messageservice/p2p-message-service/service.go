@@ -18,6 +18,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
+	"github.com/libp2p/go-libp2p/p2p/transport/websocket"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/statechannels/go-nitro/internal/logging"
 	"github.com/statechannels/go-nitro/internal/safesync"
@@ -32,8 +33,9 @@ type basicPeerInfo struct {
 }
 
 const (
-	DHT_PROTOCOL_PREFIX     protocol.ID = "/nitro" // use /nitro/kad/1.0.0 instead of /ipfs/kad/1.0.0
-	GENERAL_MSG_PROTOCOL_ID protocol.ID = "/nitro/msg/1.0.0"
+	DHT_PROTOCOL_PREFIX       protocol.ID = "/nitro" // use /nitro/kad/1.0.0 instead of /ipfs/kad/1.0.0
+	GENERAL_MSG_PROTOCOL_ID   protocol.ID = "/nitro/msg/1.0.0"
+	PEER_EXCHANGE_PROTOCOL_ID protocol.ID = "/nitro/peerinfo/1.0.0"
 
 	DELIMITER                = '\n'
 	BUFFER_SIZE              = 1_000
@@ -44,7 +46,8 @@ const (
 
 type MessageOpts struct {
 	PkBytes   []byte
-	Port      int
+	TcpPort   int
+	WsMsgPort int
 	BootPeers []string
 	PublicIp  string
 	SCAddr    types.Address
@@ -52,12 +55,12 @@ type MessageOpts struct {
 
 // P2PMessageService is a rudimentary message service that uses TCP to send and receive messages.
 type P2PMessageService struct {
-	initComplete chan struct{}
-	toEngine     chan protocols.Message // for forwarding processed messages to the engine
-	peers        *safesync.Map[peer.ID]
+	initComplete    chan struct{}
+	toEngine        chan protocols.Message // for forwarding processed messages to the engine
+	dhtSignRequests chan SignatureRequest  // for forwarding signature requests to the engine
+	peers           *safesync.Map[peer.ID]
 
 	scAddr      types.Address
-	privateKey  p2pcrypto.PrivKey
 	p2pHost     host.Host
 	dht         *dht.IpfsDHT
 	newPeerInfo chan basicPeerInfo
@@ -69,19 +72,17 @@ type P2PMessageService struct {
 // NewMessageService returns a running P2PMessageService listening on the given ip, port and message key.
 func NewMessageService(opts MessageOpts) *P2PMessageService {
 	ms := &P2PMessageService{
-		initComplete: make(chan struct{}, 1),
-		toEngine:     make(chan protocols.Message, BUFFER_SIZE),
-		newPeerInfo:  make(chan basicPeerInfo, BUFFER_SIZE),
-		peers:        &safesync.Map[peer.ID]{},
-		scAddr:       opts.SCAddr,
-		logger:       logging.LoggerWithAddress(slog.Default(), opts.SCAddr),
+		initComplete:    make(chan struct{}, 1),
+		toEngine:        make(chan protocols.Message, BUFFER_SIZE),
+		dhtSignRequests: make(chan SignatureRequest, 50),
+		newPeerInfo:     make(chan basicPeerInfo, BUFFER_SIZE),
+		peers:           &safesync.Map[peer.ID]{},
+		scAddr:          opts.SCAddr,
+		logger:          logging.LoggerWithAddress(slog.Default(), opts.SCAddr),
 	}
 
-	messageKey, err := p2pcrypto.UnmarshalSecp256k1PrivateKey(opts.PkBytes)
-	ms.checkError(err)
-
 	addressFactory := func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
-		extMultiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", opts.PublicIp, opts.Port))
+		extMultiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", opts.PublicIp, opts.TcpPort))
 		if err != nil {
 			ms.logger.Error("failed to create publicIp multiaddress", "err", err)
 			return addrs
@@ -90,14 +91,21 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 		return addrs
 	}
 
-	ms.privateKey = messageKey
+	privateKey, err := p2pcrypto.UnmarshalSecp256k1PrivateKey(opts.PkBytes)
+	ms.checkError(err)
+
 	options := []libp2p.Option{
-		libp2p.Identity(messageKey),
+		libp2p.Identity(privateKey),
 		libp2p.AddrsFactory(addressFactory),
-		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%d", "0.0.0.0", opts.Port)),
+		libp2p.ListenAddrStrings(
+			fmt.Sprintf("/ip4/%s/tcp/%d", opts.PublicIp, opts.TcpPort),
+			fmt.Sprintf("/ip4/%s/tcp/%d/ws", opts.PublicIp, opts.WsMsgPort),
+		),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.NATPortMap(),
 		libp2p.EnableNATService(),
+		libp2p.Transport(websocket.New),
+		// libp2p.NoSecurity, // Use default security options (Noise + TLS)
 		libp2p.DefaultMuxers,
 	}
 	host, err := libp2p.New(options...)
@@ -105,6 +113,7 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 
 	ms.p2pHost = host
 	ms.p2pHost.SetStreamHandler(GENERAL_MSG_PROTOCOL_ID, ms.msgStreamHandler)
+	ms.p2pHost.SetStreamHandler(PEER_EXCHANGE_PROTOCOL_ID, ms.receivePeerInfo)
 
 	// Print out my own peerInfo
 	peerInfo := peer.AddrInfo{
@@ -211,8 +220,7 @@ func (ms *P2PMessageService) InitComplete() <-chan struct{} {
 
 // Id returns the libp2p peer ID of the message service.
 func (ms *P2PMessageService) Id() peer.ID {
-	id, _ := peer.IDFromPrivateKey(ms.privateKey)
-	return id
+	return ms.p2pHost.ID()
 }
 
 // addScaddrDhtRecord adds this node's state channel address to the custom dht namespace
@@ -227,12 +235,22 @@ func (ms *P2PMessageService) addScaddrDhtRecord(ctx context.Context) {
 	recordDataBytes, err := json.Marshal(recordData)
 	ms.checkError(err)
 
-	signature, err := ms.privateKey.Sign(recordDataBytes)
+	sigReq := SignatureRequest{
+		Data:         *recordData,
+		ResponseChan: make(chan []byte),
+	}
+	ms.dhtSignRequests <- sigReq
+
+	peerIdSig, err := ms.p2pHost.Peerstore().PrivKey(ms.Id()).Sign(recordDataBytes)
+	ms.checkError(err)
+
+	scAddrSig := <-sigReq.ResponseChan
 	ms.checkError(err)
 
 	fullRecord := &dhtRecord{
 		Data:      *recordData,
-		Signature: signature,
+		PeerIdSig: peerIdSig,
+		SCAddrSig: scAddrSig,
 	}
 	fullRecordBytes, err := json.Marshal(fullRecord)
 	ms.checkError(err)
@@ -264,6 +282,39 @@ func (ms *P2PMessageService) msgStreamHandler(stream network.Stream) {
 		return
 	}
 	ms.toEngine <- m
+}
+
+// receivePeerInfo receives peer info from the given stream
+func (ms *P2PMessageService) receivePeerInfo(stream network.Stream) {
+	ms.logger.Info("received peerInfo")
+	defer stream.Close()
+
+	// Create a buffer stream for non blocking read and write.
+	reader := bufio.NewReader(stream)
+	raw, err := reader.ReadString(DELIMITER)
+
+	// An EOF means the stream has been closed by the other side.
+	if errors.Is(err, io.EOF) {
+		return
+	}
+	if err != nil {
+		ms.logger.Error("error", "err", err)
+		return
+	}
+
+	var msg *basicPeerInfo
+	err = json.Unmarshal([]byte(raw), &msg)
+	if err != nil {
+		ms.logger.Error("error in unmarshalling", "err", err)
+		return
+	}
+
+	_, foundPeer := ms.peers.LoadOrStore(msg.Address.String(), msg.Id)
+	if !foundPeer {
+		peerInfo := basicPeerInfo{msg.Id, msg.Address}
+		ms.logger.Info("stored new peer in map", "peerInfo", peerInfo)
+		ms.newPeerInfo <- peerInfo
+	}
 }
 
 func (ms *P2PMessageService) getPeerIdFromDht(scaddr string) (peer.ID, error) {
@@ -340,9 +391,14 @@ func (ms *P2PMessageService) checkError(err error) {
 	panic(err)
 }
 
-// Out returns a channel that can be used to receive messages from the message service
-func (ms *P2PMessageService) Out() <-chan protocols.Message {
+// P2PMessages returns a channel that can be used to receive messages from the message service
+func (ms *P2PMessageService) P2PMessages() <-chan protocols.Message {
 	return ms.toEngine
+}
+
+// SignRequests returns a channel that can be used to receive signature request messages from the message service
+func (ms *P2PMessageService) SignRequests() <-chan SignatureRequest {
+	return ms.dhtSignRequests
 }
 
 // Close closes the P2PMessageService

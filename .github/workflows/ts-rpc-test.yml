@@ -19,6 +19,8 @@ jobs:
       # Install foundry so we can use it to run a chain instance
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: "nightly-cafc2606a2187a42b236df4aa65f4e8cdfcea970"
 
       - uses: ./.github/actions/mkcert
 
@@ -33,12 +35,12 @@ jobs:
 
       - name: Run Create Channels script
         # TODO: We could write a test specific script that creates channels and checks the results
-        run: npx ts-node ./scripts/client-runner.ts create-channels -w 300000 &> output.log
+        run: npx ts-node ./scripts/client-runner.ts create-channels -w 300000
         working-directory: packages/nitro-rpc-client
 
       - name: Archive logs
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: logs
-          path: ./**/*.log
+          name: rpc server logs
+          path: ./output.log

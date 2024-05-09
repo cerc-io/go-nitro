@@ -49,7 +49,7 @@ func main() {
 		Usage: "Creates a ledger channel with the specified counterparty and amount",
 		Flags: flags,
 		Action: func(cCtx *cli.Context) error {
-			clientConnection, err := http.NewHttpTransportAsClient(cCtx.String(NITRO_ENDPOINT), 10*time.Millisecond)
+			clientConnection, err := http.NewHttpTransportAsClient(cCtx.String(NITRO_ENDPOINT), true, 10*time.Millisecond)
 			if err != nil {
 				return err
 			}

@@ -105,7 +105,7 @@ export default function App() {
   const [selectedFile, setSelectedFile] = useState<AvailableFile>(files[0]);
   useEffect(() => {
     console.time("Connect to Nitro Node");
-    NitroRpcClient.CreateHttpNitroClient(url)
+    NitroRpcClient.CreateHttpNitroClient(url, true)
       .then(
         (c) => setNitroClient(c),
         (e) => {
@@ -115,14 +115,6 @@ export default function App() {
       )
       .finally(() => console.timeEnd("Connect to Nitro Node"));
   }, [url]);
-
-  const updateChannelInfo = async (channelId: string) => {
-    if (channelId == "") {
-      throw new Error("Empty channel id provided");
-    }
-    const paymentChannel = await nitroClient?.GetPaymentChannel(channelId);
-    setPaymentChannelInfo(paymentChannel);
-  };
 
   const triggerFileDownload = (file: File) => {
     // This will prompt the browser to download the file
@@ -145,19 +137,22 @@ export default function App() {
       initialChannelBalance
     );
 
-    // TODO: If the objective completes fast enough, we might start waiting after it's already done
-    // await nitroClient.WaitForObjective(result.Id);
-
     setPaymentChannelId(result.ChannelId);
-    updateChannelInfo(result.ChannelId);
+
+    nitroClient.onPaymentChannelUpdated(
+      result.ChannelId,
+      setPaymentChannelInfo
+    );
+
+    // It's possible the channel updated before we registered the handler above, so
+    // query the channel once now to get the latest information:
+
+    setPaymentChannelInfo(
+      await nitroClient?.GetPaymentChannel(result.ChannelId)
+    );
+
     console.timeEnd("Create Payment Channel");
-
-    // TODO: Slightly hacky but we wait a beat before querying so we see the updated balance
-    setTimeout(() => {
-      updateChannelInfo(result.ChannelId);
-    }, 1000);
   };
-
   const fetchAndDownloadFile = async () => {
     setErrorText("");
     setFetchInProgress(true);
@@ -182,25 +177,16 @@ export default function App() {
             nitroClient,
             (progress) => {
               setDownloadProgress(progress);
-              updateChannelInfo(paymentChannelInfo.ID);
             }
           )
         : await fetchFile(
             selectedFile.url,
             skipPayment ? 0 : costPerByte * selectedFile.size,
             paymentChannelInfo.ID,
-            nitroClient,
-            () => {
-              updateChannelInfo(paymentChannelInfo.ID);
-            }
+            nitroClient
           );
       setDownloadProgress(100);
       triggerFileDownload(file);
-
-      // TODO: Slightly hacky but we wait a beat before querying so we see the updated balance
-      setTimeout(() => {
-        updateChannelInfo(paymentChannelInfo.ID);
-      }, 50);
     } catch (e: unknown) {
       console.error(e);
 
@@ -281,16 +267,9 @@ export default function App() {
             <StepLabel>Connect to a Retrieval Provider</StepLabel>
             <StepContent>
               <Typography>
-                Connect to{" "}
-                <Link
-                  underline="hover"
-                  href="https://dcent.nl/"
-                  target="_blank"
-                >
-                  DCENT Datacenter
-                </Link>{" "}
-                Storage Provider, creating a <b>virtual payment channel</b> with
-                enough capacity to pay for 10 retrievals.
+                Connect to a Storage Provider, creating a{" "}
+                <b>virtual payment channel</b> with enough capacity to pay for
+                10 retrievals.
               </Typography>
 
               <Box sx={{ mb: 2 }}>

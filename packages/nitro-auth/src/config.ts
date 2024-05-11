@@ -1,8 +1,9 @@
 export const Config = {
   LISTEN_PORT: parseInt(process.env.CERC_NITRO_AUTH_LISTEN_PORT || '8547'),
   LISTEN_ADDR: process.env.CERC_NITRO_AUTH_LISTEN_ADDR || '0.0.0.0',
+  GETH_HTTP_URL: process.env.CERC_NITRO_GETH_HTTP_URL || 'http://localhost:8545',
   NITRO_RPC_HOST: process.env.CERC_NITRO_AUTH_RPC_HOST || '127.0.0.1',
-  NITRO_RPC_PORT: process.env.CERC_NITRO_AUTH_RPC_PORT || '4005',
+  NITRO_RPC_PORT: process.env.CERC_NITRO_AUTH_RPC_PORT || '4007',
   NITRO_RPC_SECURE: 'true' === (process.env.CERC_NITRO_RPC_SECURE || 'false'),
   NITRO_PK: process.env.CERC_NITRO_PK,
   NITRO_WS_MSG_PUBLIC_IP: process.env.CERC_NITRO_MSG_PUBLIC_IP || '127.0.0.1',

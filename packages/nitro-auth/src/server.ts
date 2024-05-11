@@ -180,6 +180,43 @@ fastify.post('/pay/receive', authTokenSchema, async (req: any, res: any) => {
   return token;
 });
 
+fastify.post('/', async (req, res) => {
+  const body = req.body as any;
+  const method = body?.method ?? 'NONE';
+  let allowed = false;
+
+  switch (method) {
+  case 'eth_chainId':
+  case 'eth_blockNumber':
+    allowed = true;
+    break;
+  case 'eth_call':
+    // For the moment, all calls.
+    allowed = true;
+    break;
+  default:
+    allowed = false;
+  }
+
+  if (!allowed) {
+    log.info(`Rejecting { "method": "${body.method}", "id": ${body.id}, ... } to ${Config.GETH_HTTP_URL}`);
+    res.code(401);
+    return '401 Unauthorized';
+  }
+
+  log.info(`Proxying { "method": "${body.method}", "id": ${body.id}, ... } to ${Config.GETH_HTTP_URL}`);
+
+  const response = await fetch(Config.GETH_HTTP_URL, {
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body),
+  });
+
+  return response.json();
+});
+
 fastify.get('/metrics', async (req: any, res: any) => {
   return metrics.render();
 });

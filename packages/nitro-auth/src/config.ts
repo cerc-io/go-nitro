@@ -2,6 +2,7 @@ export const Config = {
   LISTEN_PORT: parseInt(process.env.CERC_NITRO_AUTH_LISTEN_PORT || '8547'),
   LISTEN_ADDR: process.env.CERC_NITRO_AUTH_LISTEN_ADDR || '0.0.0.0',
   GETH_HTTP_URL: process.env.CERC_NITRO_GETH_HTTP_URL || 'http://localhost:8545',
+  GETH_FREE_METHODS: (process.env.CERC_NITRO_GETH_FREE_METHODS || 'eth_chainId,eth_blockNumber,net_version').split(',').map(x => x.trim()),
   NITRO_RPC_HOST: process.env.CERC_NITRO_AUTH_RPC_HOST || '127.0.0.1',
   NITRO_RPC_PORT: process.env.CERC_NITRO_AUTH_RPC_PORT || '4007',
   NITRO_RPC_SECURE: 'true' === (process.env.CERC_NITRO_RPC_SECURE || 'false'),

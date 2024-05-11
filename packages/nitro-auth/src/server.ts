@@ -183,20 +183,7 @@ fastify.post('/pay/receive', authTokenSchema, async (req: any, res: any) => {
 fastify.post('/', async (req, res) => {
   const body = req.body as any;
   const method = body?.method ?? 'NONE';
-  let allowed = false;
-
-  switch (method) {
-  case 'eth_chainId':
-  case 'eth_blockNumber':
-    allowed = true;
-    break;
-  case 'eth_call':
-    // For the moment, all calls.
-    allowed = true;
-    break;
-  default:
-    allowed = false;
-  }
+  const allowed = Config.GETH_FREE_METHODS.includes(method);
 
   if (!allowed) {
     log.info(`Rejecting { "method": "${body.method}", "id": ${body.id}, ... } to ${Config.GETH_HTTP_URL}`);

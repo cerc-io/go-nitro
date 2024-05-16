@@ -12,8 +12,8 @@ import (
 type AllocationType uint8
 
 const (
-	NormalAllocationType AllocationType = iota
-	GuaranteeAllocationType
+	NormalAllocationType AllocationType = 0
+	GuaranteeAllocationType = 2
 )
 
 // Allocation declares an Amount to be paid to a Destination.

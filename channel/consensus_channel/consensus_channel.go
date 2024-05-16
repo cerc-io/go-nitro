@@ -356,7 +356,7 @@ func (g Guarantee) AsAllocation() outcome.Allocation {
 	return outcome.Allocation{
 		Destination:    g.target,
 		Amount:         amount,
-		AllocationType: 1,
+		AllocationType: 2,
 		Metadata:       append(g.left.Bytes(), g.right.Bytes()...),
 	}
 }

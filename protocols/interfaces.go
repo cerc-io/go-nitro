@@ -8,6 +8,7 @@ import (
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/crypto"
+	NitroAdjudicator "github.com/statechannels/go-nitro/node/engine/chainservice/adjudicator"
 	"github.com/statechannels/go-nitro/types"
 )
 
@@ -91,6 +92,15 @@ func NewCheckpointTransaction(
 		Candidate:        candidate,
 		Proof:            proof,
 	}
+}
+
+type ReclaimTransaction struct {
+	ChainTransaction
+	ReclaimArgs NitroAdjudicator.IMultiAssetHolderReclaimArgs
+}
+
+func NewReclaimTransaction(channelId types.Destination, reclaimArgs NitroAdjudicator.IMultiAssetHolderReclaimArgs) ReclaimTransaction {
+	return ReclaimTransaction{ChainTransaction: ChainTransactionBase{channelId: channelId}, ReclaimArgs: reclaimArgs}
 }
 
 // SideEffects are effects to be executed by an imperative shell

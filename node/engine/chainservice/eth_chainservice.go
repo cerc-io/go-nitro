@@ -304,6 +304,9 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 
 		_, er := ecs.na.TransferAllAssets(ecs.defaultTxOpts(), channelId, nitroVariablePart.Outcome, stateHash)
 		return er
+	case protocols.ReclaimTransaction:
+		_, err:= ecs.na.Reclaim(ecs.defaultTxOpts(), tx.ReclaimArgs)
+		return err
 	default:
 		return fmt.Errorf("unexpected transaction type %T", tx)
 	}

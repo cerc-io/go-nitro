@@ -282,6 +282,7 @@ func TestCounterChallenge(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	// TODO: Update off chain states
 
 	// Listen for allocation updated event
 	event = waitForEvent(t, testChainServiceB.EventFeed(), chainservice.AllocationUpdatedEvent{})

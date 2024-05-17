@@ -136,6 +136,11 @@ fastify.get('/pay/address',
         '2xx': {
           address: { type: 'string' },
           multiaddrs: { type: 'array', items: {type: 'string'} },
+          contractAddresses: {
+            nitroAdjudicatorAddress: { type: 'string' },
+            virtualPaymentAppAddress: { type: 'string' },
+            consensusAppAddress: { type: 'string' },
+          }
         }
       }
     }
@@ -149,7 +154,12 @@ fastify.get('/pay/address',
       address,
       multiaddrs: [
         `/ip4/${Config.NITRO_WS_MSG_PUBLIC_IP}/tcp/${Config.NITRO_WS_MSG_PUBLIC_PORT}/ws/p2p/${peerId}`
-      ]
+      ],
+      contractAddresses: {
+        nitroAdjudicatorAddress: Config.NITRO_CONTRACT_NA_ADDRESS,
+        virtualPaymentAppAddress: Config.NITRO_CONTRACT_VPA_ADDRESS,
+        consensusAppAddress: Config.NITRO_CONTRACT_CA_ADDRESS
+      }
     };
   }
 );

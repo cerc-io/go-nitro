@@ -9,6 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel/state"
+	"github.com/statechannels/go-nitro/cmd/utils"
+	"github.com/statechannels/go-nitro/internal/chain"
 	"github.com/statechannels/go-nitro/internal/testactors"
 	ta "github.com/statechannels/go-nitro/internal/testactors"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
@@ -364,7 +366,7 @@ func TestVirtualPaymentChannel(t *testing.T){
 	nodeA.Pay(virtualResponse.ChannelId, big.NewInt(int64(100)))
 
 	// Wait for node B to recieve voucher
-	nodeBVoucher := <- nodeB.ReceivedVouchers()
+	nodeBVoucher := <-nodeB.ReceivedVouchers()
 	t.Log("Voucher recieved", nodeBVoucher)
 
 	targetFinalOutcome := finalPaymentOutcome(*nodeA.Address, *nodeB.Address, types.Address{}, 1, 100)
@@ -383,31 +385,31 @@ func TestVirtualPaymentChannel(t *testing.T){
 	targetOb, _ := targetOutcome.Encode()
 
 	reclaimArgs := NitroAdjudicator.IMultiAssetHolderReclaimArgs{
-		SourceChannelId: ledgerChannel,
-		SourceStateHash: signedStateHash,
-		SourceOutcomeBytes: sourceOb,
-		SourceAssetIndex: common.Big0,
+		SourceChannelId:       ledgerChannel,
+		SourceStateHash:       signedStateHash,
+		SourceOutcomeBytes:    sourceOb,
+		SourceAssetIndex:      common.Big0,
 		IndexOfTargetInSource: common.Big2,
-		TargetStateHash: virtualStateHash,
-		TargetOutcomeBytes: targetOb,
-		TargetAssetIndex: common.Big0,
+		TargetStateHash:       virtualStateHash,
+		TargetOutcomeBytes:    targetOb,
+		TargetAssetIndex:      common.Big0,
 	}
 
-		// Node A calls challenge method on virtual channel
-		virtualChallengerSig, _ := NitroAdjudicator.SignChallengeMessage(virtualLatestState.State(), ta.Alice.PrivateKey)
-		virtualChallengeTx := protocols.NewChallengeTransaction(virtualResponse.ChannelId, virtualLatestState, []state.SignedState{postFundState}, virtualChallengerSig)
-		err = testChainServiceA.SendTransaction(virtualChallengeTx)
-		if err != nil {
-			t.Error(err)
-		}
+	// Node A calls challenge method on virtual channel
+	virtualChallengerSig, _ := NitroAdjudicator.SignChallengeMessage(virtualLatestState.State(), ta.Alice.PrivateKey)
+	virtualChallengeTx := protocols.NewChallengeTransaction(virtualResponse.ChannelId, virtualLatestState, []state.SignedState{postFundState}, virtualChallengerSig)
+	err = testChainServiceA.SendTransaction(virtualChallengeTx)
+	if err != nil {
+		t.Error(err)
+	}
 
 		// Wait for challenge duration
 		time.Sleep(time.Duration(challengeDuration) * time.Second)
 
-		// Finalize Outcome
-		sim.Commit()
+	// Finalize Outcome
+	sim.Commit()
 
-		// Node A calls challenge method
+	// Node A calls challenge method
 	challengerSig, _ := NitroAdjudicator.SignChallengeMessage(signedUpdatedLedgerState.State(), ta.Alice.PrivateKey)
 	challengeTx := protocols.NewChallengeTransaction(ledgerChannel, signedUpdatedLedgerState, make([]state.SignedState, 0), challengerSig)
 	err = testChainServiceA.SendTransaction(challengeTx)
@@ -448,6 +450,133 @@ func TestVirtualPaymentChannel(t *testing.T){
 	t.Log("Balance of A", balanceA, "\nBalance of B", balanceB)
 	testhelpers.Assert(t, balanceA.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "BalanceA (%v) should be equal to ledgerChannelDeposit (%v)", balanceA, ledgerChannelDeposit)
 	testhelpers.Assert(t, balanceB.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "BalanceB (%v) should be equal to ledgerChannelDeposit (%v)", balanceB, ledgerChannelDeposit)
+}
+
+func TestVirtualPaymentChannelUsingAnvil(t *testing.T) {
+	const challengeDuration = 5
+
+	anvilCmd, _ := chain.StartAnvil()
+	defer utils.StopCommands(anvilCmd)
+
+	chainAuthToken := ""
+	chainUrl := "ws://127.0.0.1:8545"
+	aliceChainPk := "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	bobChainPk := "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+	contractAddresses, _ := chain.DeployContracts(context.Background(), chainUrl, chainAuthToken, aliceChainPk)
+
+	chainOptsAlice := chainservice.ChainOpts{
+		ChainUrl:        chainUrl,
+		ChainStartBlock: 0,
+		ChainAuthToken:  chainAuthToken,
+		ChainPk:         aliceChainPk,
+		NaAddress:       contractAddresses.NaAddress,
+		VpaAddress:      contractAddresses.VpaAddress,
+		CaAddress:       contractAddresses.CaAddress,
+	}
+	chainOptsBob := chainservice.ChainOpts{
+		ChainUrl:        chainUrl,
+		ChainStartBlock: 0,
+		ChainAuthToken:  chainAuthToken,
+		ChainPk:         bobChainPk,
+		NaAddress:       contractAddresses.NaAddress,
+		VpaAddress:      contractAddresses.VpaAddress,
+		CaAddress:       contractAddresses.CaAddress,
+	}
+	chainServiceA, _ := chainservice.NewEthChainService(chainOptsAlice)
+	chainServiceB, _ := chainservice.NewEthChainService(chainOptsBob)
+	testChainServiceA, _ := chainservice.NewEthChainService(chainOptsBob)
+
+	// Create go-nitro nodes
+	msgBroker := messageservice.NewBroker()
+	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	defer cleanup()
+	nodeA, storeA := setupNode(ta.Alice.PrivateKey, chainServiceA, msgBroker, 0, dataFolder)
+	defer closeNode(t, &nodeA)
+	nodeB, _ := setupNode(ta.Bob.PrivateKey, chainServiceB, msgBroker, 0, dataFolder)
+
+	// Create ledger channel
+	ledgerChannel := openLedgerChannel(t, nodeA, nodeB, types.Address{}, challengeDuration)
+
+	// Create virtual channel
+	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, types.Address{})
+	virtualResponse, _ := nodeA.CreatePaymentChannel([]common.Address{}, *nodeB.Address, challengeDuration, virtualOutcome)
+
+	// Wait for objective to complete
+	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{virtualResponse.Id})
+	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeA, nodeB)
+
+	// _, oldSignedState  := getVirtualSignedState(storeA, virtualResponse.ChannelId)
+	// oldLedgerState := getLatestSignedState(storeA, ledgerChannel)
+
+	// Make payment
+	nodeA.Pay(virtualResponse.ChannelId, big.NewInt(int64(100)))
+
+	// Wait for node B to recieve voucher
+	nodeBVoucher := <-nodeB.ReceivedVouchers()
+	t.Log("Voucher recieved", nodeBVoucher)
+
+	targetFinalOutcome := finalPaymentOutcome(*nodeA.Address, *nodeB.Address, types.Address{}, 1, 100)
+	checkPaymentChannel(t, virtualResponse.ChannelId, targetFinalOutcome, query.Open, nodeA, nodeB)
+
+	closeNode(t, &nodeB)
+
+	// Call Reclaim method
+	signedUpdatedLedgerState := getLatestSignedState(storeA, ledgerChannel)
+	signedStateHash, _ := signedUpdatedLedgerState.State().Hash()
+	virtualSupportedState, virtualLatestState, postFundState := getVirtualSignedState(storeA, virtualResponse.ChannelId)
+	virtualStateHash, _ := virtualSupportedState.Hash()
+	sourceOutcome := signedUpdatedLedgerState.State().Outcome
+	sourceOb, _ := sourceOutcome.Encode()
+	targetOutcome := virtualSupportedState.Outcome
+	targetOb, _ := targetOutcome.Encode()
+
+	reclaimArgs := NitroAdjudicator.IMultiAssetHolderReclaimArgs{
+		SourceChannelId:       ledgerChannel,
+		SourceStateHash:       signedStateHash,
+		SourceOutcomeBytes:    sourceOb,
+		SourceAssetIndex:      common.Big0,
+		IndexOfTargetInSource: common.Big2,
+		TargetStateHash:       virtualStateHash,
+		TargetOutcomeBytes:    targetOb,
+		TargetAssetIndex:      common.Big0,
+	}
+
+	// Node A calls challenge method on virtual channel
+	virtualChallengerSig, _ := NitroAdjudicator.SignChallengeMessage(virtualLatestState.State(), ta.Alice.PrivateKey)
+	virtualChallengeTx := protocols.NewChallengeTransaction(virtualResponse.ChannelId, virtualLatestState, []state.SignedState{postFundState}, virtualChallengerSig)
+	err := testChainServiceA.SendTransaction(virtualChallengeTx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Wait for challenge duration
+	time.Sleep(time.Duration(challengeDuration) * time.Second)
+
+	// Node A calls challenge method
+	challengerSig, _ := NitroAdjudicator.SignChallengeMessage(signedUpdatedLedgerState.State(), ta.Alice.PrivateKey)
+	challengeTx := protocols.NewChallengeTransaction(ledgerChannel, signedUpdatedLedgerState, make([]state.SignedState, 0), challengerSig)
+	err = testChainServiceA.SendTransaction(challengeTx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Wait for challenge duration
+	time.Sleep(time.Duration(challengeDuration) * time.Second)
+
+	reclaimTx := protocols.NewReclaimTransaction(ledgerChannel, reclaimArgs)
+	err = testChainServiceA.SendTransaction(reclaimTx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	reclaimedLedgerState := getLatestSignedState(storeA, ledgerChannel)
+
+	// Node A calls transferAllAssets method
+	transferTx := protocols.NewTransferAllTransaction(ledgerChannel, reclaimedLedgerState)
+	err = testChainServiceA.SendTransaction(transferTx)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func getLatestSignedState(store store.Store, id types.Destination) state.SignedState {

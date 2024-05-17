@@ -357,6 +357,9 @@ func TestVirtualPaymentChannel(t *testing.T){
 	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{virtualResponse.Id})
 	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeA, nodeB)
 
+	// _, oldSignedState  := getVirtualSignedState(storeA, virtualResponse.ChannelId)
+	// oldLedgerState := getLatestSignedState(storeA, ledgerChannel)
+
 	// Make payment
 	nodeA.Pay(virtualResponse.ChannelId, big.NewInt(int64(100)))
 
@@ -367,32 +370,16 @@ func TestVirtualPaymentChannel(t *testing.T){
 	targetFinalOutcome := finalPaymentOutcome(*nodeA.Address, *nodeB.Address, types.Address{}, 1, 100)
 	checkPaymentChannel(t, virtualResponse.ChannelId, targetFinalOutcome, query.Open, nodeA, nodeB)
 
-	signedLedgerState := getLatestSignedState(storeA, ledgerChannel)
-
 	closeNode(t, &nodeB)
-
-	// Node A calls challenge method
-	challengerSig, _ := NitroAdjudicator.SignChallengeMessage(signedLedgerState.State(), ta.Alice.PrivateKey)
-	challengeTx := protocols.NewChallengeTransaction(ledgerChannel, signedLedgerState, make([]state.SignedState, 0), challengerSig)
-	err = testChainServiceA.SendTransaction(challengeTx)
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Wait for challenge duration
-	time.Sleep(time.Duration(challengeDuration) * time.Second)
-
-	// Finalize Outcome
-	sim.Commit()
 
 	// Call Reclaim method
 	signedUpdatedLedgerState := getLatestSignedState(storeA, ledgerChannel)
 	signedStateHash, _ := signedUpdatedLedgerState.State().Hash()
-	signedVirtualState := getVirtualSignedState(storeA, virtualResponse.ChannelId)
-	virtualStateHash, _ := signedVirtualState.Hash()
+	virtualSupportedState, virtualLatestState, postFundState := getVirtualSignedState(storeA, virtualResponse.ChannelId)
+	virtualStateHash, _ := virtualSupportedState.Hash()
 	sourceOutcome := signedUpdatedLedgerState.State().Outcome
 	sourceOb, _ := sourceOutcome.Encode()
-	targetOutcome := signedVirtualState.Outcome
+	targetOutcome := virtualSupportedState.Outcome
 	targetOb, _ := targetOutcome.Encode()
 
 	reclaimArgs := NitroAdjudicator.IMultiAssetHolderReclaimArgs{
@@ -405,6 +392,34 @@ func TestVirtualPaymentChannel(t *testing.T){
 		TargetOutcomeBytes: targetOb,
 		TargetAssetIndex: common.Big0,
 	}
+
+		// Node A calls challenge method on virtual channel
+		virtualChallengerSig, _ := NitroAdjudicator.SignChallengeMessage(virtualLatestState.State(), ta.Alice.PrivateKey)
+		virtualChallengeTx := protocols.NewChallengeTransaction(virtualResponse.ChannelId, virtualLatestState, []state.SignedState{postFundState}, virtualChallengerSig)
+		err = testChainServiceA.SendTransaction(virtualChallengeTx)
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Wait for challenge duration
+		time.Sleep(time.Duration(challengeDuration) * time.Second)
+
+		// Finalize Outcome
+		sim.Commit()
+
+		// Node A calls challenge method
+	challengerSig, _ := NitroAdjudicator.SignChallengeMessage(signedUpdatedLedgerState.State(), ta.Alice.PrivateKey)
+	challengeTx := protocols.NewChallengeTransaction(ledgerChannel, signedUpdatedLedgerState, make([]state.SignedState, 0), challengerSig)
+	err = testChainServiceA.SendTransaction(challengeTx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Wait for challenge duration
+	time.Sleep(time.Duration(challengeDuration) * time.Second)
+
+	// Finalize Outcome
+	sim.Commit()
 
 	reclaimTx := protocols.NewReclaimTransaction(ledgerChannel, reclaimArgs)
 	err = testChainServiceA.SendTransaction(reclaimTx)
@@ -440,8 +455,10 @@ func getLatestSignedState(store store.Store, id types.Destination) state.SignedS
 	return consensusChannel.SupportedSignedState()
 }
 
-func getVirtualSignedState(store store.Store, id types.Destination) state.State {
+func getVirtualSignedState(store store.Store, id types.Destination) (state.State, state.SignedState, state.SignedState) {
 	virtualChannel, _ := store.GetChannelById(id)
-	virtualState, _ := virtualChannel.LatestSupportedState()
-	return virtualState
+	postfund := virtualChannel.SignedPostFundState()
+	virtualSupportedState, _ := virtualChannel.LatestSupportedState()
+	virtualSignedState, _ := virtualChannel.LatestSignedState()
+	return virtualSupportedState, virtualSignedState, postfund
 }

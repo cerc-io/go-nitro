@@ -184,6 +184,112 @@ func TestCheckpoint(t *testing.T) {
 	testhelpers.Assert(t, err.Error() == "execution reverted: Channel not finalized.", "Expected execution reverted error")
 }
 
+func TestCounterChallenge(t *testing.T) {
+	// The sendTransaction method from simulatedBackendService mints three blocks
+	// The timestamp of each succeeding block is 10 seconds more than previous block hence calling sendTransaction moves the time forward by 30 seconds
+	// Hence if challenge duration is less than or equal to 30, on calling challenge method again channel is computed as finalized
+	// Therefore, challenge duration of 31 or greater is necessary
+	const ChallengeDuration = 31
+
+	// Start the chain & deploy contract
+	t.Log("Starting chain")
+	sim, bindings, ethAccounts, err := chainservice.SetupSimulatedBackend(2)
+	defer closeSimulatedChain(t, sim)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create go-nitro nodes
+	msgBroker := messageservice.NewBroker()
+	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	defer cleanup()
+	nodeA, storeA, chainServiceA := setupNodeAndChainService(sim, bindings, ethAccounts[0], ta.Alice.PrivateKey, msgBroker, dataFolder)
+	nodeB, storeB, chainServiceB := setupNodeAndChainService(sim, bindings, ethAccounts[1], ta.Bob.PrivateKey, msgBroker, dataFolder)
+	defer closeNode(t, &nodeA)
+	defer closeNode(t, &nodeB)
+
+	// Seperate chain service to listen for events
+	testChainServiceB, _ := chainservice.NewSimulatedBackendChainService(sim, bindings, ethAccounts[1])
+	defer testChainServiceB.Close()
+
+	// Create ledger channel and check balance of node
+	ledgerChannel := openLedgerChannel(t, nodeA, nodeB, types.Address{}, ChallengeDuration)
+	latestBlock, _ := sim.BlockByNumber(context.Background(), nil)
+	balanceNodeA, _ := sim.BalanceAt(context.Background(), ta.Alice.Address(), latestBlock.Number())
+	balanceNodeB, _ := sim.BalanceAt(context.Background(), ta.Bob.Address(), latestBlock.Number())
+	t.Log("Balance of Alice", balanceNodeA, "\nBalance of Bob", balanceNodeB)
+	testhelpers.Assert(t, balanceNodeA.Int64() == 0, "Balance of Alice should be zero")
+	testhelpers.Assert(t, balanceNodeB.Int64() == 0, "Balance of Bob should be zero")
+
+	// Store current state
+	oldState := getLatestSignedState(storeA, ledgerChannel)
+
+	// Conduct virtual fund, make payment and virtual defund
+	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, common.BigToAddress(common.Big0))
+	response, err := nodeA.CreatePaymentChannel([]common.Address{}, *nodeB.Address, ChallengeDuration, virtualOutcome)
+	if err != nil {
+		t.Error(err)
+	}
+	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{response.Id})
+	nodeA.Pay(response.ChannelId, big.NewInt(virtualChannelDeposit))
+	nodeBVoucher := <-nodeB.ReceivedVouchers()
+	t.Logf("Voucher recieved %+v", nodeBVoucher)
+	virtualDefundResponse, err := nodeA.ClosePaymentChannel(response.ChannelId)
+	if err != nil {
+		t.Error(err)
+	}
+	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{virtualDefundResponse})
+
+	// Store current state after payment and virtual defund
+	newState := getLatestSignedState(storeB, ledgerChannel)
+
+	// Alice calls challenge method using old state
+	sendChallengeTransaction(t, oldState, ta.Alice.PrivateKey, ledgerChannel, chainServiceA)
+
+	// Bob listen for challenge registered event
+	event := waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeRegisteredEvent{})
+	t.Log("Challenge registed event received", event)
+	_, ok := event.(chainservice.ChallengeRegisteredEvent)
+	testhelpers.Assert(t, ok, "Expected challenge registered event")
+
+	// Bob calls challenge method using new state
+	sendChallengeTransaction(t, newState, ta.Bob.PrivateKey, ledgerChannel, chainServiceB)
+
+	// Listen for challenge register event
+	event = waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeRegisteredEvent{})
+	t.Log("Challenge registed event received", event)
+	_, ok = event.(chainservice.ChallengeRegisteredEvent)
+	testhelpers.Assert(t, ok, "Expected challenge registered event")
+
+	// Finalize outcome
+	sim.Commit()
+
+	// Bob calls transferAllAssets method using new state
+	transferTx := protocols.NewTransferAllTransaction(ledgerChannel, newState)
+	err = chainServiceB.SendTransaction(transferTx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Check assets are liquidated
+	latestBlock, _ = sim.BlockByNumber(context.Background(), nil)
+	balanceA, _ := sim.BalanceAt(context.Background(), ta.Alice.Address(), latestBlock.Number())
+	balanceB, _ := sim.BalanceAt(context.Background(), ta.Bob.Address(), latestBlock.Number())
+	t.Log("Balance of Alice", balanceA, "\nBalance of Bob", balanceB)
+	// Alice's balance is calculated by adding her ledger deposit to the amount received through payments, while Bob's balance is determined by subtracting amount paid from his ledger deposit
+	testhelpers.Assert(t, balanceA.Cmp(big.NewInt(ledgerChannelDeposit-virtualChannelDeposit)) == 0, "Balance of Alice  (%v) should be equal to (%v)", balanceA, ledgerChannelDeposit-virtualChannelDeposit)
+	testhelpers.Assert(t, balanceB.Cmp(big.NewInt(ledgerChannelDeposit+virtualChannelDeposit)) == 0, "Balance of Bob (%v) should be equal to (%v)", balanceB, ledgerChannelDeposit+virtualChannelDeposit)
+}
+
+func sendChallengeTransaction(t *testing.T, signedState state.SignedState, privateKey []byte, ledgerChannel types.Destination, chainService chainservice.ChainService) {
+	challengerSig, _ := NitroAdjudicator.SignChallengeMessage(signedState.State(), privateKey)
+	challengeTx := protocols.NewChallengeTransaction(ledgerChannel, signedState, make([]state.SignedState, 0), challengerSig)
+	err := chainService.SendTransaction(challengeTx)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func setupNodeAndChainService(sim chainservice.SimulatedChain, bindings chainservice.Bindings, ethAccount *bind.TransactOpts, privateKey []byte, msgBroker messageservice.Broker, dataFolder string) (node.Node, store.Store, chainservice.ChainService) {
 	chainService, _ := chainservice.NewSimulatedBackendChainService(sim, bindings, ethAccount)
 	node, store := setupNode(privateKey, chainService, msgBroker, 0, dataFolder)

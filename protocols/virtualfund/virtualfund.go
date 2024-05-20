@@ -159,6 +159,7 @@ func NewObjective(request ObjectiveRequest, preApprove bool, myAddress types.Add
 			ChallengeDuration: request.ChallengeDuration,
 			Outcome:           request.Outcome,
 			TurnNum:           0,
+			AppDefinition: 		 request.AppDefinition,
 			IsFinal:           false,
 		},
 		myAddress,
@@ -800,6 +801,7 @@ func (r ObjectiveRequest) channelID(myAddress types.Address) types.Destination {
 		Participants:      participants,
 		ChannelNonce:      r.Nonce,
 		ChallengeDuration: r.ChallengeDuration,
+		AppDefinition: 		 r.AppDefinition,
 	}
 
 	return fixedPart.ChannelId()

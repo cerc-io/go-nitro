@@ -276,7 +276,7 @@ func TestExitDivertToGuarantee(t *testing.T) {
 				{
 					Destination:    targetChannel,
 					Amount:         big.NewInt(10),
-					AllocationType: 1,
+					AllocationType: 2,
 					Metadata:       append(aliceDestination.Bytes(), bobDestination.Bytes()...),
 				},
 			},
@@ -292,7 +292,6 @@ func TestExitDivertToGuarantee(t *testing.T) {
 	}
 
 	got, err = e.DivertToGuarantee(aliceDestination, bobDestination, leftFunds, types.Funds{}, targetChannel)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +315,7 @@ func TestExitDivertToGuarantee(t *testing.T) {
 				{
 					Destination:    targetChannel,
 					Amount:         big.NewInt(5),
-					AllocationType: 1,
+					AllocationType: 2,
 					Metadata:       append(aliceDestination.Bytes(), bobDestination.Bytes()...),
 				},
 			},

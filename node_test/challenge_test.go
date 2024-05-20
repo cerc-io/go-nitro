@@ -44,9 +44,11 @@ func TestChallenge(t *testing.T) {
 
 	// Check balance of node
 	latestBlock, _ := sim.BlockByNumber(context.Background(), nil)
-	balanceNodeA, _ := sim.BalanceAt(context.Background(), ethAccounts[0].From, latestBlock.Number())
-	balanceNodeB, _ := sim.BalanceAt(context.Background(), ethAccounts[1].From, latestBlock.Number())
+	balanceNodeA, _ := sim.BalanceAt(context.Background(), ta.Alice.Address(), latestBlock.Number())
+	balanceNodeB, _ := sim.BalanceAt(context.Background(), ta.Bob.Address(), latestBlock.Number())
 	t.Log("Balance of node A", balanceNodeA, "\nBalance of Node B", balanceNodeB)
+	testhelpers.Assert(t, balanceNodeA.Int64() == 0, "BalanceA should be zero")
+	testhelpers.Assert(t, balanceNodeB.Int64() == 0, "BalanceB should be zero")
 
 	// Close the node B
 	closeNode(t, &nodeB)
@@ -79,6 +81,7 @@ func TestChallenge(t *testing.T) {
 	balanceA, _ := sim.BalanceAt(context.Background(), ta.Alice.Address(), latestBlock.Number())
 	balanceB, _ := sim.BalanceAt(context.Background(), ta.Bob.Address(), latestBlock.Number())
 	t.Log("Balance of A", balanceA, "\nBalance of B", balanceB)
+	// Assert balance equals ledger channel deposit since no payment has been made
 	testhelpers.Assert(t, balanceA.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "BalanceA (%v) should be equal to ledgerChannelDeposit (%v)", balanceA, ledgerChannelDeposit)
 	testhelpers.Assert(t, balanceB.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "BalanceB (%v) should be equal to ledgerChannelDeposit (%v)", balanceB, ledgerChannelDeposit)
 }

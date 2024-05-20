@@ -10,7 +10,7 @@ import (
 )
 
 // assetAddressForIndex uses the input parameters of a transaction to map an asset index to an asset address
-func assetAddressForIndex(tx *types.Transaction, index *big.Int) (common.Address, error) {
+func assetAddressForIndex(na *NitroAdjudicator.NitroAdjudicator, tx *types.Transaction, index *big.Int) (common.Address, error) {
 	abi, err := NitroAdjudicator.NitroAdjudicatorMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, err

@@ -334,7 +334,7 @@ func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 				return fmt.Errorf("error in TransactionByHash: %w", err)
 			}
 
-			assetAddress, err := assetAddressForIndex(tx, au.AssetIndex)
+			assetAddress, err := assetAddressForIndex(ecs.na, tx, au.AssetIndex)
 			if err != nil {
 				return fmt.Errorf("error in assetAddressForIndex: %w", err)
 			}

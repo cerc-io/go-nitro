@@ -12,8 +12,8 @@ import (
 type AllocationType uint8
 
 const (
-	NormalAllocationType AllocationType = 0
-	GuaranteeAllocationType = 2
+	NormalAllocationType    AllocationType = 0
+	GuaranteeAllocationType AllocationType = 2
 )
 
 // Allocation declares an Amount to be paid to a Destination.

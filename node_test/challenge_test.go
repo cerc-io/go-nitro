@@ -2,8 +2,8 @@ package node_test
 
 import (
 	"context"
+	"fmt"
 	"math/big"
-	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -35,10 +35,11 @@ func TestChallenge(t *testing.T) {
 	msgBroker := messageservice.NewBroker()
 	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
 	defer cleanup()
-	nodeA, storeA, _ := setupTestNode(sim, bindings, ethAccounts[0], ta.Alice.PrivateKey, msgBroker, dataFolder)
-	nodeB, _, _ := setupTestNode(sim, bindings, ethAccounts[1], ta.Bob.PrivateKey, msgBroker, dataFolder)
+	nodeA, storeA, chainServiceA := setupNodeAndChainService(sim, bindings, ethAccounts[0], ta.Alice.PrivateKey, msgBroker, dataFolder)
+	nodeB, _, _ := setupNodeAndChainService(sim, bindings, ethAccounts[1], ta.Bob.PrivateKey, msgBroker, dataFolder)
 	defer closeNode(t, &nodeA)
 
+	// Separate chain service to listen for events
 	testChainServiceA, _ := chainservice.NewSimulatedBackendChainService(sim, bindings, ethAccounts[0])
 	defer testChainServiceA.Close()
 
@@ -64,14 +65,21 @@ func TestChallenge(t *testing.T) {
 	// The sendTransaction method from simulatedBackendService mints three blocks
 	// The timestamp of each succeeding block is 10 seconds more than previous block hence calling sendTransaction moves the time forward by 30 seconds
 	// Hence challenge duration is over as it is less than 30 seconds and channel is computed as finalized
-	err = testChainServiceA.SendTransaction(challengeTx)
+	err = chainServiceA.SendTransaction(challengeTx)
 	if err != nil {
 		t.Error(err)
 	}
 
+	// Listen for challenge registered event
+	event := waitForEvent(t, testChainServiceA.EventFeed(), chainservice.ChallengeRegisteredEvent{})
+	challengeRegisteredEvent, ok := event.(chainservice.ChallengeRegisteredEvent)
+	testhelpers.Assert(t, ok, "Expect challenge registered event")
+	latestBlock, _ = sim.BlockByNumber(context.Background(), nil)
+	testhelpers.Assert(t, challengeRegisteredEvent.FinalizesAt.Uint64() <= latestBlock.Header().Time, "Expect channel to be finalized")
+
 	// Alice calls transferAllAssets method
 	transferTx := protocols.NewTransferAllTransaction(ledgerChannel, signedState)
-	err = testChainServiceA.SendTransaction(transferTx)
+	err = chainServiceA.SendTransaction(transferTx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -106,12 +114,12 @@ func TestCheckpoint(t *testing.T) {
 	msgBroker := messageservice.NewBroker()
 	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
 	defer cleanup()
-	nodeA, storeA, chainServiceA := setupTestNode(sim, bindings, ethAccounts[0], ta.Alice.PrivateKey, msgBroker, dataFolder)
-	nodeB, storeB, chainServiceB := setupTestNode(sim, bindings, ethAccounts[1], ta.Bob.PrivateKey, msgBroker, dataFolder)
+	nodeA, storeA, chainServiceA := setupNodeAndChainService(sim, bindings, ethAccounts[0], ta.Alice.PrivateKey, msgBroker, dataFolder)
+	nodeB, storeB, chainServiceB := setupNodeAndChainService(sim, bindings, ethAccounts[1], ta.Bob.PrivateKey, msgBroker, dataFolder)
 	defer closeNode(t, &nodeA)
 	defer closeNode(t, &nodeB)
 
-	// Seperate chain service to listen for events
+	// Separate chain service to listen for events
 	testChainServiceB, _ := chainservice.NewSimulatedBackendChainService(sim, bindings, ethAccounts[1])
 	defer testChainServiceB.Close()
 
@@ -148,6 +156,11 @@ func TestCheckpoint(t *testing.T) {
 	// Bob listens for challenge registered event
 	event := waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeRegisteredEvent{})
 	t.Log("Challenge registed event received", event)
+	challengeRegisteredEvent, ok := event.(chainservice.ChallengeRegisteredEvent)
+	testhelpers.Assert(t, ok, "Expect challenge registered event")
+	latestBlock, _ := sim.BlockByNumber(context.Background(), nil)
+	fmt.Println(challengeRegisteredEvent.FinalizesAt.Uint64(), latestBlock.Header().Time)
+	testhelpers.Assert(t, latestBlock.Header().Time < challengeRegisteredEvent.FinalizesAt.Uint64(), "Expect channel to not be finalized")
 
 	// Bob calls checkpoint method using new state
 	checkpointTx := protocols.NewCheckpointTransaction(ledgerChannel, newState, make([]state.SignedState, 0))
@@ -169,21 +182,10 @@ func TestCheckpoint(t *testing.T) {
 	testhelpers.Assert(t, err.Error() == "execution reverted: Channel not finalized.", "Expects execution reverted error")
 }
 
-func setupTestNode(sim chainservice.SimulatedChain, bindings chainservice.Bindings, ethAccount *bind.TransactOpts, privateKey []byte, msgBroker messageservice.Broker, dataFolder string) (node.Node, store.Store, chainservice.ChainService) {
+func setupNodeAndChainService(sim chainservice.SimulatedChain, bindings chainservice.Bindings, ethAccount *bind.TransactOpts, privateKey []byte, msgBroker messageservice.Broker, dataFolder string) (node.Node, store.Store, chainservice.ChainService) {
 	chainService, _ := chainservice.NewSimulatedBackendChainService(sim, bindings, ethAccount)
 	node, store := setupNode(privateKey, chainService, msgBroker, 0, dataFolder)
 	return node, store, chainService
-}
-
-func waitForEvent(t *testing.T, eventChannel <-chan chainservice.Event, eventType chainservice.Event) chainservice.Event {
-	for event := range eventChannel {
-		if reflect.TypeOf(event) == reflect.TypeOf(eventType) {
-			return event
-		} else {
-			t.Log("Ignoring other events")
-		}
-	}
-	return nil
 }
 
 func getLatestSignedState(store store.Store, id types.Destination) state.SignedState {

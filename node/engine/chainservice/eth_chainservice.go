@@ -369,7 +369,7 @@ func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 				Outcome: NitroAdjudicator.ConvertBindingsExitToExit(cr.Candidate.VariablePart.Outcome),
 				TurnNum: cr.Candidate.VariablePart.TurnNum.Uint64(),
 				IsFinal: cr.Candidate.VariablePart.IsFinal,
-			}, NitroAdjudicator.ConvertBindingsSignaturesToSignatures(cr.Candidate.Sigs))
+			}, NitroAdjudicator.ConvertBindingsSignaturesToSignatures(cr.Candidate.Sigs), cr.FinalizesAt)
 			ecs.out <- event
 		case challengeClearedTopic:
 			ecs.logger.Debug("Processing Challenge Cleared event")

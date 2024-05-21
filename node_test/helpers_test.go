@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"reflect"
 	"testing"
 	"time"
 
@@ -379,4 +380,15 @@ func clientAddresses(clients []node.Node) []common.Address {
 	}
 
 	return addrs
+}
+
+func waitForEvent(t *testing.T, eventChannel <-chan chainservice.Event, eventType chainservice.Event) chainservice.Event {
+	for event := range eventChannel {
+		if reflect.TypeOf(event) == reflect.TypeOf(eventType) {
+			return event
+		} else {
+			t.Log("Ignoring other events")
+		}
+	}
+	return nil
 }

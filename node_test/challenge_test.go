@@ -178,7 +178,8 @@ func TestCounterChallenge(t *testing.T) {
 	// The timestamp of each succeeding block is 10 seconds more than previous block, hence sendTransaction moves the time forward by 20 seconds
 	// Also any new transaction after that would be included in a new block, hence moving the time foward by 10 more seconds
 	// So challenge duration needs to be more than 30 seconds (as chain would have already moved ahead by 30 seconds after a transaction)
-	const ChallengeDuration = 31
+	const challengeDuration = 31
+	const payAmount = 2000
 
 	// Start the chain & deploy contract
 	t.Log("Starting chain")
@@ -202,7 +203,7 @@ func TestCounterChallenge(t *testing.T) {
 	defer testChainServiceB.Close()
 
 	// Create ledger channel and check balance of node
-	ledgerChannel := openLedgerChannel(t, nodeA, nodeB, types.Address{}, ChallengeDuration)
+	ledgerChannel := openLedgerChannel(t, nodeA, nodeB, types.Address{}, challengeDuration)
 	latestBlock, _ := sim.BlockByNumber(context.Background(), nil)
 	balanceNodeA, _ := sim.BalanceAt(context.Background(), ta.Alice.Address(), latestBlock.Number())
 	balanceNodeB, _ := sim.BalanceAt(context.Background(), ta.Bob.Address(), latestBlock.Number())
@@ -215,12 +216,13 @@ func TestCounterChallenge(t *testing.T) {
 
 	// Conduct virtual fund, make payment and virtual defund
 	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, common.BigToAddress(common.Big0))
-	response, err := nodeA.CreatePaymentChannel([]common.Address{}, *nodeB.Address, ChallengeDuration, virtualOutcome)
+	response, err := nodeA.CreatePaymentChannel([]common.Address{}, *nodeB.Address, challengeDuration, virtualOutcome)
 	if err != nil {
 		t.Error(err)
 	}
 	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{response.Id})
-	nodeA.Pay(response.ChannelId, big.NewInt(virtualChannelDeposit))
+	// Alice pays Bob
+	nodeA.Pay(response.ChannelId, big.NewInt(payAmount))
 	nodeBVoucher := <-nodeB.ReceivedVouchers()
 	t.Logf("Voucher recieved %+v", nodeBVoucher)
 	virtualDefundResponse, err := nodeA.ClosePaymentChannel(response.ChannelId)
@@ -278,9 +280,9 @@ func TestCounterChallenge(t *testing.T) {
 	balanceA, _ := sim.BalanceAt(context.Background(), ta.Alice.Address(), latestBlock.Number())
 	balanceB, _ := sim.BalanceAt(context.Background(), ta.Bob.Address(), latestBlock.Number())
 	t.Log("Balance of Alice", balanceA, "\nBalance of Bob", balanceB)
-	// Alice's balance is calculated by adding her ledger deposit to the amount received through payments, while Bob's balance is determined by subtracting amount paid from his ledger deposit
-	testhelpers.Assert(t, balanceA.Cmp(big.NewInt(ledgerChannelDeposit-virtualChannelDeposit)) == 0, "Balance of Alice  (%v) should be equal to (%v)", balanceA, ledgerChannelDeposit-virtualChannelDeposit)
-	testhelpers.Assert(t, balanceB.Cmp(big.NewInt(ledgerChannelDeposit+virtualChannelDeposit)) == 0, "Balance of Bob (%v) should be equal to (%v)", balanceB, ledgerChannelDeposit+virtualChannelDeposit)
+	// Alice's balance is determined by subtracting amount paid from her ledger deposit, while Bob's balance is calculated by adding his ledger deposit to the amount received
+	testhelpers.Assert(t, balanceA.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of Alice  (%v) should be equal to (%v)", balanceA, ledgerChannelDeposit-payAmount)
+	testhelpers.Assert(t, balanceB.Cmp(big.NewInt(ledgerChannelDeposit+payAmount)) == 0, "Balance of Bob (%v) should be equal to (%v)", balanceB, ledgerChannelDeposit+payAmount)
 }
 
 func sendChallengeTransaction(t *testing.T, signedState state.SignedState, privateKey []byte, ledgerChannel types.Destination, chainService chainservice.ChainService) {

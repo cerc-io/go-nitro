@@ -57,17 +57,11 @@ func TestChallenge(t *testing.T) {
 	closeNode(t, &nodeB)
 
 	// Alice calls challenge method
-	signedState := getLatestSignedState(storeA, ledgerChannel)
-	challengerSig, _ := NitroAdjudicator.SignChallengeMessage(signedState.State(), ta.Alice.PrivateKey)
-	challengeTx := protocols.NewChallengeTransaction(ledgerChannel, signedState, make([]state.SignedState, 0), challengerSig)
-
 	// The sendTransaction method from simulatedBackendService mints three blocks
 	// The timestamp of each succeeding block is 10 seconds more than previous block hence calling sendTransaction moves the time forward by 30 seconds
 	// Hence challenge duration is over as it is less than 30 seconds and channel is computed as finalized
-	err = chainServiceA.SendTransaction(challengeTx)
-	if err != nil {
-		t.Error(err)
-	}
+	signedState := getLatestSignedState(storeA, ledgerChannel)
+	sendChallengeTransaction(t, signedState, ta.Alice.PrivateKey, ledgerChannel, testChainServiceA)
 
 	// Listen for challenge registered event
 	event := waitForEvent(t, testChainServiceA.EventFeed(), chainservice.ChallengeRegisteredEvent{})
@@ -146,12 +140,7 @@ func TestCheckpoint(t *testing.T) {
 	newState := getLatestSignedState(storeB, ledgerChannel)
 
 	// Alice calls challenge method using old state
-	challengerSig, _ := NitroAdjudicator.SignChallengeMessage(oldState.State(), ta.Alice.PrivateKey)
-	challengeTx := protocols.NewChallengeTransaction(ledgerChannel, oldState, make([]state.SignedState, 0), challengerSig)
-	err = chainServiceA.SendTransaction(challengeTx)
-	if err != nil {
-		t.Error(err)
-	}
+	sendChallengeTransaction(t, oldState, ta.Alice.PrivateKey, ledgerChannel, chainServiceA)
 
 	// Bob listens for challenge registered event
 	event := waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeRegisteredEvent{})
@@ -246,7 +235,7 @@ func TestCounterChallenge(t *testing.T) {
 	// Alice calls challenge method using old state
 	sendChallengeTransaction(t, oldState, ta.Alice.PrivateKey, ledgerChannel, chainServiceA)
 
-	// Bob listen for challenge registered event
+	// Bob listens for challenge registered event
 	event := waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeRegisteredEvent{})
 	t.Log("Challenge registed event received", event)
 	_, ok := event.(chainservice.ChallengeRegisteredEvent)
@@ -261,11 +250,18 @@ func TestCounterChallenge(t *testing.T) {
 	_, ok = event.(chainservice.ChallengeRegisteredEvent)
 	testhelpers.Assert(t, ok, "Expected challenge registered event")
 
-	// Finalize outcome
+	// Transfer can be done only after channel is finalized
+	// Due to SendTransaction, 2 additional blocks have been minted (moved ahead by 20s)
+	// Mint additional block (10s) for channel to get finalized
 	sim.Commit()
 
+	// Alice attempts to liquidate an asset with an outdated state but fails
+	transferTx := protocols.NewTransferAllTransaction(ledgerChannel, oldState)
+	err = chainServiceB.SendTransaction(transferTx)
+	testhelpers.Assert(t, err.Error() == "execution reverted: incorrect fingerprint", "Expects execution reverted error")
+
 	// Bob calls transferAllAssets method using new state
-	transferTx := protocols.NewTransferAllTransaction(ledgerChannel, newState)
+	transferTx = protocols.NewTransferAllTransaction(ledgerChannel, newState)
 	err = chainServiceB.SendTransaction(transferTx)
 	if err != nil {
 		t.Error(err)

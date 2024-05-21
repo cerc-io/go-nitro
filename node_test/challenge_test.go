@@ -57,9 +57,6 @@ func TestChallenge(t *testing.T) {
 	closeNode(t, &nodeB)
 
 	// Alice calls challenge method
-	// The sendTransaction method from simulatedBackendService mints three blocks
-	// The timestamp of each succeeding block is 10 seconds more than previous block hence calling sendTransaction moves the time forward by 30 seconds
-	// Hence challenge duration is over as it is less than 30 seconds and channel is computed as finalized
 	signedState := getLatestSignedState(storeA, ledgerChannel)
 	sendChallengeTransaction(t, signedState, ta.Alice.PrivateKey, ledgerChannel, testChainServiceA)
 
@@ -68,6 +65,9 @@ func TestChallenge(t *testing.T) {
 	challengeRegisteredEvent, ok := event.(chainservice.ChallengeRegisteredEvent)
 	testhelpers.Assert(t, ok, "Expected challenge registered event")
 
+	// The sendTransaction method from simulatedBackendService mints 2 additional blocks
+	// The timestamp of each succeeding block is 10 seconds more than previous block hence calling sendTransaction moves the time forward by 20 seconds
+	// So challenge duration is over as it is less than 20 seconds and channel is computed as finalized
 	latestBlock, _ = sim.BlockByNumber(context.Background(), nil)
 	testhelpers.Assert(t, challengeRegisteredEvent.FinalizesAt.Uint64() <= latestBlock.Header().Time, "Expected channel to be finalized")
 
@@ -90,10 +90,10 @@ func TestChallenge(t *testing.T) {
 }
 
 func TestCheckpoint(t *testing.T) {
-	// The sendTransaction method from simulatedBackendService mints three blocks
-	// The timestamp of each succeeding block is 10 seconds more than previous block hence calling sendTransaction moves the time forward by 30 seconds
-	// Hence if challenge duration is less than or equal to 30, on calling checkpoint method channel is computed as finalized
-	// Therefore, challenge duration of 31 or greater is necessary
+	// The sendTransaction method from simulatedBackendService mints 2 additional blocks
+	// The timestamp of each succeeding block is 10 seconds more than previous block, hence sendTransaction moves the time forward by 20 seconds
+	// Also any new transaction after that would be included in a new block, hence moving the time foward by 10 more seconds
+	// So challenge duration needs to be more than 30 seconds (as chain would have already moved ahead by 30 seconds after a transaction)
 	const challengeDuration = 31
 
 	// Start the chain & deploy contract
@@ -174,10 +174,10 @@ func TestCheckpoint(t *testing.T) {
 }
 
 func TestCounterChallenge(t *testing.T) {
-	// The sendTransaction method from simulatedBackendService mints three blocks
-	// The timestamp of each succeeding block is 10 seconds more than previous block hence calling sendTransaction moves the time forward by 30 seconds
-	// Hence if challenge duration is less than or equal to 30, on calling challenge method again channel is computed as finalized
-	// Therefore, challenge duration of 31 or greater is necessary
+	// The sendTransaction method from simulatedBackendService mints 2 additional blocks
+	// The timestamp of each succeeding block is 10 seconds more than previous block, hence sendTransaction moves the time forward by 20 seconds
+	// Also any new transaction after that would be included in a new block, hence moving the time foward by 10 more seconds
+	// So challenge duration needs to be more than 30 seconds (as chain would have already moved ahead by 30 seconds after a transaction)
 	const ChallengeDuration = 31
 
 	// Start the chain & deploy contract
@@ -238,8 +238,11 @@ func TestCounterChallenge(t *testing.T) {
 	// Bob listens for challenge registered event
 	event := waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeRegisteredEvent{})
 	t.Log("Challenge registed event received", event)
-	_, ok := event.(chainservice.ChallengeRegisteredEvent)
+	challengeRegisteredEvent, ok := event.(chainservice.ChallengeRegisteredEvent)
 	testhelpers.Assert(t, ok, "Expected challenge registered event")
+
+	latestBlock, _ = sim.BlockByNumber(context.Background(), nil)
+	testhelpers.Assert(t, latestBlock.Header().Time < challengeRegisteredEvent.FinalizesAt.Uint64(), "Expected channel to not be finalized")
 
 	// Bob calls challenge method using new state
 	sendChallengeTransaction(t, newState, ta.Bob.PrivateKey, ledgerChannel, chainServiceB)
@@ -247,18 +250,21 @@ func TestCounterChallenge(t *testing.T) {
 	// Listen for challenge register event
 	event = waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeRegisteredEvent{})
 	t.Log("Challenge registed event received", event)
-	_, ok = event.(chainservice.ChallengeRegisteredEvent)
+	challengeRegisteredEvent, ok = event.(chainservice.ChallengeRegisteredEvent)
 	testhelpers.Assert(t, ok, "Expected challenge registered event")
 
 	// Transfer can be done only after channel is finalized
-	// Due to SendTransaction, 2 additional blocks have been minted (moved ahead by 20s)
-	// Mint additional block (10s) for channel to get finalized
+	// Due to SendTransaction, 2 additional blocks have been minted (chain moved ahead by 20 seconds)
+	// Mint 2 additional block for channel to get finalized (chain moved ahead by 40 seconds which is greater than challenge duration 31 seconds)
 	sim.Commit()
+	sim.Commit()
+	latestBlock, _ = sim.BlockByNumber(context.Background(), nil)
+	testhelpers.Assert(t, challengeRegisteredEvent.FinalizesAt.Uint64() <= latestBlock.Header().Time, "Expected channel to be finalized")
 
 	// Alice attempts to liquidate an asset with an outdated state but fails
 	transferTx := protocols.NewTransferAllTransaction(ledgerChannel, oldState)
 	err = chainServiceB.SendTransaction(transferTx)
-	testhelpers.Assert(t, err.Error() == "execution reverted: incorrect fingerprint", "Expects execution reverted error")
+	testhelpers.Assert(t, err.Error() == "execution reverted: incorrect fingerprint", "Expected execution reverted error")
 
 	// Bob calls transferAllAssets method using new state
 	transferTx = protocols.NewTransferAllTransaction(ledgerChannel, newState)

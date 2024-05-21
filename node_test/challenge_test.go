@@ -2,7 +2,6 @@ package node_test
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -73,9 +72,10 @@ func TestChallenge(t *testing.T) {
 	// Listen for challenge registered event
 	event := waitForEvent(t, testChainServiceA.EventFeed(), chainservice.ChallengeRegisteredEvent{})
 	challengeRegisteredEvent, ok := event.(chainservice.ChallengeRegisteredEvent)
-	testhelpers.Assert(t, ok, "Expect challenge registered event")
+	testhelpers.Assert(t, ok, "Expected challenge registered event")
+
 	latestBlock, _ = sim.BlockByNumber(context.Background(), nil)
-	testhelpers.Assert(t, challengeRegisteredEvent.FinalizesAt.Uint64() <= latestBlock.Header().Time, "Expect channel to be finalized")
+	testhelpers.Assert(t, challengeRegisteredEvent.FinalizesAt.Uint64() <= latestBlock.Header().Time, "Expected channel to be finalized")
 
 	// Alice calls transferAllAssets method
 	transferTx := protocols.NewTransferAllTransaction(ledgerChannel, signedState)
@@ -157,10 +157,9 @@ func TestCheckpoint(t *testing.T) {
 	event := waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeRegisteredEvent{})
 	t.Log("Challenge registed event received", event)
 	challengeRegisteredEvent, ok := event.(chainservice.ChallengeRegisteredEvent)
-	testhelpers.Assert(t, ok, "Expect challenge registered event")
+	testhelpers.Assert(t, ok, "Expected challenge registered event")
 	latestBlock, _ := sim.BlockByNumber(context.Background(), nil)
-	fmt.Println(challengeRegisteredEvent.FinalizesAt.Uint64(), latestBlock.Header().Time)
-	testhelpers.Assert(t, latestBlock.Header().Time < challengeRegisteredEvent.FinalizesAt.Uint64(), "Expect channel to not be finalized")
+	testhelpers.Assert(t, latestBlock.Header().Time < challengeRegisteredEvent.FinalizesAt.Uint64(), "Expected channel to not be finalized")
 
 	// Bob calls checkpoint method using new state
 	checkpointTx := protocols.NewCheckpointTransaction(ledgerChannel, newState, make([]state.SignedState, 0))
@@ -173,13 +172,16 @@ func TestCheckpoint(t *testing.T) {
 	event = waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeClearedEvent{})
 	t.Log("Challenge cleared event received", event)
 	challengeClearedEvent, ok := event.(chainservice.ChallengeClearedEvent)
-	testhelpers.Assert(t, ok, "Expect challenge cleared event")
+	testhelpers.Assert(t, ok, "Expected challenge cleared event")
 	testhelpers.Assert(t, challengeClearedEvent.ChannelID() == ledgerChannel, "Channel ID mismatch")
+
+	latestBlock, _ = sim.BlockByNumber(context.Background(), nil)
+	testhelpers.Assert(t, challengeRegisteredEvent.FinalizesAt.Uint64() <= latestBlock.Header().Time, "Expected challenge duration to be completed")
 
 	// Alice attempts to liquidate the asset after the challenge duration, but the attempt fails because the outcome has not been finalized
 	transferTx := protocols.NewTransferAllTransaction(ledgerChannel, oldState)
 	err = chainServiceA.SendTransaction(transferTx)
-	testhelpers.Assert(t, err.Error() == "execution reverted: Channel not finalized.", "Expects execution reverted error")
+	testhelpers.Assert(t, err.Error() == "execution reverted: Channel not finalized.", "Expected execution reverted error")
 }
 
 func setupNodeAndChainService(sim chainservice.SimulatedChain, bindings chainservice.Bindings, ethAccount *bind.TransactOpts, privateKey []byte, msgBroker messageservice.Broker, dataFolder string) (node.Node, store.Store, chainservice.ChainService) {

@@ -293,12 +293,16 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 		_, err := ecs.na.Checkpoint(ecs.defaultTxOpts(), fp, proof, candidate)
 		return err
 	case protocols.TransferAllTransaction:
-		transferState := tx.TransferState
+		transferState := tx.TransferState.State()
 		channelId := transferState.ChannelId()
+		stateHash, err := transferState.Hash()
+		if err != nil {
+			return err
+		}
 
 		nitroVariablePart := NitroAdjudicator.ConvertVariablePart(transferState.VariablePart())
 
-		_, er := ecs.na.TransferAllAssets(ecs.defaultTxOpts(), channelId, nitroVariablePart.Outcome, tx.SignedStateHash)
+		_, er := ecs.na.TransferAllAssets(ecs.defaultTxOpts(), channelId, nitroVariablePart.Outcome, stateHash)
 		return er
 	case protocols.ReclaimTransaction:
 		_, err := ecs.na.Reclaim(ecs.defaultTxOpts(), tx.ReclaimArgs)

@@ -292,6 +292,7 @@ func TestExitDivertToGuarantee(t *testing.T) {
 	}
 
 	got, err = e.DivertToGuarantee(aliceDestination, bobDestination, leftFunds, types.Funds{}, targetChannel)
+
 	if err != nil {
 		t.Fatal(err)
 	}

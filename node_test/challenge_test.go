@@ -368,10 +368,9 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	testhelpers.Assert(t, challengeRegisteredEvent.FinalizesAt.Uint64() <= latestBlock.Header().Time, "Expected channel to be finalized")
 
 	// Now that ledger and virtual channels are finalized, call reclaim method
-	signedUpdatedLedgerState := getLatestSignedState(storeA, ledgerChannel)
-	ledgerStateHash, _ := signedUpdatedLedgerState.State().Hash()
-	virtualLatestState := getVirtualSignedState(storeA, virtualResponse.ChannelId)
-	virtualStateHash, _ := virtualLatestState.State().Hash()
+	convertedLedgerFixedPart := NitroAdjudicator.ConvertFixedPart(signedLedgerState.State().FixedPart())
+	convertedLedgerVariablePart := NitroAdjudicator.ConvertVariablePart(signedLedgerState.State().VariablePart())
+	virtualStateHash, _ := signedVirtualState.State().Hash()
 	sourceOutcome := signedLedgerState.State().Outcome
 	sourceOb, _ := sourceOutcome.Encode()
 	targetOutcome := signedVirtualState.State().Outcome
@@ -379,7 +378,8 @@ func TestVirtualPaymentChannel(t *testing.T) {
 
 	reclaimArgs := NitroAdjudicator.IMultiAssetHolderReclaimArgs{
 		SourceChannelId:       ledgerChannel,
-		SourceStateHash:       ledgerStateHash,
+		FixedPart:             convertedLedgerFixedPart,
+		VariablePart:          convertedLedgerVariablePart,
 		SourceOutcomeBytes:    sourceOb,
 		SourceAssetIndex:      common.Big0,
 		IndexOfTargetInSource: common.Big2,

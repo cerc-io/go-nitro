@@ -6,6 +6,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IMultiAssetHolder} from './interfaces/IMultiAssetHolder.sol';
 import {StatusManager} from './StatusManager.sol';
+import {NitroUtils} from './libraries/NitroUtils.sol';
 
 /**
 @dev An implementation of the IMultiAssetHolder interface. The AssetHolder contract escrows ETH or tokens against state channels. It allows assets to be internally accounted for, and ultimately prepared for transfer from one channel to other channels and/or external destinations, as well as for guarantees to be reclaimed.
@@ -284,7 +285,7 @@ contract MultiAssetHolder is IMultiAssetHolder, StatusManager {
         // source checks
         _requireChannelFinalized(sourceChannelId);
         _requireMatchingFingerprint(
-            reclaimArgs.sourceStateHash,
+            NitroUtils.hashState(reclaimArgs.fixedPart, reclaimArgs.variablePart),
             keccak256(sourceOutcomeBytes),
             sourceChannelId
         );
@@ -382,10 +383,11 @@ contract MultiAssetHolder is IMultiAssetHolder, StatusManager {
 
         // store fingerprint of modified source outcome
         sourceOutcome[sourceAssetIndex].allocations = newSourceAllocations;
+        reclaimArgs.variablePart.outcome = sourceOutcome;
+
         _updateFingerprint(
             sourceChannelId,
-            // TODO: Use updated sourceStateHash
-            reclaimArgs.sourceStateHash,
+            NitroUtils.hashState(reclaimArgs.fixedPart, reclaimArgs.variablePart),
             keccak256(abi.encode(sourceOutcome))
         );
 

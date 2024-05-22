@@ -69,7 +69,7 @@ func NewChallengeTransaction(
 
 type TransferAllTransaction struct {
 	ChainTransaction
-	TransferState 	state.State
+	TransferState   state.State
 	SignedStateHash [32]byte
 }
 

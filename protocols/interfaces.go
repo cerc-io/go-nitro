@@ -69,11 +69,12 @@ func NewChallengeTransaction(
 
 type TransferAllTransaction struct {
 	ChainTransaction
-	TransferState state.SignedState
+	TransferState 	state.State
+	SignedStateHash [32]byte
 }
 
-func NewTransferAllTransaction(channelId types.Destination, state state.SignedState) TransferAllTransaction {
-	return TransferAllTransaction{ChainTransaction: ChainTransactionBase{channelId: channelId}, TransferState: state}
+func NewTransferAllTransaction(channelId types.Destination, state state.State, signedStateHash [32]byte) TransferAllTransaction {
+	return TransferAllTransaction{ChainTransaction: ChainTransactionBase{channelId: channelId}, TransferState: state, SignedStateHash: signedStateHash}
 }
 
 type CheckpointTransaction struct {

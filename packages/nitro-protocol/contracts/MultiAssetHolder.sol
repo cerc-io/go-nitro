@@ -384,6 +384,7 @@ contract MultiAssetHolder is IMultiAssetHolder, StatusManager {
         sourceOutcome[sourceAssetIndex].allocations = newSourceAllocations;
         _updateFingerprint(
             sourceChannelId,
+            // TODO: Use updated sourceStateHash
             reclaimArgs.sourceStateHash,
             keccak256(abi.encode(sourceOutcome))
         );

@@ -399,19 +399,19 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	latestState := latestLedgerState.State()
 
 	latestState.Outcome[0].Allocations = outcome.Allocations{
-			{
-				Destination:    latestLedgerState.State().Outcome[0].Allocations[0].Destination,
-				Amount:         alliceOutcomeAllocationAmount,
-				AllocationType: outcome.NormalAllocationType,
-				Metadata:       latestLedgerState.State().Outcome[0].Allocations[0].Metadata,
-			},
-			{
-				Destination:    latestLedgerState.State().Outcome[0].Allocations[1].Destination,
-				Amount:         bobOutcomeAllocationAmount,
-				AllocationType: outcome.NormalAllocationType,
-				Metadata:       latestLedgerState.State().Outcome[0].Allocations[1].Metadata,
-			},
-		}
+		{
+			Destination:    latestLedgerState.State().Outcome[0].Allocations[0].Destination,
+			Amount:         alliceOutcomeAllocationAmount,
+			AllocationType: outcome.NormalAllocationType,
+			Metadata:       latestLedgerState.State().Outcome[0].Allocations[0].Metadata,
+		},
+		{
+			Destination:    latestLedgerState.State().Outcome[0].Allocations[1].Destination,
+			Amount:         bobOutcomeAllocationAmount,
+			AllocationType: outcome.NormalAllocationType,
+			Metadata:       latestLedgerState.State().Outcome[0].Allocations[1].Metadata,
+		},
+	}
 
 	signedConstructedState := state.NewSignedState(latestState)
 
@@ -426,9 +426,9 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	balanceA, _ := sim.BalanceAt(context.Background(), ta.Alice.Address(), latestBlock.Number())
 	balanceB, _ := sim.BalanceAt(context.Background(), ta.Bob.Address(), latestBlock.Number())
 	t.Log("Balance of A", balanceA, "\nBalance of B", balanceB)
-		// Assert balance equals ledger channel deposit since no payment has been made
-		testhelpers.Assert(t, balanceA.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "Balance of Alice (%v) should be equal to ledgerChannelDeposit (%v)", balanceA, ledgerChannelDeposit)
-		testhelpers.Assert(t, balanceB.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "Balance of Bob (%v) should be equal to ledgerChannelDeposit (%v)", balanceB, ledgerChannelDeposit)
+	// Assert balance equals ledger channel deposit since no payment has been made
+	testhelpers.Assert(t, balanceA.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "Balance of Alice (%v) should be equal to ledgerChannelDeposit (%v)", balanceA, ledgerChannelDeposit)
+	testhelpers.Assert(t, balanceB.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "Balance of Bob (%v) should be equal to ledgerChannelDeposit (%v)", balanceB, ledgerChannelDeposit)
 }
 
 func sendChallengeTransaction(t *testing.T, signedState state.SignedState, privateKey []byte, ledgerChannel types.Destination, chainService chainservice.ChainService) {
@@ -451,7 +451,7 @@ func getLatestSignedState(store store.Store, id types.Destination) state.SignedS
 	return consensusChannel.SupportedSignedState()
 }
 
-func getVirtualSignedState(store store.Store, id types.Destination) (state.SignedState) {
+func getVirtualSignedState(store store.Store, id types.Destination) state.SignedState {
 	virtualChannel, _ := store.GetChannelById(id)
 	virtualSignedState, _ := virtualChannel.LatestSignedState()
 	return virtualSignedState

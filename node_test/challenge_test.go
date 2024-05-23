@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state"
@@ -20,6 +21,11 @@ import (
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/types"
 )
+
+type VoucherAmountSignature struct {
+	Amount    *big.Int
+	Signature NitroAdjudicator.INitroTypesSignature
+}
 
 func TestChallenge(t *testing.T) {
 	testCase := TestCase{
@@ -286,6 +292,7 @@ func TestCounterChallenge(t *testing.T) {
 }
 
 func TestVirtualPaymentChannel(t *testing.T) {
+const payAmount = 2000
 	tc := TestCase{
 		Description:       "Virtual channel test",
 		Chain:             AnvilChain,
@@ -325,16 +332,66 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{virtualResponse.Id})
 	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeA, nodeB)
 
+	// Alice pays Bob
+	nodeA.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
+
+	// Wait for Bob to recieve voucher
+	nodeBVoucher := <-nodeB.ReceivedVouchers()
+	t.Logf("Voucher recieved %+v", nodeBVoucher)
+
+	virtualChannel, _ := storeA.GetChannelById(virtualResponse.ChannelId)
+	voucherState, _ := virtualChannel.LatestSignedState()
+
+	voucherAmountSignatureData := VoucherAmountSignature{
+		Amount:    nodeBVoucher.Amount,
+		Signature: NitroAdjudicator.ConvertSignature(nodeBVoucher.Signature),
+	}
+
+	// Encode voucher amount and voucher signature
+	voucherAmountSigTy, _ := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+		{Name: "amount", Type: "uint256"},
+		{Name: "signature", Type: "tuple", Components: []abi.ArgumentMarshaling{
+			{Name: "v", Type: "uint8"},
+			{Name: "r", Type: "bytes32"},
+			{Name: "s", Type: "bytes32"},
+		}},
+	})
+
+	arguments := abi.Arguments{
+		{Type: voucherAmountSigTy},
+	}
+
+	dataEncoded, err := arguments.Pack(voucherAmountSignatureData)
+	if err != nil {
+		t.Fatalf("Failed to encode data: %v", err)
+	}
+
+	// Create expected payment outcome
+	finalVirtualOutcome := finalPaymentOutcome(*nodeA.Address, *nodeB.Address, common.Address{}, 1, uint(nodeBVoucher.Amount.Int64()))
+
+	// Construct variable part with updted outcome and app data
+	vp := state.VariablePart{Outcome: finalVirtualOutcome, TurnNum: voucherState.State().TurnNum + 1, AppData: dataEncoded, IsFinal: voucherState.State().IsFinal}
+
+	// Update state with constructed variable part
+	newState := state.StateFromFixedAndVariablePart(voucherState.State().FixedPart(), vp)
+
+	// Add both Bob's and Alice's signature
+	_, _ = virtualChannel.SignAndAddState(newState, &tc.Participants[0].PrivateKey)
+	_, _ = virtualChannel.SignAndAddState(newState, &tc.Participants[1].PrivateKey)
+
+	// Update virtual channel with updated state
+	_ = storeA.SetChannel(virtualChannel)
+
 	// Close Bob's node
 	closeNode(t, &nodeB)
 
 	signedLedgerState := getLatestSignedState(storeA, ledgerChannel)
-	signedVirtualState := getVirtualSignedState(storeA, virtualResponse.ChannelId)
+	signedVirtualState, signedPostFundState := getVirtualSignedState(storeA, virtualResponse.ChannelId)
 
 	// Alice calls challenge method on virtual channel
 	virtualChallengerSig, _ := NitroAdjudicator.SignChallengeMessage(signedVirtualState.State(), tc.Participants[0].PrivateKey)
-	virtualChallengeTx := protocols.NewChallengeTransaction(virtualResponse.ChannelId, signedVirtualState, []state.SignedState{}, virtualChallengerSig)
-	err := chainServiceA.SendTransaction(virtualChallengeTx)
+	virtualChallengeTx := protocols.NewChallengeTransaction(virtualResponse.ChannelId, signedVirtualState, []state.SignedState{signedPostFundState}, virtualChallengerSig)
+	err = chainServiceA.SendTransaction(virtualChallengeTx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -436,9 +493,10 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	balanceNodeB, _ := infra.anvilChain.GetAccountBalance(tc.Participants[1].Address())
 	t.Log("Balance of Alice", balanceNodeA, "\nBalance of Bob", balanceNodeB)
 
-	// Assert balance equals ledger channel deposit since no payment has been made
-	testhelpers.Assert(t, balanceNodeA.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "Balance of Alice (%v) should be equal to ledgerChannelDeposit (%v)", balanceNodeA, ledgerChannelDeposit)
-	testhelpers.Assert(t, balanceNodeB.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "Balance of Bob (%v) should be equal to ledgerChannelDeposit (%v)", balanceNodeB, ledgerChannelDeposit)
+
+	// Alice's balance is determined by subtracting amount paid from her ledger deposit, while Bob's balance is calculated by adding his ledger deposit to the amount received
+	testhelpers.Assert(t, balanceNodeA.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of Alice (%v) should be equal to (%v)", balanceNodeA, ledgerChannelDeposit-payAmount)
+	testhelpers.Assert(t, balanceNodeB.Cmp(big.NewInt(ledgerChannelDeposit+payAmount)) == 0, "Balance of Bob (%v) should be equal to (%v)", balanceNodeB, ledgerChannelDeposit+payAmount)
 }
 
 func getLatestSignedState(store store.Store, id types.Destination) state.SignedState {
@@ -446,10 +504,11 @@ func getLatestSignedState(store store.Store, id types.Destination) state.SignedS
 	return consensusChannel.SupportedSignedState()
 }
 
-func getVirtualSignedState(store store.Store, id types.Destination) state.SignedState {
+func getVirtualSignedState(store store.Store, id types.Destination) (state.SignedState, state.SignedState) {
 	virtualChannel, _ := store.GetChannelById(id)
 	virtualSignedState, _ := virtualChannel.LatestSignedState()
-	return virtualSignedState
+	postFundState := virtualChannel.SignedPostFundState()
+	return virtualSignedState, postFundState
 }
 
 func listenForLedgerUpdates(ledgerUpdatesChan <-chan query.LedgerChannelInfo, listenType channel.ChannelMode) {

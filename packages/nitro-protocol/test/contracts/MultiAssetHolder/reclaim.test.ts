@@ -2,6 +2,7 @@ import {Contract, constants, BigNumber} from 'ethers';
 import {it} from '@jest/globals';
 import {Allocation, AllocationType} from '@statechannels/exit-format';
 
+import {Alice as AWallet, Bob as BWallet, TestChannel} from '../../../gas-benchmarks/fixtures';
 import {
   getTestProvider,
   randomChannelId,
@@ -11,7 +12,14 @@ import {
 import {TESTNitroAdjudicator} from '../../../typechain-types/TESTNitroAdjudicator';
 // eslint-disable-next-line import/order
 import TESTNitroAdjudicatorArtifact from '../../../artifacts/contracts/test/TESTNitroAdjudicator.sol/TESTNitroAdjudicator.json';
-import {channelDataToStatus, encodeOutcome, hashOutcome, Outcome} from '../../../src';
+import {
+  channelDataToStatus,
+  encodeOutcome,
+  getVariablePart,
+  hashOutcome,
+  hashState,
+  Outcome,
+} from '../../../src';
 import {MAGIC_ADDRESS_INDICATING_ETH} from '../../../src/transactions';
 import {encodeGuaranteeData} from '../../../src/contract/outcome';
 const provider = getTestProvider();
@@ -89,19 +97,16 @@ describe('reclaim', () => {
       },
     ];
 
-    const lOutcome: Outcome = [
-      {
-        asset: MAGIC_ADDRESS_INDICATING_ETH,
-        allocations: lAllocations,
-        assetMetadata: {assetType: 0, metadata: '0x'},
-      },
-    ];
-    const lOutcomeHash = hashOutcome(lOutcome);
+    const lChannel = new TestChannel('0x0', [AWallet, BWallet], lAllocations);
+
+    const lOutcomeHash = hashOutcome(lChannel.outcome(MAGIC_ADDRESS_INDICATING_ETH));
+    const lStateHash = hashState(lChannel.someState(MAGIC_ADDRESS_INDICATING_ETH));
+
     await (
       await testNitroAdjudicator.setStatusFromChannelData(sourceId, {
-        turnNumRecord: 99,
+        turnNumRecord: lChannel.someState(MAGIC_ADDRESS_INDICATING_ETH).turnNum,
         finalizesAt: 1,
-        stateHash: constants.HashZero, // not realistic, but OK for purpose of this test
+        stateHash: lStateHash, // not realistic, but OK for purpose of this test
         outcomeHash: lOutcomeHash,
       })
     ).wait();
@@ -110,8 +115,9 @@ describe('reclaim', () => {
 
     const tx = testNitroAdjudicator.reclaim({
       sourceChannelId: sourceId,
-      sourceStateHash: constants.HashZero,
-      sourceOutcomeBytes: encodeOutcome(lOutcome),
+      fixedPart: lChannel.fixedPart,
+      variablePart: getVariablePart(lChannel.someState(MAGIC_ADDRESS_INDICATING_ETH)),
+      sourceOutcomeBytes: encodeOutcome(lChannel.outcome(MAGIC_ADDRESS_INDICATING_ETH)),
       sourceAssetIndex: 0, // TODO: introduce test cases with multiple-asset Source and Targets
       indexOfTargetInSource: 2,
       targetStateHash: constants.HashZero,
@@ -155,19 +161,14 @@ describe('reclaim', () => {
       },
     ];
 
-    const outcomeAfter: Outcome = [
-      {
-        asset: MAGIC_ADDRESS_INDICATING_ETH,
-        allocations: allocationAfter,
-        assetMetadata: {assetType: 0, metadata: '0x'},
-      },
-    ];
+    const lChannelAfter = new TestChannel('0x0', [AWallet, BWallet], allocationAfter);
     const expectedStatusAfter = channelDataToStatus({
-      turnNumRecord: 99,
+      turnNumRecord: lChannel.someState(MAGIC_ADDRESS_INDICATING_ETH).turnNum,
       finalizesAt: 1,
       // stateHash will be set to HashZero by this helper fn
       // if state property of this object is undefined
-      outcome: outcomeAfter,
+      state: lChannelAfter.someState(MAGIC_ADDRESS_INDICATING_ETH),
+      outcome: lChannelAfter.outcome(MAGIC_ADDRESS_INDICATING_ETH),
     });
 
     expect(await testNitroAdjudicator.statusOf(sourceId)).toEqual(expectedStatusAfter);

@@ -344,7 +344,8 @@ describe('Consumes the expected gas for sad-path exits', () => {
     await expect(
       await nitroAdjudicator.reclaim({
         sourceChannelId: LforV.channelId,
-        sourceStateHash: ledgerProof.stateHash,
+        fixedPart: ledgerProof.fixedPart,
+        variablePart: ledgerProof.candidate.variablePart,
         sourceOutcomeBytes: encodeOutcome(ledgerProof.outcome),
         sourceAssetIndex: 0,
         indexOfTargetInSource: 2,
@@ -373,11 +374,16 @@ describe('Consumes the expected gas for sad-path exits', () => {
       },
     ];
 
+    const state = LforV.someState(MAGIC_ADDRESS_INDICATING_ETH);
+    state.outcome = updatedOutcome;
+
+    const updatedSupportProof = LforV.counterSignedSupportProof(state);
+
     await expect(
       await nitroAdjudicator.transferAllAssets(
         LforV.channelId,
         updatedOutcome,
-        ledgerProof.stateHash // stateHash
+        updatedSupportProof.stateHash // stateHash
       )
     ).toConsumeGas(gasRequiredTo.ETHexitSadVirtualFunded.satp.transferAllAssetsL);
     // transferAllAssetsL          ⬛ ---------------> 👨

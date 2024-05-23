@@ -350,7 +350,8 @@ async function main() {
     gasResults.ETHexitSadVirtualFunded.satp.reclaimL = await gasUsed(
       await nitroAdjudicator.reclaim({
         sourceChannelId: LforV.channelId,
-        sourceStateHash: ledgerProof.stateHash,
+        fixedPart: ledgerProof.fixedPart,
+        variablePart: ledgerProof.candidate.variablePart,
         sourceOutcomeBytes: encodeOutcome(ledgerProof.outcome),
         sourceAssetIndex: 0,
         indexOfTargetInSource: 2,
@@ -373,11 +374,16 @@ async function main() {
         allocations: updatedAllocations,
       },
     ];
+
+    const state = LforV.someState(MAGIC_ADDRESS_INDICATING_ETH);
+    state.outcome = updatedOutcome;
+
+    const updatedSupportProof = LforV.counterSignedSupportProof(state);
     gasResults.ETHexitSadVirtualFunded.satp.transferAllAssetsL = await gasUsed(
       await nitroAdjudicator.transferAllAssets(
         LforV.channelId,
         updatedOutcome,
-        ledgerProof.stateHash // stateHash
+        updatedSupportProof.stateHash // stateHash
       )
     );
     // transferAllAssetsL          ⬛ ---------------> 👨

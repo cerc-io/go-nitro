@@ -488,11 +488,12 @@ const payAmount = 2000
 
 	testhelpers.Assert(t, err == nil, "Expected assets liquidated")
 
+	time.Sleep(2 * time.Second)
+
 	// Check assets are liquidated
 	balanceNodeA, _ := infra.anvilChain.GetAccountBalance(tc.Participants[0].Address())
 	balanceNodeB, _ := infra.anvilChain.GetAccountBalance(tc.Participants[1].Address())
 	t.Log("Balance of Alice", balanceNodeA, "\nBalance of Bob", balanceNodeB)
-
 
 	// Alice's balance is determined by subtracting amount paid from her ledger deposit, while Bob's balance is calculated by adding his ledger deposit to the amount received
 	testhelpers.Assert(t, balanceNodeA.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of Alice (%v) should be equal to (%v)", balanceNodeA, ledgerChannelDeposit-payAmount)

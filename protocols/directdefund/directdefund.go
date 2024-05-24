@@ -42,6 +42,8 @@ type Objective struct {
 
 	// Whether a withdraw transaction has been declared as a side effect in a previous crank
 	withdrawTransactionSubmitted bool
+
+	// TODO: isForceful flag part of Objective
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -120,6 +122,7 @@ func NewObjective(
 		init.finalTurnNum = latestSS.TurnNum
 	}
 
+	// TODO: Add isForceful flag to objective
 	return init, nil
 }
 
@@ -220,6 +223,11 @@ func (o *Objective) Update(p protocols.ObjectivePayload) (protocols.Objective, e
 
 // Crank inspects the extended state and declares a list of Effects to be executed
 func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
+	// TODO:
+	// defund crank will be called in these scenarios
+	// 1. Handle objective request
+	// 2. Handle chain event- challengeregistered event and allocationupdated event
+	// 3. Handle message (for challenge its not called)
 	updated := o.clone()
 
 	sideEffects := protocols.SideEffects{}
@@ -233,6 +241,27 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")
 	}
 
+	// TODO: If else block based on isForceful flag
+	// If true then do challenge flow
+	// if false then normal flow
+
+	// Inside if block (Challenge flow)
+
+	// Case 1 (Handle objective request):
+	// if isChallengeInitiated is false then
+	// 		- Populate sideeffects.TransactionsToSubmit with challenge transaction
+	// 		- Mark isChallengeInitiated to true
+	// 		- Return updatedObjective, sideeffect, waitingForChallenge
+
+	// Case 2 (HandleChainEvent challengeregistered event)
+	// if isChallengeInitiated is true && updated.fullyWithdrawn() && transferTransactionSubmitted is false then
+	//    - Wait for challenge duration to complete
+	//    - Can check contract whether channel is finalized
+	//    - Populate sideeffects.TransactionsToSubmit with transfer transaction
+	//    - Mark transferTransactionSubmitted to true
+	//    - Return updatedObjective, sideeffect, waitingForTransfer
+
+	// Inside else block (normal flow) start here
 	// Sign a final state if no supported, final state exists
 	if !latestSignedState.State().IsFinal || !latestSignedState.HasSignatureForParticipant(updated.C.MyIndex) {
 		stateToSign := latestSignedState.State().Clone()
@@ -270,7 +299,9 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		// Every participant waits for all channel funds to be distributed, even if the participant has no funds in the channel
 		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
+	// else block (normal flow) ends here
 
+	// TODO: Case3: HandleChainEvent allocationupdated event called
 	updated.Status = protocols.Completed
 	return &updated, sideEffects, WaitingForNothing, nil
 }
@@ -316,10 +347,12 @@ func (o *Objective) clone() Objective {
 type ObjectiveRequest struct {
 	ChannelId        types.Destination
 	objectiveStarted chan struct{}
+	// TODO: isForceful flag part of ObjectiveRequest
 }
 
 // NewObjectiveRequest creates a new ObjectiveRequest.
 func NewObjectiveRequest(channelId types.Destination) ObjectiveRequest {
+	// TODO: Add isForceful flag
 	return ObjectiveRequest{
 		ChannelId:        channelId,
 		objectiveStarted: make(chan struct{}),

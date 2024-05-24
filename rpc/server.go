@@ -145,6 +145,7 @@ func (rs *RpcServer) registerHandlers() (err error) {
 			})
 		case serde.CloseLedgerChannelRequestMethod:
 			return processRequest(rs, permSign, requestData, func(req directdefund.ObjectiveRequest) (protocols.ObjectiveId, error) {
+				// TODO: Client pass isForceful flag to Server
 				return rs.node.CloseLedgerChannel(req.ChannelId)
 			})
 		case serde.CreatePaymentChannelRequestMethod:

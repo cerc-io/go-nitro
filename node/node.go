@@ -252,6 +252,7 @@ func (n *Node) CreateLedgerChannel(Counterparty types.Address, ChallengeDuration
 
 // CloseLedgerChannel attempts to close and defund the given directly funded channel.
 func (n *Node) CloseLedgerChannel(channelId types.Destination) (protocols.ObjectiveId, error) {
+	// TODO: isForceFul flag passed to NewObjectiveRequest
 	objectiveRequest := directdefund.NewObjectiveRequest(channelId)
 
 	// Send the event to the engine

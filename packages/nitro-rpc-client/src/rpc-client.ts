@@ -13,6 +13,7 @@ import {
   ChannelStatus,
   LedgerChannelUpdatedNotification,
   PaymentChannelUpdatedNotification,
+  DirectDefundObjectiveRequest
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -171,8 +172,8 @@ export class NitroRpcClient implements RpcClientApi {
     return getAndValidateResult(res, "pay");
   }
 
-  public async CloseLedgerChannel(channelId: string): Promise<string> {
-    const payload: DefundObjectiveRequest = { ChannelId: channelId };
+  public async CloseLedgerChannel(channelId: string, isChallenge: boolean): Promise<string> {
+    const payload: DirectDefundObjectiveRequest = { ChannelId: channelId, IsChallenge: isChallenge};
     return this.sendRequest("close_ledger_channel", payload);
   }
 

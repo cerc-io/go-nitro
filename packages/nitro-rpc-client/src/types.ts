@@ -69,6 +69,9 @@ type GetByLedgerRequest = {
 export type DefundObjectiveRequest = {
   ChannelId: string;
 };
+export type DirectDefundObjectiveRequest = DefundObjectiveRequest & {
+  IsChallenge: boolean;
+};
 export type ObjectiveResponse = {
   Id: string;
   ChannelId: string;
@@ -118,7 +121,7 @@ export type GetPaymentChannelsByLedgerRequest = JsonRpcRequest<
 export type VersionRequest = JsonRpcRequest<"version", Record<string, never>>;
 export type DirectDefundRequest = JsonRpcRequest<
   "close_ledger_channel",
-  DefundObjectiveRequest
+  DirectDefundObjectiveRequest
 >;
 export type VirtualDefundRequest = JsonRpcRequest<
   "close_payment_channel",

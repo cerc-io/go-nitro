@@ -151,7 +151,7 @@ func ConstructObjectiveFromPayload(
 	}
 
 	cId := s.ChannelId()
-	request := NewObjectiveRequest(cId)
+	request := NewObjectiveRequest(cId, false)
 	return NewObjective(request, preapprove, getConsensusChannel)
 }
 
@@ -347,15 +347,15 @@ func (o *Objective) clone() Objective {
 type ObjectiveRequest struct {
 	ChannelId        types.Destination
 	objectiveStarted chan struct{}
-	// TODO: isForceful flag part of ObjectiveRequest
+	IsChallenge      bool
 }
 
 // NewObjectiveRequest creates a new ObjectiveRequest.
-func NewObjectiveRequest(channelId types.Destination) ObjectiveRequest {
-	// TODO: Add isForceful flag
+func NewObjectiveRequest(channelId types.Destination, isChallenge bool) ObjectiveRequest {
 	return ObjectiveRequest{
 		ChannelId:        channelId,
 		objectiveStarted: make(chan struct{}),
+		IsChallenge:      isChallenge,
 	}
 }
 

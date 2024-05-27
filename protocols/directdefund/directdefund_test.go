@@ -74,7 +74,7 @@ func newTestObjective() (Objective, error) {
 	getConsensusChannel := func(id types.Destination) (channel *consensus_channel.ConsensusChannel, err error) {
 		return cc, nil
 	}
-	request := NewObjectiveRequest(cc.Id)
+	request := NewObjectiveRequest(cc.Id, false)
 	// Assert that valid constructor args do not result in error
 	o, err := NewObjective(request, true, getConsensusChannel)
 	if err != nil {
@@ -276,7 +276,6 @@ func TestCrankBob(t *testing.T) {
 
 	// The third crank. Bob is expected to enter the terminal state of the defunding protocol.
 	_, err = updated.(*Objective).C.UpdateWithChainEvent(chainservice.NewAllocationUpdatedEvent(types.Destination{}, 1, 0, common.Address{}, common.Big0))
-
 	if err != nil {
 		t.Error(err)
 	}

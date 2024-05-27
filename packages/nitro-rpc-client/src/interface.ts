@@ -25,7 +25,7 @@ interface ledgerChannelApi {
    * @param channelId - The ID of the channel to defund
    * @returns The ID of the objective that was created
    */
-  CloseLedgerChannel(channelId: string): Promise<string>;
+  CloseLedgerChannel(channelId: string, isChallenge: boolean): Promise<string>;
   /**
    * GetLedgerChannel queries the RPC server for a payment channel.
    *

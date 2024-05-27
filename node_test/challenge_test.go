@@ -11,6 +11,7 @@ import (
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/testactors"
+	ta "github.com/statechannels/go-nitro/internal/testactors"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
 	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
@@ -315,7 +316,7 @@ const payAmount = 2000
 	// Create go-nitro nodes
 	nodeA, _, _, storeA, chainServiceA := setupIntegrationNode(tc, tc.Participants[0], infra, []string{}, dataFolder)
 	defer nodeA.Close()
-	nodeB, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[1], infra, []string{}, dataFolder)
+	nodeB, _, _, storeB, _ := setupIntegrationNode(tc, tc.Participants[1], infra, []string{}, dataFolder)
 
 	// Seperate chain service to listen for events
 	testChainService := setupChainService(tc, tc.Participants[1], infra)
@@ -339,7 +340,7 @@ const payAmount = 2000
 	nodeBVoucher := <-nodeB.ReceivedVouchers()
 	t.Logf("Voucher recieved %+v", nodeBVoucher)
 
-	virtualChannel, _ := storeA.GetChannelById(virtualResponse.ChannelId)
+	virtualChannel, _ := storeB.GetChannelById(virtualResponse.ChannelId)
 	voucherState, _ := virtualChannel.LatestSignedState()
 
 	voucherAmountSignatureData := VoucherAmountSignature{
@@ -375,12 +376,12 @@ const payAmount = 2000
 	// Update state with constructed variable part
 	newState := state.StateFromFixedAndVariablePart(voucherState.State().FixedPart(), vp)
 
-	// Add both Bob's and Alice's signature
-	_, _ = virtualChannel.SignAndAddState(newState, &tc.Participants[0].PrivateKey)
-	_, _ = virtualChannel.SignAndAddState(newState, &tc.Participants[1].PrivateKey)
+	// Bob signs constructed state
+	_, _ = virtualChannel.SignAndAddState(newState, &ta.Bob.PrivateKey)
 
 	// Update virtual channel with updated state
 	_ = storeA.SetChannel(virtualChannel)
+	_ = storeB.SetChannel(virtualChannel)
 
 	// Close Bob's node
 	closeNode(t, &nodeB)

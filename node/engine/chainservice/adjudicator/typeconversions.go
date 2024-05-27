@@ -70,6 +70,9 @@ func ConvertSignedStateToFixedPartAndSignedVariablePart(s state.SignedState) (IN
 		Sigs:         make([]INitroTypesSignature, 0, len(s.Signatures())),
 	}
 	for _, sig := range s.Signatures() {
+		if (sig.Equal(nc.Signature{})) {
+			continue
+		}
 		svp.Sigs = append(svp.Sigs, ConvertSignature(sig))
 	}
 

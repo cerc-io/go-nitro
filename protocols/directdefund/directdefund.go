@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/statechannels/go-nitro/channel"
@@ -45,8 +46,8 @@ type Objective struct {
 	// Whether a withdraw transaction has been declared as a side effect in a previous crank
 	withdrawTransactionSubmitted bool
 
-	IsChallenge          bool
-	isChallengeInitiated bool
+	IsChallenge                   bool
+	challengeTransactionSubmitted bool
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -226,11 +227,6 @@ func (o *Objective) Update(p protocols.ObjectivePayload) (protocols.Objective, e
 
 // Crank inspects the extended state and declares a list of Effects to be executed
 func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
-	// TODO:
-	// defund crank will be called in these scenarios
-	// 1. Handle objective request
-	// 2. Handle chain event- challengeregistered event and allocationupdated event
-	// 3. Handle message (for challenge its not called)
 	updated := o.clone()
 
 	sideEffects := protocols.SideEffects{}
@@ -239,31 +235,31 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
 	}
 
-	latestSignedState, err := updated.C.LatestSignedState()
-	if err != nil {
-		return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")
-	}
-
 	if updated.IsChallenge {
-		// Case 1 (Handle objective request):
-		if !updated.isChallengeInitiated {
+		if !updated.challengeTransactionSubmitted {
 			// TODO: Handle error
 			latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
 			challengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSupportedSignedState.State(), *secretKey)
 			challengeTx := protocols.NewChallengeTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0), challengerSig)
 			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
-			updated.isChallengeInitiated = true
+			updated.challengeTransactionSubmitted = true
 			return &updated, sideEffects, WaitingForChallenge, nil
 		}
 
-		// Case 2 (HandleChainEvent challengeregistered event):
-		// if isChallengeInitiated is true && updated.fullyWithdrawn() && transferTransactionSubmitted is false then
-		//    - Wait for challenge duration to complete
-		//    - Can check contract whether channel is finalized
-		//    - Populate sideeffects.TransactionsToSubmit with transfer transaction
-		//    - Mark transferTransactionSubmitted to true
-		//    - Return updatedObjective, sideeffect, waitingForTransfer
+		if updated.challengeTransactionSubmitted && !updated.fullyWithdrawn() {
+			latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
+			time.Sleep(time.Duration(latestSupportedSignedState.State().ChallengeDuration) * time.Second)
+			// TODO: Can check on chain whether channel is finalized
+			transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
+			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
+			return &updated, sideEffects, WaitingForWithdraw, nil
+		}
 	} else {
+		latestSignedState, err := updated.C.LatestSignedState()
+		if err != nil {
+			return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")
+		}
+
 		// Sign a final state if no supported, final state exists
 		if !latestSignedState.State().IsFinal || !latestSignedState.HasSignatureForParticipant(updated.C.MyIndex) {
 			stateToSign := latestSignedState.State().Clone()
@@ -303,7 +299,6 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		}
 	}
 
-	// TODO: Case3: HandleChainEvent allocationupdated event called
 	updated.Status = protocols.Completed
 	return &updated, sideEffects, WaitingForNothing, nil
 }
@@ -342,7 +337,7 @@ func (o *Objective) clone() Objective {
 	clone.finalTurnNum = o.finalTurnNum
 	clone.withdrawTransactionSubmitted = o.withdrawTransactionSubmitted
 	clone.IsChallenge = o.IsChallenge
-	clone.isChallengeInitiated = o.isChallengeInitiated
+	clone.challengeTransactionSubmitted = o.challengeTransactionSubmitted
 	return clone
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
 	"github.com/statechannels/go-nitro/channel/state"
+	NitroAdjudicator "github.com/statechannels/go-nitro/node/engine/chainservice/adjudicator"
 	"github.com/statechannels/go-nitro/protocols"
 	"github.com/statechannels/go-nitro/types"
 )
@@ -19,6 +20,7 @@ import (
 const (
 	WaitingForFinalization protocols.WaitingFor = "WaitingForFinalization"
 	WaitingForWithdraw     protocols.WaitingFor = "WaitingForWithdraw"
+	WaitingForChallenge    protocols.WaitingFor = "WaitingForChallenge"
 	WaitingForNothing      protocols.WaitingFor = "WaitingForNothing" // Finished
 )
 
@@ -43,7 +45,8 @@ type Objective struct {
 	// Whether a withdraw transaction has been declared as a side effect in a previous crank
 	withdrawTransactionSubmitted bool
 
-	// TODO: isForceful flag part of Objective
+	IsChallenge          bool
+	isChallengeInitiated bool
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -122,7 +125,7 @@ func NewObjective(
 		init.finalTurnNum = latestSS.TurnNum
 	}
 
-	// TODO: Add isForceful flag to objective
+	init.IsChallenge = request.IsChallenge
 	return init, nil
 }
 
@@ -241,65 +244,64 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")
 	}
 
-	// TODO: If else block based on isForceful flag
-	// If true then do challenge flow
-	// if false then normal flow
-
-	// Inside if block (Challenge flow)
-
-	// Case 1 (Handle objective request):
-	// if isChallengeInitiated is false then
-	// 		- Populate sideeffects.TransactionsToSubmit with challenge transaction
-	// 		- Mark isChallengeInitiated to true
-	// 		- Return updatedObjective, sideeffect, waitingForChallenge
-
-	// Case 2 (HandleChainEvent challengeregistered event)
-	// if isChallengeInitiated is true && updated.fullyWithdrawn() && transferTransactionSubmitted is false then
-	//    - Wait for challenge duration to complete
-	//    - Can check contract whether channel is finalized
-	//    - Populate sideeffects.TransactionsToSubmit with transfer transaction
-	//    - Mark transferTransactionSubmitted to true
-	//    - Return updatedObjective, sideeffect, waitingForTransfer
-
-	// Inside else block (normal flow) start here
-	// Sign a final state if no supported, final state exists
-	if !latestSignedState.State().IsFinal || !latestSignedState.HasSignatureForParticipant(updated.C.MyIndex) {
-		stateToSign := latestSignedState.State().Clone()
-		if !stateToSign.IsFinal {
-			stateToSign.TurnNum += 1
-			stateToSign.IsFinal = true
+	if updated.IsChallenge {
+		// Case 1 (Handle objective request):
+		if !updated.isChallengeInitiated {
+			// TODO: Handle error
+			latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
+			challengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSupportedSignedState.State(), *secretKey)
+			challengeTx := protocols.NewChallengeTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0), challengerSig)
+			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
+			updated.isChallengeInitiated = true
+			return &updated, sideEffects, WaitingForChallenge, nil
 		}
-		ss, err := updated.C.SignAndAddState(stateToSign, secretKey)
+
+		// Case 2 (HandleChainEvent challengeregistered event):
+		// if isChallengeInitiated is true && updated.fullyWithdrawn() && transferTransactionSubmitted is false then
+		//    - Wait for challenge duration to complete
+		//    - Can check contract whether channel is finalized
+		//    - Populate sideeffects.TransactionsToSubmit with transfer transaction
+		//    - Mark transferTransactionSubmitted to true
+		//    - Return updatedObjective, sideeffect, waitingForTransfer
+	} else {
+		// Sign a final state if no supported, final state exists
+		if !latestSignedState.State().IsFinal || !latestSignedState.HasSignatureForParticipant(updated.C.MyIndex) {
+			stateToSign := latestSignedState.State().Clone()
+			if !stateToSign.IsFinal {
+				stateToSign.TurnNum += 1
+				stateToSign.IsFinal = true
+			}
+			ss, err := updated.C.SignAndAddState(stateToSign, secretKey)
+			if err != nil {
+				return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not sign final state %w", err)
+			}
+			messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), ss, SignedStatePayload, o.otherParticipants()...)
+			if err != nil {
+				return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not create payload message %w", err)
+			}
+			sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, messages...)
+		}
+
+		latestSupportedState, err := updated.C.LatestSupportedState()
 		if err != nil {
-			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not sign final state %w", err)
+			return &updated, sideEffects, WaitingForFinalization, fmt.Errorf("error finding a supported state: %w", err)
 		}
-		messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), ss, SignedStatePayload, o.otherParticipants()...)
-		if err != nil {
-			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not create payload message %w", err)
+		if !latestSupportedState.IsFinal {
+			return &updated, sideEffects, WaitingForFinalization, nil
 		}
-		sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, messages...)
-	}
 
-	latestSupportedState, err := updated.C.LatestSupportedState()
-	if err != nil {
-		return &updated, sideEffects, WaitingForFinalization, fmt.Errorf("error finding a supported state: %w", err)
-	}
-	if !latestSupportedState.IsFinal {
-		return &updated, sideEffects, WaitingForFinalization, nil
-	}
-
-	// Withdrawal of funds
-	if !updated.fullyWithdrawn() {
-		// The first participant in the channel submits the withdrawAll transaction
-		if updated.C.MyIndex == 0 && !updated.withdrawTransactionSubmitted {
-			withdrawAll := protocols.NewWithdrawAllTransaction(updated.C.Id, latestSignedState)
-			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, withdrawAll)
-			updated.withdrawTransactionSubmitted = true
+		// Withdrawal of funds
+		if !updated.fullyWithdrawn() {
+			// The first participant in the channel submits the withdrawAll transaction
+			if updated.C.MyIndex == 0 && !updated.withdrawTransactionSubmitted {
+				withdrawAll := protocols.NewWithdrawAllTransaction(updated.C.Id, latestSignedState)
+				sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, withdrawAll)
+				updated.withdrawTransactionSubmitted = true
+			}
+			// Every participant waits for all channel funds to be distributed, even if the participant has no funds in the channel
+			return &updated, sideEffects, WaitingForWithdraw, nil
 		}
-		// Every participant waits for all channel funds to be distributed, even if the participant has no funds in the channel
-		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
-	// else block (normal flow) ends here
 
 	// TODO: Case3: HandleChainEvent allocationupdated event called
 	updated.Status = protocols.Completed
@@ -339,7 +341,8 @@ func (o *Objective) clone() Objective {
 	clone.C = cClone
 	clone.finalTurnNum = o.finalTurnNum
 	clone.withdrawTransactionSubmitted = o.withdrawTransactionSubmitted
-
+	clone.IsChallenge = o.IsChallenge
+	clone.isChallengeInitiated = o.isChallengeInitiated
 	return clone
 }
 

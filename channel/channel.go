@@ -227,6 +227,15 @@ func (c Channel) LatestSupportedState() (state.State, error) {
 	return c.OffChain.SignedStateForTurnNum[c.OffChain.LatestSupportedStateTurnNum].State(), nil
 }
 
+// LatestSupportedSignedState returns latest supported signed state. A state is supported if it is signed
+// by all participants.
+func (c Channel) LatestSupportedSignedState() (state.SignedState, error) {
+	if c.OffChain.LatestSupportedStateTurnNum == MaxTurnNum {
+		return state.SignedState{}, errors.New(`no state is yet supported`)
+	}
+	return c.OffChain.SignedStateForTurnNum[c.OffChain.LatestSupportedStateTurnNum], nil
+}
+
 // LatestSignedState fetches the state with the largest turn number signed by at least one participant.
 func (c Channel) LatestSignedState() (state.SignedState, error) {
 	if len(c.OffChain.SignedStateForTurnNum) == 0 {

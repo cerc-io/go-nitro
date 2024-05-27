@@ -301,11 +301,11 @@ func TestCounterChallenge(t *testing.T) {
 
 func TestVirtualPaymentChannel(t *testing.T) {
 	tc := TestCase{
-		Description:       "Counter challenge test",
+		Description:       "Virtual channel test",
 		Chain:             AnvilChain,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
-		LogName:           "Counter_challenge_test",
+		LogName:           "Virtual_channel_test",
 		ChallengeDuration: 5,
 		Participants: []TestParticipant{
 			{StoreType: MemStore, Actor: testactors.Alice},

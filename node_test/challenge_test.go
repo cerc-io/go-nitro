@@ -377,7 +377,7 @@ const payAmount = 2000
 	newState := state.StateFromFixedAndVariablePart(voucherState.State().FixedPart(), vp)
 
 	// Bob signs constructed state
-	_, _ = virtualChannel.SignAndAddState(newState, &ta.Bob.PrivateKey)
+	_, _ = virtualChannel.SignAndAddState(newState, &tc.Participants[1].PrivateKey)
 
 	// Update virtual channel with updated state
 	_ = storeA.SetChannel(virtualChannel)

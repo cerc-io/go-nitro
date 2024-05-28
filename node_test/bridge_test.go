@@ -8,6 +8,7 @@ import (
 	"github.com/statechannels/go-nitro/internal/testactors"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
 	"github.com/statechannels/go-nitro/node"
+	"github.com/statechannels/go-nitro/node/engine/messageservice"
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/protocols"
 	"github.com/statechannels/go-nitro/types"
@@ -15,6 +16,11 @@ import (
 
 func TestBridge(t *testing.T) {
 	const payAmount = 2000
+
+	const (
+		CHAIN_URL_L1 = "ws://127.0.0.1:8545"
+		CHAIN_URL_L2 = "ws://127.0.0.1:8546"
+	)
 
 	tc := TestCase{
 		Description:       "Challenge test",
@@ -34,20 +40,30 @@ func TestBridge(t *testing.T) {
 	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
 	defer cleanup()
 
-	infra := setupSharedInfra(tc)
-	defer infra.Close(t)
+	infraL1 := setupSharedInfraWithChainUrlArg(tc, CHAIN_URL_L1)
+	defer infraL1.Close(t)
+
+	infraL2 := setupSharedInfraWithChainUrlArg(tc, CHAIN_URL_L2)
+	defer infraL2.Close(t)
+
+	if tc.MessageService == TestMessageService {
+
+		broker := messageservice.NewBroker()
+		infraL1.broker = &broker
+		infraL2.broker = &broker
+	}
 
 	// Create go-nitro nodes
-	nodeA, _, _, storeA, _ := setupIntegrationNode(tc, tc.Participants[0], infra, []string{}, dataFolder)
+	nodeA, _, _, storeA, _ := setupIntegrationNode(tc, tc.Participants[0], infraL1, []string{}, dataFolder)
 	defer nodeA.Close()
 
-	nodeB, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[1], infra, []string{}, dataFolder)
+	nodeB, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[1], infraL1, []string{}, dataFolder)
 	defer nodeB.Close()
 
-	nodeBPrime, _, _, storeBPrime, _ := setupIntegrationNode(tc, tc.Participants[2], infra, []string{}, dataFolder)
+	nodeBPrime, _, _, storeBPrime, _ := setupIntegrationNode(tc, tc.Participants[2], infraL2, []string{}, dataFolder)
 	defer nodeBPrime.Close()
 
-	nodeAPrime, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[3], infra, []string{}, dataFolder)
+	nodeAPrime, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[3], infraL2, []string{}, dataFolder)
 	defer nodeAPrime.Close()
 
 	// Create ledger channel

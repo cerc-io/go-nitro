@@ -251,6 +251,31 @@ func setupSharedInfra(tc TestCase) sharedTestInfrastructure {
 	return infra
 }
 
+func setupSharedInfraWithChainUrlArg(tc TestCase, chainUrl string) sharedTestInfrastructure {
+	infra := sharedTestInfrastructure{}
+	switch tc.Chain {
+	case MockChain:
+		infra.mockChain = chainservice.NewMockChain()
+	case SimulatedChain:
+		sim, bindings, ethAccounts, err := chainservice.SetupSimulatedBackend(MAX_PARTICIPANTS)
+		if err != nil {
+			panic(err)
+		}
+		infra.simulatedChain = sim
+		infra.bindings = &bindings
+		infra.ethAccounts = ethAccounts
+	case AnvilChain:
+		chain, err := chainservice.NewAnvilChainWithChainUrlArg(chainUrl)
+		if err != nil {
+			panic(err)
+		}
+		infra.anvilChain = chain
+	default:
+		panic("Unknown chain service")
+	}
+	return infra
+}
+
 // checkPaymentChannel checks that the ledger channel has the expected outcome and status
 // It will fail if the channel does not exist
 func checkPaymentChannel(t *testing.T, id types.Destination, o outcome.Exit, status query.ChannelStatus, clients ...node.Node) {

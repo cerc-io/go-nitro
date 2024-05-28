@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -68,6 +69,27 @@ func NewAnvilChain() (*AnvilChain, error) {
 	return &anvilChain, nil
 }
 
+func NewAnvilChainWithChainUrlArg(chainUrl string) (*AnvilChain, error) {
+	anvilChain, err := StartAnvilWithChainUrlArg(chainUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	ethClient, txSubmitter, err := chainutils.ConnectToChain(
+		context.Background(),
+		anvilChain.ChainUrl,
+		anvilChain.ChainAuthToken,
+		common.Hex2Bytes(ChainPks[0]),
+	)
+	if err != nil {
+		return nil, err
+	}
+	anvilChain.ethClient = ethClient
+	contractAddresses, _ := DeployContracts(context.Background(), ethClient, txSubmitter)
+	anvilChain.ContractAddresses = contractAddresses
+	return &anvilChain, nil
+}
+
 func (chain AnvilChain) GetAccountBalance(accountAddress common.Address) (*big.Int, error) {
 	latestBlock, _ := chain.GetLatestBlock()
 	return chain.ethClient.BalanceAt(context.Background(), accountAddress, latestBlock.Header().Number)
@@ -84,6 +106,26 @@ func StartAnvil() (AnvilChain, error) {
 	anvilChain.ChainPks = ChainPks
 
 	anvilChain.AnvilCmd = exec.Command("anvil", "--chain-id", "1337", "--block-time", "1", "--silent")
+	anvilChain.AnvilCmd.Stdout = os.Stdout
+	anvilChain.AnvilCmd.Stderr = os.Stderr
+	err := anvilChain.AnvilCmd.Start()
+	if err != nil {
+		return AnvilChain{}, err
+	}
+	// If Anvil start successfully, delay by 1 second for the chain to initialize
+	time.Sleep(1 * time.Second)
+	return anvilChain, nil
+}
+
+func StartAnvilWithChainUrlArg(chainUrl string) (AnvilChain, error) {
+	anvilChain := AnvilChain{}
+	anvilChain.ChainAuthToken = CHAIN_AUTH_TOKEN
+	anvilChain.ChainUrl = chainUrl
+	anvilChain.ChainPks = ChainPks
+
+	chainUrlSplit := strings.Split(chainUrl, ":")
+
+	anvilChain.AnvilCmd = exec.Command("anvil", "--chain-id", "1337", "--block-time", "1", "--silent", "--port", chainUrlSplit[2])
 	anvilChain.AnvilCmd.Stdout = os.Stdout
 	anvilChain.AnvilCmd.Stderr = os.Stderr
 	err := anvilChain.AnvilCmd.Start()

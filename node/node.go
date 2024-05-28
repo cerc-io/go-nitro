@@ -18,6 +18,7 @@ import (
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
+	"github.com/statechannels/go-nitro/protocols/bridgedfund"
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
@@ -242,6 +243,34 @@ func (n *Node) CreateLedgerChannel(Counterparty types.Address, ChallengeDuration
 		slog.Error("directfund: channel already exists", "error", directfund.ErrLedgerChannelExists)
 
 		return directfund.ObjectiveResponse{}, fmt.Errorf("counterparty %s: %w", Counterparty, directfund.ErrLedgerChannelExists)
+	}
+
+	// Send the event to the engine
+	n.engine.ObjectiveRequestsFromAPI <- objectiveRequest
+	objectiveRequest.WaitForObjectiveToStart()
+	return objectiveRequest.Response(*n.Address, n.chainId), nil
+}
+
+func (n *Node) CreateBridgeChannel(Counterparty types.Address, ChallengeDuration uint32, outcome outcome.Exit) (bridgedfund.ObjectiveResponse, error) {
+	objectiveRequest := bridgedfund.NewObjectiveRequest(
+		Counterparty,
+		ChallengeDuration,
+		outcome,
+		rand.Uint64(),
+		n.engine.GetConsensusAppAddress(),
+		// Appdata implicitly zero
+	)
+
+	// Check store to see if there is an existing channel with this counterparty
+	channelExists, err := bridgedfund.ChannelsExistWithCounterparty(Counterparty, n.store.GetChannelsByParticipant, n.store.GetConsensusChannel)
+	if err != nil {
+		slog.Error("bridge fund error", "error", err)
+		return bridgedfund.ObjectiveResponse{}, fmt.Errorf("counterparty check failed: %w", err)
+	}
+	if channelExists {
+		slog.Error("bridgefund: channel already exists", "error", bridgedfund.ErrLedgerChannelExists)
+
+		return bridgedfund.ObjectiveResponse{}, fmt.Errorf("counterparty %s: %w", Counterparty, bridgedfund.ErrLedgerChannelExists)
 	}
 
 	// Send the event to the engine

@@ -310,23 +310,6 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForCompletePrefund, nil
 	}
 
-	// Funding
-	fundingComplete := updated.fundingComplete() // note all information stored in state (since there are no real events)
-	amountToDeposit := updated.amountToDeposit()
-	safeToDeposit := updated.safeToDeposit()
-
-	if !fundingComplete && !safeToDeposit {
-		return &updated, sideEffects, WaitingForMyTurnToFund, nil
-	}
-
-	if !fundingComplete && safeToDeposit && amountToDeposit.IsNonZero() && !updated.transactionSubmitted {
-		updated.transactionSubmitted = true
-	}
-
-	if !fundingComplete {
-		return &updated, sideEffects, WaitingForCompleteFunding, nil
-	}
-
 	// Postfunding
 	if !updated.C.PostFundSignedByMe() {
 

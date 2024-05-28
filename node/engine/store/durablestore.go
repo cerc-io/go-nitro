@@ -14,6 +14,7 @@ import (
 	"github.com/statechannels/go-nitro/crypto"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
+	"github.com/statechannels/go-nitro/protocols/bridgedfund"
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
@@ -603,6 +604,16 @@ func (ds *DurableStore) populateChannelData(obj protocols.Objective) error {
 			o.ToMyRight = right
 		}
 		return nil
+	case *bridgedfund.Objective:
+		ch, err := ds.getChannelById(o.C.Id)
+		if err != nil {
+			return fmt.Errorf("error retrieving channel data for objective %s: %w", id, err)
+		}
+
+		o.C = &ch
+
+		return nil
+
 	default:
 		return fmt.Errorf("objective %s did not correctly represent a known Objective type", id)
 	}

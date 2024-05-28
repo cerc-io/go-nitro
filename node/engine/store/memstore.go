@@ -12,6 +12,7 @@ import (
 	"github.com/statechannels/go-nitro/internal/safesync"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
+	"github.com/statechannels/go-nitro/protocols/bridgedfund"
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
@@ -450,6 +451,15 @@ func (ms *MemStore) populateChannelData(obj protocols.Objective) error {
 			o.ToMyRight = right
 		}
 		return nil
+	case *bridgedfund.Objective:
+		ch, err := ms.getChannelById(o.C.Id)
+		if err != nil {
+			return fmt.Errorf("error retrieving channel data for objective %s: %w", id, err)
+		}
+
+		o.C = &ch
+
+		return nil
 	default:
 		return fmt.Errorf("objective %s did not correctly represent a known Objective type", id)
 	}
@@ -476,6 +486,10 @@ func decodeObjective(id protocols.ObjectiveId, data []byte) (protocols.Objective
 		dvfo := virtualdefund.Objective{}
 		err := dvfo.UnmarshalJSON(data)
 		return &dvfo, err
+	case bridgedfund.IsBridgedFundObjective(id):
+		bfo := bridgedfund.Objective{}
+		err := bfo.UnmarshalJSON(data)
+		return &bfo, err
 	default:
 		return nil, fmt.Errorf("objective id %s does not correspond to a known Objective type", id)
 

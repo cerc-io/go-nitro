@@ -1,19 +1,21 @@
 package node_test
 
 import (
+	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/testactors"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
+	"github.com/statechannels/go-nitro/node"
+	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/protocols"
-	"github.com/statechannels/go-nitro/protocols/bridgedfund"
 	"github.com/statechannels/go-nitro/types"
 )
 
 func TestBridge(t *testing.T) {
+	const payAmount = 2000
+
 	tc := TestCase{
 		Description:       "Challenge test",
 		Chain:             AnvilChain,
@@ -42,15 +44,11 @@ func TestBridge(t *testing.T) {
 	nodeB, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[1], infra, []string{}, dataFolder)
 	defer nodeB.Close()
 
-	nodeBPrime, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[2], infra, []string{}, dataFolder)
+	nodeBPrime, _, _, storeBPrime, _ := setupIntegrationNode(tc, tc.Participants[2], infra, []string{}, dataFolder)
 	defer nodeBPrime.Close()
 
 	nodeAPrime, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[3], infra, []string{}, dataFolder)
 	defer nodeAPrime.Close()
-
-	// Separate chain service to listen for events
-	testChainServiceA := setupChainService(tc, tc.Participants[0], infra)
-	defer testChainServiceA.Close()
 
 	// Create ledger channel
 	l1LedgerChannelId := openLedgerChannel(t, nodeA, nodeB, types.Address{}, uint32(tc.ChallengeDuration))
@@ -70,106 +68,58 @@ func TestBridge(t *testing.T) {
 	nodeAPrimeAllocation := l1ledgerChannelStateClone.State().Outcome[0].Allocations[0]
 	nodeAPrimeAllocation.Destination = types.AddressToDestination(*nodeAPrime.Address)
 
-	// Create extended state based on l1ChannelState
+	// Create extended state outcome based on l1ChannelState
 	l2ChannelOutcome := outcome.Exit{
 		{
 			Asset:         l1ledgerChannelStateClone.State().Outcome[0].Asset,
 			AssetMetadata: l1ledgerChannelStateClone.State().Outcome[0].AssetMetadata,
 			Allocations: outcome.Allocations{
-				nodeAPrimeAllocation,
 				nodeBPrimeAllocation,
+				nodeAPrimeAllocation,
 			},
 		},
 	}
 
-	l2ChannelState := state.State{
-		Participants:      []common.Address{*nodeBPrime.Address, *nodeAPrime.Address},
-		ChannelNonce:      state.TestState.ChannelNonce,
-		AppDefinition:     l1ledgerChannelStateClone.State().AppDefinition,
-		ChallengeDuration: l1ledgerChannelStateClone.State().ChallengeDuration,
-		AppData:           l1ledgerChannelStateClone.State().AppData,
-		Outcome:           l2ChannelOutcome,
-		TurnNum:           0,
-		IsFinal:           l1ledgerChannelStateClone.State().IsFinal,
-	}
-
-	// Test Crank method of bridgedfund protocol
-	id := protocols.ObjectiveId(bridgedfund.ObjectivePrefix + l2ChannelState.ChannelId().String())
-	op, err := protocols.CreateObjectivePayload(id, bridgedfund.SignedStatePayload, state.NewSignedState(l2ChannelState))
+	// Create mirrored ledger channel between node BPrime and APrime
+	response, err := nodeBPrime.CreateBridgeChannel(*nodeAPrime.Address, uint32(tc.ChallengeDuration), l2ChannelOutcome)
 	if err != nil {
 		t.Error(err)
 	}
 
-	s, err := bridgedfund.ConstructFromPayload(false, op, l2ChannelState.Participants[0])
+	t.Log("Waiting for bridge-fund objective to complete...")
 
-	if err != nil {
-		t.Error(err)
-	}
+	<-nodeBPrime.ObjectiveCompleteChan(response.Id)
+	<-nodeAPrime.ObjectiveCompleteChan(response.Id)
 
-	preFundSignatureBPrime, _ := s.C.PreFundState().Sign(tc.Participants[2].PrivateKey)
-	preFundSignatureAprime, _ := s.C.PreFundState().Sign(tc.Participants[3].PrivateKey)
+	t.Log("Completed bridge-fund objective")
 
-	postFundSignatureBprime, _ := s.C.PostFundState().Sign(tc.Participants[2].PrivateKey)
-	postFundSignatureAprime, _ := s.C.PostFundState().Sign(tc.Participants[3].PrivateKey)
+	virtualOutcome := initialPaymentOutcome(*nodeBPrime.Address, *nodeAPrime.Address, types.Address{})
 
-	o := s.Approve().(*bridgedfund.Objective)
+	virtualResponse, _ := nodeBPrime.CreatePaymentChannel([]types.Address{}, *nodeAPrime.Address, uint32(tc.ChallengeDuration), virtualOutcome)
+	waitForObjectives(t, nodeBPrime, nodeAPrime, []node.Node{}, []protocols.ObjectiveId{virtualResponse.Id})
 
-	// Initial Crank
-	_, _, waitingFor, err := o.Crank(&tc.Participants[2].PrivateKey)
-	if err != nil {
-		t.Error(err)
-	}
+	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeBPrime, nodeAPrime)
 
-	if waitingFor != bridgedfund.WaitingForCompletePrefund {
-		t.Fatalf(`WaitingFor: expected %v, got %v`, bridgedfund.WaitingForCompletePrefund, waitingFor)
-	}
+	virtualChannel, _ := storeBPrime.GetChannelById(virtualResponse.ChannelId)
 
-	// Manually progress the extended state by collecting prefund signatures
-	o.C.AddStateWithSignature(o.C.PreFundState(), preFundSignatureBPrime)
-	o.C.AddStateWithSignature(o.C.PreFundState(), preFundSignatureAprime)
+	// Bridge pays APrime
+	nodeBPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
 
-	// Cranking should move us to the next waiting point
-	_, _, waitingFor, err = o.Crank(&tc.Participants[2].PrivateKey)
-	if err != nil {
-		t.Error(err)
-	}
+	// Wait for APrime to recieve voucher
+	nodeAPrimeVoucher := <-nodeAPrime.ReceivedVouchers()
+	t.Logf("Voucher recieved %+v", nodeAPrimeVoucher)
 
-	if waitingFor != bridgedfund.WaitingForMyTurnToFund {
-		t.Fatalf(`WaitingFor: expected %v, got %v`, bridgedfund.WaitingForMyTurnToFund, waitingFor)
-	}
+	// Virtual defund
+	virtualDefundResponse, _ := nodeBPrime.ClosePaymentChannel(virtualChannel.Id)
+	waitForObjectives(t, nodeBPrime, nodeAPrime, []node.Node{}, []protocols.ObjectiveId{virtualDefundResponse})
 
-	// Manually make the first "deposit"
-	o.C.OnChain.Holdings[l2ChannelState.Outcome[0].Asset] = l2ChannelState.Outcome[0].Allocations[0].Amount
-	_, _, waitingFor, err = o.Crank(&tc.Participants[2].PrivateKey)
-	if err != nil {
-		t.Error(err)
-	}
-	if waitingFor != bridgedfund.WaitingForCompleteFunding {
-		t.Fatalf(`WaitingFor: expected %v, got %v`, bridgedfund.WaitingForCompleteFunding, waitingFor)
-	}
+	latestSignedState := getLatestSignedState(storeBPrime, response.ChannelId)
 
-	// Manually make the second "deposit"
-	totalAmountAllocated := l2ChannelState.Outcome[0].TotalAllocated()
-	o.C.OnChain.Holdings[l2ChannelState.Outcome[0].Asset] = totalAmountAllocated
-	_, _, waitingFor, err = o.Crank(&tc.Participants[2].PrivateKey)
-	if err != nil {
-		t.Error(err)
-	}
-	if waitingFor != bridgedfund.WaitingForCompletePostFund {
-		t.Fatalf(`WaitingFor: expected %v, got %v`, bridgedfund.WaitingForCompletePostFund, waitingFor)
-	}
+	balanceNodeBPrime := latestSignedState.State().Outcome[0].Allocations[0].Amount
+	balanceNodeAPrime := latestSignedState.State().Outcome[0].Allocations[1].Amount
+	t.Log("Balance of node BPrime", balanceNodeBPrime, "\nBalance of node APrime", balanceNodeAPrime)
 
-	// Manually progress the extended state by collecting postfund signatures
-	o.C.AddStateWithSignature(o.C.PostFundState(), postFundSignatureBprime)
-	o.C.AddStateWithSignature(o.C.PostFundState(), postFundSignatureAprime)
-
-	// This should be the final crank
-	o.C.OnChain.Holdings[l2ChannelState.Outcome[0].Asset] = totalAmountAllocated
-	_, _, waitingFor, err = o.Crank(&tc.Participants[2].PrivateKey)
-	if err != nil {
-		t.Error(err)
-	}
-	if waitingFor != bridgedfund.WaitingForNothing {
-		t.Fatalf(`WaitingFor: expected %v, got %v`, bridgedfund.WaitingForNothing, waitingFor)
-	}
+	// BPrime's balance is determined by subtracting amount paid from it's ledger deposit, while APrime's balance is calculated by adding it's ledger deposit to the amount received
+	testhelpers.Assert(t, balanceNodeBPrime.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of node BPrime (%v) should be equal to (%v)", balanceNodeBPrime, ledgerChannelDeposit-payAmount)
+	testhelpers.Assert(t, balanceNodeAPrime.Cmp(big.NewInt(ledgerChannelDeposit+payAmount)) == 0, "Balance of node APrime (%v) should be equal to (%v)", balanceNodeAPrime, ledgerChannelDeposit+payAmount)
 }

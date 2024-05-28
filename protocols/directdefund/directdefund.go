@@ -246,11 +246,12 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForChallenge, nil
 	}
 
-	if updated.IsChallengeInitiatedByMe && updated.challengeTransactionSubmitted || updated.ChannelStatus == protocols.Challenge {
-		if updated.ChannelStatus == protocols.Open {
-			updated.ChannelStatus = protocols.Challenge
-		}
+	if updated.IsChallengeInitiatedByMe && updated.challengeTransactionSubmitted && updated.ChannelStatus == protocols.Open {
+		updated.ChannelStatus = protocols.Challenge
+		return &updated, sideEffects, WaitingForFinalization, nil
+	}
 
+	if updated.ChannelStatus == protocols.Challenge && !updated.IsChallengeInitiatedByMe {
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 

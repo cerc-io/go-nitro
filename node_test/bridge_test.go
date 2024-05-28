@@ -9,7 +9,7 @@ import (
 	"github.com/statechannels/go-nitro/internal/testactors"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
 	"github.com/statechannels/go-nitro/protocols"
-	"github.com/statechannels/go-nitro/protocols/directfund"
+	"github.com/statechannels/go-nitro/protocols/bridgedfund"
 	"github.com/statechannels/go-nitro/types"
 )
 
@@ -43,9 +43,10 @@ func TestBridge(t *testing.T) {
 	defer nodeB.Close()
 
 	nodeBPrime, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[2], infra, []string{}, dataFolder)
-	defer nodeA.Close()
+	defer nodeBPrime.Close()
 
 	nodeAPrime, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[3], infra, []string{}, dataFolder)
+	defer nodeAPrime.Close()
 
 	// Separate chain service to listen for events
 	testChainServiceA := setupChainService(tc, tc.Participants[0], infra)
@@ -63,11 +64,11 @@ func TestBridge(t *testing.T) {
 
 	l1ledgerChannelStateClone := l1ledgerChannelState.Clone()
 
-	nodeBPrimeAllocation := l1ledgerChannelStateClone.State().Outcome[0].Allocations[0]
+	nodeBPrimeAllocation := l1ledgerChannelStateClone.State().Outcome[0].Allocations[1]
 	nodeBPrimeAllocation.Destination = types.AddressToDestination(*nodeBPrime.Address)
 
-	nodeAPrimeAllocation := l1ledgerChannelStateClone.State().Outcome[1].Allocations[0]
-	nodeAPrimeAllocation.Destination = types.AddressToDestination(*nodeBPrime.Address)
+	nodeAPrimeAllocation := l1ledgerChannelStateClone.State().Outcome[0].Allocations[0]
+	nodeAPrimeAllocation.Destination = types.AddressToDestination(*nodeAPrime.Address)
 
 	// Create extended state based on l1ChannelState
 	l2ChannelOutcome := outcome.Exit{
@@ -75,13 +76,12 @@ func TestBridge(t *testing.T) {
 			Asset:         l1ledgerChannelStateClone.State().Outcome[0].Asset,
 			AssetMetadata: l1ledgerChannelStateClone.State().Outcome[0].AssetMetadata,
 			Allocations: outcome.Allocations{
-				nodeBPrimeAllocation,
 				nodeAPrimeAllocation,
+				nodeBPrimeAllocation,
 			},
 		},
 	}
 
-	// 1. Create state reflecting ledger channel state on l1
 	l2ChannelState := state.State{
 		Participants:      []common.Address{*nodeBPrime.Address, *nodeAPrime.Address},
 		ChannelNonce:      state.TestState.ChannelNonce,
@@ -89,16 +89,87 @@ func TestBridge(t *testing.T) {
 		ChallengeDuration: l1ledgerChannelStateClone.State().ChallengeDuration,
 		AppData:           l1ledgerChannelStateClone.State().AppData,
 		Outcome:           l2ChannelOutcome,
-		TurnNum:           l1ledgerChannelStateClone.State().TurnNum,
+		TurnNum:           0,
 		IsFinal:           l1ledgerChannelStateClone.State().IsFinal,
 	}
 
-	// 2. Contruct objective using it and progress by cranking it
-	id := protocols.ObjectiveId(directfund.ObjectivePrefix + l2ChannelState.ChannelId().String())
-	op, err := protocols.CreateObjectivePayload(id, directfund.SignedStatePayload, state.NewSignedState(l2ChannelState))
+	// Test Crank method of bridgedfund protocol
+	id := protocols.ObjectiveId(bridgedfund.ObjectivePrefix + l2ChannelState.ChannelId().String())
+	op, err := protocols.CreateObjectivePayload(id, bridgedfund.SignedStatePayload, state.NewSignedState(l2ChannelState))
+	if err != nil {
+		t.Error(err)
+	}
 
-	s, _ := directfund.ConstructFromPayload(false, op, l2ChannelState.Participants[0])
+	s, err := bridgedfund.ConstructFromPayload(false, op, l2ChannelState.Participants[0])
 
-	o := s.Approve().(*directfund.Objective)
-	// 3. TODO: Create `bridgedfund` protocol and use it to crank the constructed objective
+	if err != nil {
+		t.Error(err)
+	}
+
+	preFundSignatureBPrime, _ := s.C.PreFundState().Sign(tc.Participants[2].PrivateKey)
+	preFundSignatureAprime, _ := s.C.PreFundState().Sign(tc.Participants[3].PrivateKey)
+
+	postFundSignatureBprime, _ := s.C.PostFundState().Sign(tc.Participants[2].PrivateKey)
+	postFundSignatureAprime, _ := s.C.PostFundState().Sign(tc.Participants[3].PrivateKey)
+
+	o := s.Approve().(*bridgedfund.Objective)
+
+	// Initial Crank
+	_, _, waitingFor, err := o.Crank(&tc.Participants[2].PrivateKey)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if waitingFor != bridgedfund.WaitingForCompletePrefund {
+		t.Fatalf(`WaitingFor: expected %v, got %v`, bridgedfund.WaitingForCompletePrefund, waitingFor)
+	}
+
+	// Manually progress the extended state by collecting prefund signatures
+	o.C.AddStateWithSignature(o.C.PreFundState(), preFundSignatureBPrime)
+	o.C.AddStateWithSignature(o.C.PreFundState(), preFundSignatureAprime)
+
+	// Cranking should move us to the next waiting point
+	_, _, waitingFor, err = o.Crank(&tc.Participants[2].PrivateKey)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if waitingFor != bridgedfund.WaitingForMyTurnToFund {
+		t.Fatalf(`WaitingFor: expected %v, got %v`, bridgedfund.WaitingForMyTurnToFund, waitingFor)
+	}
+
+	// Manually make the first "deposit"
+	o.C.OnChain.Holdings[l2ChannelState.Outcome[0].Asset] = l2ChannelState.Outcome[0].Allocations[0].Amount
+	_, _, waitingFor, err = o.Crank(&tc.Participants[2].PrivateKey)
+	if err != nil {
+		t.Error(err)
+	}
+	if waitingFor != bridgedfund.WaitingForCompleteFunding {
+		t.Fatalf(`WaitingFor: expected %v, got %v`, bridgedfund.WaitingForCompleteFunding, waitingFor)
+	}
+
+	// Manually make the second "deposit"
+	totalAmountAllocated := l2ChannelState.Outcome[0].TotalAllocated()
+	o.C.OnChain.Holdings[l2ChannelState.Outcome[0].Asset] = totalAmountAllocated
+	_, _, waitingFor, err = o.Crank(&tc.Participants[2].PrivateKey)
+	if err != nil {
+		t.Error(err)
+	}
+	if waitingFor != bridgedfund.WaitingForCompletePostFund {
+		t.Fatalf(`WaitingFor: expected %v, got %v`, bridgedfund.WaitingForCompletePostFund, waitingFor)
+	}
+
+	// Manually progress the extended state by collecting postfund signatures
+	o.C.AddStateWithSignature(o.C.PostFundState(), postFundSignatureBprime)
+	o.C.AddStateWithSignature(o.C.PostFundState(), postFundSignatureAprime)
+
+	// This should be the final crank
+	o.C.OnChain.Holdings[l2ChannelState.Outcome[0].Asset] = totalAmountAllocated
+	_, _, waitingFor, err = o.Crank(&tc.Participants[2].PrivateKey)
+	if err != nil {
+		t.Error(err)
+	}
+	if waitingFor != bridgedfund.WaitingForNothing {
+		t.Fatalf(`WaitingFor: expected %v, got %v`, bridgedfund.WaitingForNothing, waitingFor)
+	}
 }

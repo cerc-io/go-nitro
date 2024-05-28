@@ -135,14 +135,14 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "direct-defund <channelId> <isChallenge>",
+    "direct-defund <channelId> <isChallengeInitiatedByMe>",
     "Defunds a directly funded ledger channel",
     (yargsBuilder) => {
       return yargsBuilder.positional("channelId", {
         describe: "The id of the ledger channel to defund",
         type: "string",
         demandOption: true,
-      }).option("isChallenge", {
+      }).option("isChallengeInitiatedByMe", {
         describe: "To initiate challenge transaction",
         type: "boolean",
         default: false,
@@ -156,7 +156,7 @@ yargs(hideBin(process.argv))
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
-      const id = await rpcClient.CloseLedgerChannel(yargs.channelId, yargs.isChallenge);
+      const id = await rpcClient.CloseLedgerChannel(yargs.channelId, yargs.isChallengeInitiatedByMe);
       console.log(`Objective started ${id}`);
       await rpcClient.WaitForPaymentChannelStatus(yargs.channelId, "Complete");
       console.log(`Channel Complete ${yargs.channelId}`);

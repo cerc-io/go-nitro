@@ -137,7 +137,7 @@ func New(vm *payments.VoucherManager, msg messageservice.MessageService, chain c
 
 	e.fromLedger = make(chan consensus_channel.Proposal, 100)
 	// bind to inbound chans
-	e.ObjectiveRequestsFromAPI = make(chan protocols.ObjectiveRequest)
+	e.ObjectiveRequestsFromAPI = make(chan protocols.ObjectiveRequest, 5)
 	e.PaymentRequestsFromAPI = make(chan PaymentRequest)
 
 	e.fromChain = chain.EventFeed()
@@ -427,6 +427,13 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	err := e.store.SetLastBlockNumSeen(chainEvent.BlockNum())
 	if err != nil {
 		return EngineEvent{}, err
+	}
+
+	_, isObjectiveFound := e.store.GetObjectiveByChannelId(chainEvent.ChannelID())
+	_, isChalllengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
+	if !isObjectiveFound && isChalllengeRegistered {
+		e.ObjectiveRequestsFromAPI <- directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false, protocols.Challenge)
+		return EngineEvent{}, nil
 	}
 
 	c, ok := e.store.GetChannelById(chainEvent.ChannelID())

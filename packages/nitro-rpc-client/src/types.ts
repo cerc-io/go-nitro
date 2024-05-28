@@ -70,7 +70,7 @@ export type DefundObjectiveRequest = {
   ChannelId: string;
 };
 export type DirectDefundObjectiveRequest = DefundObjectiveRequest & {
-  IsChallenge: boolean;
+  IsChallengeInitiatedByMe: boolean;
 };
 export type ObjectiveResponse = {
   Id: string;

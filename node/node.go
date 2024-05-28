@@ -251,8 +251,8 @@ func (n *Node) CreateLedgerChannel(Counterparty types.Address, ChallengeDuration
 }
 
 // CloseLedgerChannel attempts to close and defund the given directly funded channel.
-func (n *Node) CloseLedgerChannel(channelId types.Destination, isChallenge bool) (protocols.ObjectiveId, error) {
-	objectiveRequest := directdefund.NewObjectiveRequest(channelId, isChallenge)
+func (n *Node) CloseLedgerChannel(channelId types.Destination, isChallengeInitiatedByMe bool) (protocols.ObjectiveId, error) {
+	objectiveRequest := directdefund.NewObjectiveRequest(channelId, isChallengeInitiatedByMe, protocols.Open)
 
 	// Send the event to the engine
 	n.engine.ObjectiveRequestsFromAPI <- objectiveRequest

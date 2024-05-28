@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/statechannels/go-nitro/channel"
@@ -46,7 +45,8 @@ type Objective struct {
 	// Whether a withdraw transaction has been declared as a side effect in a previous crank
 	withdrawTransactionSubmitted bool
 
-	IsChallenge                   bool
+	IsChallengeInitiatedByMe      bool
+	ChannelStatus                 protocols.ChannelMode
 	challengeTransactionSubmitted bool
 }
 
@@ -126,7 +126,8 @@ func NewObjective(
 		init.finalTurnNum = latestSS.TurnNum
 	}
 
-	init.IsChallenge = request.IsChallenge
+	init.IsChallengeInitiatedByMe = request.IsChallengeInitiatedByMe
+	init.ChannelStatus = request.ChannelStatus
 	return init, nil
 }
 
@@ -155,7 +156,7 @@ func ConstructObjectiveFromPayload(
 	}
 
 	cId := s.ChannelId()
-	request := NewObjectiveRequest(cId, false)
+	request := NewObjectiveRequest(cId, false, protocols.Open)
 	return NewObjective(request, preapprove, getConsensusChannel)
 }
 
@@ -235,26 +236,33 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
 	}
 
-	if updated.IsChallenge {
-		if !updated.challengeTransactionSubmitted {
-			// TODO: Handle error
-			latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
-			challengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSupportedSignedState.State(), *secretKey)
-			challengeTx := protocols.NewChallengeTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0), challengerSig)
-			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
-			updated.challengeTransactionSubmitted = true
-			return &updated, sideEffects, WaitingForChallenge, nil
+	if updated.IsChallengeInitiatedByMe && !updated.challengeTransactionSubmitted {
+		// TODO: Handle error
+		latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
+		challengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSupportedSignedState.State(), *secretKey)
+		challengeTx := protocols.NewChallengeTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0), challengerSig)
+		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
+		updated.challengeTransactionSubmitted = true
+		return &updated, sideEffects, WaitingForChallenge, nil
+	}
+
+	if updated.IsChallengeInitiatedByMe && updated.challengeTransactionSubmitted || updated.ChannelStatus == protocols.Challenge {
+		if updated.ChannelStatus == protocols.Open {
+			updated.ChannelStatus = protocols.Challenge
 		}
 
-		if updated.challengeTransactionSubmitted && !updated.fullyWithdrawn() {
-			latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
-			time.Sleep(time.Duration(latestSupportedSignedState.State().ChallengeDuration) * time.Second)
-			// TODO: Can check on chain whether channel is finalized
-			transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
-			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
-			return &updated, sideEffects, WaitingForWithdraw, nil
-		}
-	} else {
+		return &updated, sideEffects, WaitingForFinalization, nil
+	}
+
+	if updated.challengeTransactionSubmitted && !updated.fullyWithdrawn() {
+		latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
+		// TODO: Can check on chain whether channel is finalized
+		transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
+		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
+		return &updated, sideEffects, WaitingForWithdraw, nil
+	}
+
+	if updated.ChannelStatus != protocols.Challenge || !updated.IsChallengeInitiatedByMe {
 		latestSignedState, err := updated.C.LatestSignedState()
 		if err != nil {
 			return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")
@@ -336,24 +344,27 @@ func (o *Objective) clone() Objective {
 	clone.C = cClone
 	clone.finalTurnNum = o.finalTurnNum
 	clone.withdrawTransactionSubmitted = o.withdrawTransactionSubmitted
-	clone.IsChallenge = o.IsChallenge
+	clone.IsChallengeInitiatedByMe = o.IsChallengeInitiatedByMe
 	clone.challengeTransactionSubmitted = o.challengeTransactionSubmitted
+	clone.ChannelStatus = o.ChannelStatus
 	return clone
 }
 
 // ObjectiveRequest represents a request to create a new direct defund objective.
 type ObjectiveRequest struct {
-	ChannelId        types.Destination
-	objectiveStarted chan struct{}
-	IsChallenge      bool
+	ChannelId                types.Destination
+	objectiveStarted         chan struct{}
+	IsChallengeInitiatedByMe bool
+	ChannelStatus            protocols.ChannelMode
 }
 
 // NewObjectiveRequest creates a new ObjectiveRequest.
-func NewObjectiveRequest(channelId types.Destination, isChallenge bool) ObjectiveRequest {
+func NewObjectiveRequest(channelId types.Destination, isChallengeInitiatedByMe bool, channelStatus protocols.ChannelMode) ObjectiveRequest {
 	return ObjectiveRequest{
-		ChannelId:        channelId,
-		objectiveStarted: make(chan struct{}),
-		IsChallenge:      isChallenge,
+		ChannelId:                channelId,
+		objectiveStarted:         make(chan struct{}),
+		IsChallengeInitiatedByMe: isChallengeInitiatedByMe,
+		ChannelStatus:            channelStatus,
 	}
 }
 

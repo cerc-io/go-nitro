@@ -168,3 +168,11 @@ type ObjectiveRequest interface {
 	WaitForObjectiveToStart()
 	SignalObjectiveStarted()
 }
+
+type ChannelMode int
+
+const (
+	Open ChannelMode = iota
+	Challenge
+	Finalized
+)

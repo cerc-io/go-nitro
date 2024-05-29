@@ -59,6 +59,7 @@ type TestCase struct {
 	NumOfHops         uint
 	ChallengeDuration uint
 	Participants      []TestParticipant
+	ChainPort         string
 }
 
 // Validate validates the test case and makes sure that the current test supports the test case.

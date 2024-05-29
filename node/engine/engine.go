@@ -711,42 +711,36 @@ func (e Engine) registerPaymentChannel(vfo virtualfund.Objective) error {
 	return e.vm.Register(vfo.V.Id, payments.GetPayer(postfund.Participants), payments.GetPayee(postfund.Participants), startingBalance)
 }
 
-// spawnConsensusChannelIfDirectFundObjective will attempt to create and store a ConsensusChannel derived from the supplied Objective if it is a directfund.Objective.
+// (*consensus_channel.ConsensusChannel, error)
+// spawnConsensusChannel will attempt to create and store a ConsensusChannel derived from the supplied Objective if it is a directfund.Objective or bridgedfund.Objective.
 // The associated Channel will remain in the store.
+func (e Engine) spawnConsensusChannel(crankedObjective protocols.Objective, createChannelFunc func() (*consensus_channel.ConsensusChannel, error)) error {
+	c, err := createChannelFunc()
+	if err != nil {
+		return fmt.Errorf("could not create consensus channel for objective %s: %w", crankedObjective.Id(), err)
+	}
+	err = e.store.SetConsensusChannel(c)
+	if err != nil {
+		return fmt.Errorf("could not store consensus channel for objective %s: %w", crankedObjective.Id(), err)
+	}
+	// Destroy the channel since the consensus channel takes over governance:
+	err = e.store.DestroyChannel(c.Id)
+	if err != nil {
+		return fmt.Errorf("could not destroy consensus channel for objective %s: %w", crankedObjective.Id(), err)
+	}
+	return nil
+}
+
 func (e Engine) spawnConsensusChannelIfDirectFundObjective(crankedObjective protocols.Objective) error {
 	if dfo, isDfo := crankedObjective.(*directfund.Objective); isDfo {
-		c, err := dfo.CreateConsensusChannel()
-		if err != nil {
-			return fmt.Errorf("could not create consensus channel for objective %s: %w", crankedObjective.Id(), err)
-		}
-		err = e.store.SetConsensusChannel(c)
-		if err != nil {
-			return fmt.Errorf("could not store consensus channel for objective %s: %w", crankedObjective.Id(), err)
-		}
-		// Destroy the channel since the consensus channel takes over governance:
-		err = e.store.DestroyChannel(c.Id)
-		if err != nil {
-			return fmt.Errorf("could not destroy consensus channel for objective %s: %w", crankedObjective.Id(), err)
-		}
+		return e.spawnConsensusChannel(crankedObjective, dfo.CreateConsensusChannel)
 	}
 	return nil
 }
 
 func (e Engine) spawnConsensusChannelIfBridgedFundObjective(crankedObjective protocols.Objective) error {
 	if bfo, isBfo := crankedObjective.(*bridgedfund.Objective); isBfo {
-		c, err := bfo.CreateConsensusChannel()
-		if err != nil {
-			return fmt.Errorf("could not create consensus channel for objective %s: %w", crankedObjective.Id(), err)
-		}
-		err = e.store.SetConsensusChannel(c)
-		if err != nil {
-			return fmt.Errorf("could not store consensus channel for objective %s: %w", crankedObjective.Id(), err)
-		}
-		// Destroy the channel since the consensus channel takes over governance:
-		err = e.store.DestroyChannel(c.Id)
-		if err != nil {
-			return fmt.Errorf("could not destroy consensus channel for objective %s: %w", crankedObjective.Id(), err)
-		}
+		return e.spawnConsensusChannel(crankedObjective, bfo.CreateConsensusChannel)
 	}
 	return nil
 }

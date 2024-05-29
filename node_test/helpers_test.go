@@ -234,7 +234,7 @@ func setupSharedInfra(tc TestCase) sharedTestInfrastructure {
 		infra.bindings = &bindings
 		infra.ethAccounts = ethAccounts
 	case AnvilChain:
-		chain, err := chainservice.NewAnvilChain()
+		chain, err := chainservice.NewAnvilChain(tc.ChainPort)
 		if err != nil {
 			panic(err)
 		}
@@ -247,31 +247,6 @@ func setupSharedInfra(tc TestCase) sharedTestInfrastructure {
 
 		broker := messageservice.NewBroker()
 		infra.broker = &broker
-	}
-	return infra
-}
-
-func setupSharedInfraWithChainUrlArg(tc TestCase, chainUrl string) sharedTestInfrastructure {
-	infra := sharedTestInfrastructure{}
-	switch tc.Chain {
-	case MockChain:
-		infra.mockChain = chainservice.NewMockChain()
-	case SimulatedChain:
-		sim, bindings, ethAccounts, err := chainservice.SetupSimulatedBackend(MAX_PARTICIPANTS)
-		if err != nil {
-			panic(err)
-		}
-		infra.simulatedChain = sim
-		infra.bindings = &bindings
-		infra.ethAccounts = ethAccounts
-	case AnvilChain:
-		chain, err := chainservice.NewAnvilChainWithChainUrlArg(chainUrl)
-		if err != nil {
-			panic(err)
-		}
-		infra.anvilChain = chain
-	default:
-		panic("Unknown chain service")
 	}
 	return infra
 }

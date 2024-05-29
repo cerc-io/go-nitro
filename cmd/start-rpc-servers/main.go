@@ -52,13 +52,15 @@ var participants = map[name]participant{
 }
 
 const (
-	FUNDED_TEST_PK  = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-	ANVIL_CHAIN_URL = "ws://127.0.0.1:8545"
+	FUNDED_TEST_PK   = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	ANVIL_CHAIN_URL  = "ws://127.0.0.1:8545"
+	ANVIL_CHAIN_PORT = "8545"
 )
 
 const (
 	CHAIN_AUTH_TOKEN = "chainauthtoken"
 	CHAIN_URL        = "chainurl"
+	CHAIN_PORT       = "chainport"
 	DEPLOYER_PK      = "chainpk"
 	START_ANVIL      = "startanvil"
 	HOST_UI          = "hostui"
@@ -85,6 +87,12 @@ func main() {
 			Aliases: []string{"cu"},
 		},
 		&cli.StringFlag{
+			Name:    CHAIN_PORT,
+			Usage:   "Specifies the chain port to use",
+			Value:   ANVIL_CHAIN_PORT,
+			Aliases: []string{"cp"},
+		},
+		&cli.StringFlag{
 			Name:     DEPLOYER_PK,
 			Usage:    "Specifies the private key to use when deploying contracts",
 			Category: "Keys:",
@@ -107,7 +115,8 @@ func main() {
 		Action: func(cCtx *cli.Context) error {
 			running := []*exec.Cmd{}
 			if cCtx.Bool(START_ANVIL) {
-				anvilCmd, err := chain.StartAnvil()
+				chainPort := cCtx.String(CHAIN_PORT)
+				anvilCmd, err := chain.StartAnvil(chainPort)
 				if err != nil {
 					utils.StopCommands(running...)
 					panic(err)

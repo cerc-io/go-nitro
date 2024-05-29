@@ -9,8 +9,8 @@ import (
 	chainutils "github.com/statechannels/go-nitro/node/engine/chainservice/utils"
 )
 
-func StartAnvil() (*exec.Cmd, error) {
-	anvilChain, err := chainservice.StartAnvil()
+func StartAnvil(chainPort string) (*exec.Cmd, error) {
+	anvilChain, err := chainservice.StartAnvil(chainPort)
 	return anvilChain.AnvilCmd, err
 }
 

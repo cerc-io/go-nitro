@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -21,8 +20,9 @@ import (
 )
 
 const (
-	CHAIN_AUTH_TOKEN = ""
-	CHAIN_URL        = "ws://127.0.0.1:8545"
+	CHAIN_AUTH_TOKEN       = ""
+	CHAIN_URL_WITHOUT_PORT = "ws://127.0.0.1:"
+	DEFAULT_CHAIN_PORT     = "8545"
 )
 
 // Funded accounts in anvil chain
@@ -48,29 +48,12 @@ type AnvilChain struct {
 	ContractAddresses ContractAddresses
 }
 
-func NewAnvilChain() (*AnvilChain, error) {
-	anvilChain, err := StartAnvil()
-	if err != nil {
-		return nil, err
+func NewAnvilChain(chainPort string) (*AnvilChain, error) {
+	if chainPort == "" {
+		chainPort = DEFAULT_CHAIN_PORT
 	}
 
-	ethClient, txSubmitter, err := chainutils.ConnectToChain(
-		context.Background(),
-		anvilChain.ChainUrl,
-		anvilChain.ChainAuthToken,
-		common.Hex2Bytes(ChainPks[0]),
-	)
-	if err != nil {
-		return nil, err
-	}
-	anvilChain.ethClient = ethClient
-	contractAddresses, _ := DeployContracts(context.Background(), ethClient, txSubmitter)
-	anvilChain.ContractAddresses = contractAddresses
-	return &anvilChain, nil
-}
-
-func NewAnvilChainWithChainUrlArg(chainUrl string) (*AnvilChain, error) {
-	anvilChain, err := StartAnvilWithChainUrlArg(chainUrl)
+	anvilChain, err := StartAnvil(chainPort)
 	if err != nil {
 		return nil, err
 	}
@@ -99,33 +82,14 @@ func (chain AnvilChain) GetLatestBlock() (*ethTypes.Block, error) {
 	return chain.ethClient.BlockByNumber(context.Background(), nil)
 }
 
-func StartAnvil() (AnvilChain, error) {
+func StartAnvil(chainPort string) (AnvilChain, error) {
 	anvilChain := AnvilChain{}
+	anvilChain.ChainUrl = CHAIN_URL_WITHOUT_PORT + chainPort
+	anvilChain.AnvilCmd = exec.Command("anvil", "--chain-id", "1337", "--block-time", "1", "--silent", "--port", chainPort)
+
 	anvilChain.ChainAuthToken = CHAIN_AUTH_TOKEN
-	anvilChain.ChainUrl = CHAIN_URL
 	anvilChain.ChainPks = ChainPks
 
-	anvilChain.AnvilCmd = exec.Command("anvil", "--chain-id", "1337", "--block-time", "1", "--silent")
-	anvilChain.AnvilCmd.Stdout = os.Stdout
-	anvilChain.AnvilCmd.Stderr = os.Stderr
-	err := anvilChain.AnvilCmd.Start()
-	if err != nil {
-		return AnvilChain{}, err
-	}
-	// If Anvil start successfully, delay by 1 second for the chain to initialize
-	time.Sleep(1 * time.Second)
-	return anvilChain, nil
-}
-
-func StartAnvilWithChainUrlArg(chainUrl string) (AnvilChain, error) {
-	anvilChain := AnvilChain{}
-	anvilChain.ChainAuthToken = CHAIN_AUTH_TOKEN
-	anvilChain.ChainUrl = chainUrl
-	anvilChain.ChainPks = ChainPks
-
-	chainUrlSplit := strings.Split(chainUrl, ":")
-
-	anvilChain.AnvilCmd = exec.Command("anvil", "--chain-id", "1337", "--block-time", "1", "--silent", "--port", chainUrlSplit[2])
 	anvilChain.AnvilCmd.Stdout = os.Stdout
 	anvilChain.AnvilCmd.Stderr = os.Stderr
 	err := anvilChain.AnvilCmd.Start()

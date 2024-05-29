@@ -39,11 +39,6 @@ func FundOnChainEffect(cId types.Destination, asset string, amount types.Funds) 
 type Objective struct {
 	Status protocols.ObjectiveStatus
 	C      *channel.Channel
-
-	myDepositSafetyThreshold types.Funds // if the on chain holdings are equal to this amount it is safe for me to deposit
-	myDepositTarget          types.Funds // I want to get the on chain holdings up to this much
-	fullyFundedThreshold     types.Funds // if the on chain holdings are equal
-	transactionSubmitted     bool        // whether a transition for the objective has been submitted or not
 }
 
 // GetChannelByIdFunction specifies a function that can be used to retrieve channels from a store.
@@ -158,17 +153,6 @@ func ConstructFromPayload(
 	if err != nil {
 		return Objective{}, fmt.Errorf("failed to initialize channel for bridged-fund objective: %w", err)
 	}
-
-	myAllocatedAmount := initialState.Outcome.TotalAllocatedFor(
-		types.AddressToDestination(myAddress),
-	)
-
-	init.fullyFundedThreshold = initialState.Outcome.TotalAllocated()
-	init.myDepositSafetyThreshold = initialState.Outcome.DepositSafetyThreshold(
-		types.AddressToDestination(myAddress),
-	)
-
-	init.myDepositTarget = init.myDepositSafetyThreshold.Add(myAllocatedAmount)
 
 	return init, nil
 }
@@ -339,56 +323,6 @@ func (o *Objective) Related() []protocols.Storable {
 
 //  Private methods on the BridgedFundingObjectiveState
 
-// fundingComplete returns true if the recorded OnChainHoldings are greater than or equal to the threshold for being fully funded.
-func (o *Objective) fundingComplete() bool {
-	for asset, threshold := range o.fullyFundedThreshold {
-		chainHolding, ok := o.C.OnChain.Holdings[asset]
-
-		if !ok {
-			return false
-		}
-
-		if types.Gt(threshold, chainHolding) {
-			return false
-		}
-	}
-
-	return true
-}
-
-// safeToDeposit returns true if the recorded OnChainHoldings are greater than or equal to the threshold for safety.
-func (o *Objective) safeToDeposit() bool {
-	for asset, safetyThreshold := range o.myDepositSafetyThreshold {
-
-		chainHolding, ok := o.C.OnChain.Holdings[asset]
-
-		if !ok {
-			return false // nil chainHolding for asset
-		}
-
-		if types.Gt(safetyThreshold, chainHolding) {
-			return false
-		}
-	}
-
-	return true
-}
-
-// amountToDeposit computes the appropriate amount to deposit given the current recorded OnChainHoldings
-func (o *Objective) amountToDeposit() types.Funds {
-	deposits := make(types.Funds, len(o.C.OnChain.Holdings))
-
-	for asset, target := range o.myDepositTarget {
-		holding, ok := o.C.OnChain.Holdings[asset]
-		if !ok {
-			holding = big.NewInt(0)
-		}
-		deposits[asset] = big.NewInt(0).Sub(target, holding)
-	}
-
-	return deposits
-}
-
 // clone returns a deep copy of the receiver.
 func (o *Objective) clone() Objective {
 	clone := Objective{}
@@ -397,10 +331,6 @@ func (o *Objective) clone() Objective {
 	cClone := o.C.Clone()
 	clone.C = cClone
 
-	clone.myDepositSafetyThreshold = o.myDepositSafetyThreshold.Clone()
-	clone.myDepositTarget = o.myDepositTarget.Clone()
-	clone.fullyFundedThreshold = o.fullyFundedThreshold.Clone()
-	clone.transactionSubmitted = o.transactionSubmitted
 	return clone
 }
 
@@ -493,43 +423,4 @@ func getSignedStatePayload(b []byte) (state.SignedState, error) {
 	return ss, nil
 }
 
-// mermaid diagram
-// key:
-// - effect!
-// - waiting...
-//
-// https://mermaid-js.github.io/mermaid-live-editor/edit/#eyJjb2RlIjoiZ3JhcGggVERcbiAgICBTdGFydCAtLT4gQ3tJbnZhbGlkIElucHV0P31cbiAgICBDIC0tPnxZZXN8IEVbZXJyb3JdXG4gICAgQyAtLT58Tm98IEQwXG4gICAgXG4gICAgRDB7U2hvdWxkU2lnblByZUZ1bmR9XG4gICAgRDAgLS0-fFllc3wgUjFbU2lnblByZWZ1bmQhXVxuICAgIEQwIC0tPnxOb3wgRDFcbiAgICBcbiAgICBEMXtTYWZlVG9EZXBvc2l0ICY8YnI-ICFGdW5kaW5nQ29tcGxldGV9XG4gICAgRDEgLS0-IHxZZXN8IFIyW0Z1bmQgb24gY2hhaW4hXVxuICAgIEQxIC0tPiB8Tm98IEQyXG4gICAgXG4gICAgRDJ7IVNhZmVUb0RlcG9zaXQgJjxicj4gIUZ1bmRpbmdDb21wbGV0ZX1cbiAgICBEMiAtLT4gfFllc3wgUjNbXCJteSB0dXJuLi4uXCJdXG4gICAgRDIgLS0-IHxOb3wgRDNcblxuICAgIEQze1NhZmVUb0RlcG9zaXQgJjxicj4gIUZ1bmRpbmdDb21wbGV0ZX1cbiAgICBEMyAtLT4gfFllc3wgUjRbRGVwb3NpdCFdXG4gICAgRDMgLS0-IHxOb3wgRDRcblxuICAgIEQ0eyFGdW5kaW5nQ29tcGxldGV9XG4gICAgRDQgLS0-IHxZZXN8IFI1W1wiY29tcGxldGUgZnVuZGluZy4uLlwiXVxuICAgIEQ0IC0tPiB8Tm98IEQ1XG5cbiAgICBENXtTaG91bGRTaWduUHJlRnVuZH1cbiAgICBENSAtLT58WWVzfCBSNltTaWduUG9zdGZ1bmQhXVxuICAgIEQ1IC0tPnxOb3wgRDZcblxuICAgIEQ2eyFQb3N0RnVuZENvbXBsZXRlfVxuICAgIEQ2IC0tPnxZZXN8IFI3W1wiY29tcGxldGUgcG9zdGZ1bmQuLi5cIl1cbiAgICBENiAtLT58Tm98IFI4XG5cbiAgICBSOFtcImZpbmlzaFwiXVxuICAgIFxuXG5cbiIsIm1lcm1haWQiOiJ7fSIsInVwZGF0ZUVkaXRvciI6ZmFsc2UsImF1dG9TeW5jIjp0cnVlLCJ1cGRhdGVEaWFncmFtIjp0cnVlfQ
-// graph TD
-//     Start --> C{Invalid Input?}
-//     C -->|Yes| E[error]
-//     C -->|No| D0
-
-//     D0{ShouldSignPreFund}
-//     D0 -->|Yes| R1[SignPrefund!]
-//     D0 -->|No| D1
-
-//     D1{SafeToDeposit &<br> !FundingComplete}
-//     D1 --> |Yes| R2[Fund on chain!]
-//     D1 --> |No| D2
-
-//     D2{!SafeToDeposit &<br> !FundingComplete}
-//     D2 --> |Yes| R3["wait my turn..."]
-//     D2 --> |No| D3
-
-//     D3{SafeToDeposit &<br> !FundingComplete}
-//     D3 --> |Yes| R4[Deposit!]
-//     D3 --> |No| D4
-
-//     D4{!FundingComplete}
-//     D4 --> |Yes| R5["wait for complete funding..."]
-//     D4 --> |No| D5
-
-//     D5{ShouldSignPostFund}
-//     D5 -->|Yes| R6[SignPostfund!]
-//     D5 -->|No| D6
-
-//     D6{!PostFundComplete}
-//     D6 -->|Yes| R7["wait for complete postfund..."]
-//     D6 -->|No| R8
-
-//     R8["finish"]
+// TODO: Add mermaid diagram

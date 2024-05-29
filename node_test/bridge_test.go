@@ -63,7 +63,7 @@ func TestBridge(t *testing.T) {
 	nodeAPrime, _, _, _, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{}, dataFolder)
 	defer nodeAPrime.Close()
 
-	bridgeResponse := &bridgedfund.ObjectiveResponse{}
+	bridgeResponse := bridgedfund.ObjectiveResponse{}
 
 	t.Run("Create ledger channel on L1 and mirror it on L2", func(t *testing.T) {
 		// Create ledger channel
@@ -89,7 +89,7 @@ func TestBridge(t *testing.T) {
 			t.Error(err)
 		}
 
-		bridgeResponse = &response
+		bridgeResponse = response
 
 		t.Log("Waiting for bridge-fund objective to complete...")
 

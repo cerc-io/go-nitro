@@ -19,8 +19,6 @@ var ErrLedgerChannelExists error = errors.New("bridgedfund: ledger channel alrea
 
 const (
 	WaitingForCompletePrefund  protocols.WaitingFor = "WaitingForCompletePrefund"
-	WaitingForMyTurnToFund     protocols.WaitingFor = "WaitingForMyTurnToFund"
-	WaitingForCompleteFunding  protocols.WaitingFor = "WaitingForCompleteFunding"
 	WaitingForCompletePostFund protocols.WaitingFor = "WaitingForCompletePostFund"
 	WaitingForNothing          protocols.WaitingFor = "WaitingForNothing" // Finished
 )

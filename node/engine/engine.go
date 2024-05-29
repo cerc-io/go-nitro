@@ -711,7 +711,6 @@ func (e Engine) registerPaymentChannel(vfo virtualfund.Objective) error {
 	return e.vm.Register(vfo.V.Id, payments.GetPayer(postfund.Participants), payments.GetPayee(postfund.Participants), startingBalance)
 }
 
-// (*consensus_channel.ConsensusChannel, error)
 // spawnConsensusChannel will attempt to create and store a ConsensusChannel derived from the supplied Objective if it is a directfund.Objective or bridgedfund.Objective.
 // The associated Channel will remain in the store.
 func (e Engine) spawnConsensusChannel(crankedObjective protocols.Objective, createChannelFunc func() (*consensus_channel.ConsensusChannel, error)) error {

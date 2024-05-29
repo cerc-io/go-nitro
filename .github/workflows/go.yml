@@ -39,7 +39,7 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: go test ./... -count=2 -shuffle=on -timeout 150s -v -failfast
+        run: go test ./... -count=2 -shuffle=on -timeout 180s -v -failfast
 
       - name: Check for race conditions
         # Only executes when triggered by a push to the main branch

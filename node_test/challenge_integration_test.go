@@ -16,7 +16,7 @@ func TestDirectDefundWithChallenge(t *testing.T) {
 		Description:       "Direct defund with Challenge",
 		Chain:             AnvilChain,
 		MessageService:    TestMessageService,
-		ChallengeDuration: 30,
+		ChallengeDuration: 10,
 		LogName:           "challenge_integration",
 		Participants: []TestParticipant{
 			{StoreType: MemStore, Actor: testactors.Alice},

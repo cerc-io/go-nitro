@@ -65,6 +65,7 @@ func New(s state.State, myIndex uint) (*Channel, error) {
 	}
 	c.MyIndex = myIndex
 	c.OnChain.Holdings = make(types.Funds)
+	c.OnChain.FinalizesAt = big.NewInt(0)
 	c.FixedPart = s.FixedPart().Clone()
 	c.OffChain.LatestSupportedStateTurnNum = MaxTurnNum // largest uint64 value reserved for "no supported state"
 
@@ -372,6 +373,8 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 			return nil, err
 		}
 		c.AddSignedState(ss)
+
+	// TODO: Handle challenge cleared event
 	default:
 		return &Channel{}, fmt.Errorf("channel %+v cannot handle event %+v", c, event)
 	}

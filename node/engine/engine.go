@@ -434,6 +434,7 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 
 		_, isChalllengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
 		if isChalllengeRegistered {
+			// TODO: Validate channelId of challenge registered event
 			ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById)
 			if err != nil {
 				return EngineEvent{}, err

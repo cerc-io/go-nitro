@@ -391,13 +391,14 @@ func TestSerde(t *testing.T) {
 			LatestSupportedStateTurnNum: 2,
 		},
 		OnChain: OnChainData{
-			Holdings:  types.Funds{},
-			StateHash: common.Hash{},
-			Outcome:   outcome.Exit{},
+			Holdings:    types.Funds{},
+			StateHash:   common.Hash{},
+			Outcome:     outcome.Exit{},
+			FinalizesAt: common.Big0,
 		},
 	}
 
-	someChannelJSON := `{"Id":"0x0100000000000000000000000000000000000000000000000000000000000000","MyIndex":1,"Participants":["0xf5a1bb5607c9d079e46d1b3dc33f257d937b43bd","0x760bf27cd45036a6c486802d30b5d90cffbe31fe"],"ChannelNonce":37140676580,"AppDefinition":"0x5e29e5ab8ef33f050c7cc10b5a0456d975c5f88d","ChallengeDuration":60,"OnChain":{"Holdings":{},"Outcome":[],"StateHash":"0x0000000000000000000000000000000000000000000000000000000000000000"},"OffChain":{"SignedStateForTurnNum":{"0":{"State":{"Participants":["0xf5a1bb5607c9d079e46d1b3dc33f257d937b43bd","0x760bf27cd45036a6c486802d30b5d90cffbe31fe"],"ChannelNonce":37140676580,"AppDefinition":"0x5e29e5ab8ef33f050c7cc10b5a0456d975c5f88d","ChallengeDuration":60,"AppData":"","Outcome":[{"Asset":"0x0000000000000000000000000000000000000000","AssetMetadata":{"AssetType":0,"Metadata":""},"Allocations":[{"Destination":"0x000000000000000000000000f5a1bb5607c9d079e46d1b3dc33f257d937b43bd","Amount":5,"AllocationType":0,"Metadata":null},{"Destination":"0x000000000000000000000000ee18ff1575055691009aa246ae608132c57a422c","Amount":5,"AllocationType":0,"Metadata":null}]}],"TurnNum":5,"IsFinal":false},"Sigs":{}}},"LatestSupportedStateTurnNum":2}}`
+	someChannelJSON := `{"Id":"0x0100000000000000000000000000000000000000000000000000000000000000","MyIndex":1,"Participants":["0xf5a1bb5607c9d079e46d1b3dc33f257d937b43bd","0x760bf27cd45036a6c486802d30b5d90cffbe31fe"],"ChannelNonce":37140676580,"AppDefinition":"0x5e29e5ab8ef33f050c7cc10b5a0456d975c5f88d","ChallengeDuration":60,"OnChain":{"Holdings":{},"Outcome":[],"StateHash":"0x0000000000000000000000000000000000000000000000000000000000000000","FinalizesAt":0},"OffChain":{"SignedStateForTurnNum":{"0":{"State":{"Participants":["0xf5a1bb5607c9d079e46d1b3dc33f257d937b43bd","0x760bf27cd45036a6c486802d30b5d90cffbe31fe"],"ChannelNonce":37140676580,"AppDefinition":"0x5e29e5ab8ef33f050c7cc10b5a0456d975c5f88d","ChallengeDuration":60,"AppData":"","Outcome":[{"Asset":"0x0000000000000000000000000000000000000000","AssetMetadata":{"AssetType":0,"Metadata":""},"Allocations":[{"Destination":"0x000000000000000000000000f5a1bb5607c9d079e46d1b3dc33f257d937b43bd","Amount":5,"AllocationType":0,"Metadata":null},{"Destination":"0x000000000000000000000000ee18ff1575055691009aa246ae608132c57a422c","Amount":5,"AllocationType":0,"Metadata":null}]}],"TurnNum":5,"IsFinal":false},"Sigs":{}}},"LatestSupportedStateTurnNum":2}}`
 
 	// Marshalling
 	got, err := json.Marshal(someChannel)
@@ -416,7 +417,14 @@ func TestSerde(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := cmp.Diff(c, someChannel, cmp.AllowUnexported(state.SignedState{})); diff != "" {
+	if diff := cmp.Diff(c, someChannel, cmp.AllowUnexported(state.SignedState{}), cmp.Comparer(bigIntComparer)); diff != "" {
 		t.Fatalf("incorrect json unmarshaling (-want +got):\n%s", diff)
 	}
+}
+
+func bigIntComparer(x, y *big.Int) bool {
+	if x == nil || y == nil {
+		return x == y
+	}
+	return x.Cmp(y) == 0
 }

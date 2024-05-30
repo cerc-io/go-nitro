@@ -433,7 +433,7 @@ func (ecs *EthChainService) listenForEventLogs(errorChan chan<- error, eventChan
 			ecs.eventSub.Unsubscribe()
 
 		case chainEvent := <-eventChan:
-			ecs.logger.Debug("queueing new chainEvent", "block-num", chainEvent.BlockNumber, "block-hash", chainEvent.BlockHash.String())
+			ecs.logger.Debug("queueing new chainEvent", "block-num", chainEvent.BlockNumber, "block-hash", chainEvent.BlockHash)
 			ecs.updateEventTracker(errorChan, nil, &chainEvent)
 		}
 	}

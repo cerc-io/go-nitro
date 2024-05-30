@@ -311,7 +311,7 @@ func (b *Balance) Clone() Balance {
 // AsAllocation converts a Balance struct into the on-chain outcome.Allocation type.
 func (b Balance) AsAllocation() outcome.Allocation {
 	amount := big.NewInt(0).Set(b.amount)
-	return outcome.Allocation{Destination: b.destination, Amount: amount, AllocationType: outcome.NormalAllocationType}
+	return outcome.Allocation{Destination: b.destination, Amount: amount, AllocationType: outcome.SimpleAllocationType}
 }
 
 // Guarantee is a convenient, ergonomic representation of a
@@ -356,7 +356,7 @@ func (g Guarantee) AsAllocation() outcome.Allocation {
 	return outcome.Allocation{
 		Destination:    g.target,
 		Amount:         amount,
-		AllocationType: 2,
+		AllocationType: outcome.GuaranteeAllocationType,
 		Metadata:       append(g.left.Bytes(), g.right.Bytes()...),
 	}
 }

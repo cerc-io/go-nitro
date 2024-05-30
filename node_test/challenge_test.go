@@ -325,8 +325,8 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	nodeB, _, _, _, _ := setupIntegrationNode(tc, tc.Participants[1], infra, []string{}, dataFolder)
 
 	// Seperate chain service to listen for events
-	testChainServiceB := setupChainService(tc, tc.Participants[1], infra)
-	defer testChainServiceB.Close()
+	testChainService := setupChainService(tc, tc.Participants[1], infra)
+	defer testChainService.Close()
 
 	// Create ledger channel
 	ledgerChannel := openLedgerChannel(t, nodeA, nodeB, types.Address{}, uint32(tc.ChallengeDuration))
@@ -353,8 +353,8 @@ func TestVirtualPaymentChannel(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Bob listens for challenge registered event
-	event := waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeRegisteredEvent{})
+	// Listen for challenge registered event
+	event := waitForEvent(t, testChainService.EventFeed(), chainservice.ChallengeRegisteredEvent{})
 	t.Log("Challenge registed event received", event)
 	challengeRegisteredEvent, ok := event.(chainservice.ChallengeRegisteredEvent)
 	testhelpers.Assert(t, ok, "Expected challenge registered event")
@@ -371,8 +371,8 @@ func TestVirtualPaymentChannel(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Bob listens for challenge registered event
-	event = waitForEvent(t, testChainServiceB.EventFeed(), chainservice.ChallengeRegisteredEvent{})
+	// Listen for challenge registered event
+	event = waitForEvent(t, testChainService.EventFeed(), chainservice.ChallengeRegisteredEvent{})
 	t.Log("Challenge registed event received", event)
 	challengeRegisteredEvent, ok = event.(chainservice.ChallengeRegisteredEvent)
 	testhelpers.Assert(t, ok, "Expected challenge registered event")
@@ -381,7 +381,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	latestBlock, _ = infra.anvilChain.GetLatestBlock()
 	testhelpers.Assert(t, challengeRegisteredEvent.FinalizesAt.Uint64() <= latestBlock.Header().Time, "Expected channel to be finalized")
 
-	// Call Reclaim method after finalizing ledger channel and virtual channel
+	// Now that ledger and virtual channels are finalized, call reclaim method
 	signedUpdatedLedgerState := getLatestSignedState(storeA, ledgerChannel)
 	ledgerStateHash, _ := signedUpdatedLedgerState.State().Hash()
 	virtualLatestState := getVirtualSignedState(storeA, virtualResponse.ChannelId)
@@ -421,18 +421,18 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	latestLedgerState := getLatestSignedState(storeA, ledgerChannel)
 	latestState := latestLedgerState.State()
 
-	// Update state with new state outcome allocations
+	// Construct state with new outcome to and exit to chain
 	latestState.Outcome[0].Allocations = outcome.Allocations{
 		{
 			Destination:    latestLedgerState.State().Outcome[0].Allocations[0].Destination,
 			Amount:         aliceOutcomeAllocationAmount,
-			AllocationType: outcome.NormalAllocationType,
+			AllocationType: outcome.SimpleAllocationType,
 			Metadata:       latestLedgerState.State().Outcome[0].Allocations[0].Metadata,
 		},
 		{
 			Destination:    latestLedgerState.State().Outcome[0].Allocations[1].Destination,
 			Amount:         bobOutcomeAllocationAmount,
-			AllocationType: outcome.NormalAllocationType,
+			AllocationType: outcome.SimpleAllocationType,
 			Metadata:       latestLedgerState.State().Outcome[0].Allocations[1].Metadata,
 		},
 	}

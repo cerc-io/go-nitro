@@ -41,13 +41,13 @@ func TestComputeReclaimEffects(t *testing.T) {
 				{
 					Destination:    Alice,
 					Amount:         big.NewInt(2),
-					AllocationType: outcome.NormalAllocationType,
+					AllocationType: outcome.SimpleAllocationType,
 					Metadata:       []byte{},
 				},
 				{
 					Destination:    Bob,
 					Amount:         big.NewInt(2),
-					AllocationType: outcome.NormalAllocationType,
+					AllocationType: outcome.SimpleAllocationType,
 					Metadata:       []byte{},
 				},
 				{
@@ -61,13 +61,13 @@ func TestComputeReclaimEffects(t *testing.T) {
 				{
 					Destination:    Alice,
 					Amount:         big.NewInt(1),
-					AllocationType: outcome.NormalAllocationType,
+					AllocationType: outcome.SimpleAllocationType,
 					Metadata:       []byte{},
 				},
 				{
 					Destination:    Bob,
 					Amount:         big.NewInt(5),
-					AllocationType: outcome.NormalAllocationType,
+					AllocationType: outcome.SimpleAllocationType,
 					Metadata:       []byte{},
 				},
 			},
@@ -77,13 +77,13 @@ func TestComputeReclaimEffects(t *testing.T) {
 				{
 					Destination:    Alice,
 					Amount:         big.NewInt(3),
-					AllocationType: outcome.NormalAllocationType,
+					AllocationType: outcome.SimpleAllocationType,
 					Metadata:       []byte{},
 				},
 				{
 					Destination:    Bob,
 					Amount:         big.NewInt(7),
-					AllocationType: outcome.NormalAllocationType,
+					AllocationType: outcome.SimpleAllocationType,
 					Metadata:       []byte{},
 				},
 			},

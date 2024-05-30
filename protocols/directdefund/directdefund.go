@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/statechannels/go-nitro/channel"
@@ -248,14 +249,21 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	}
 
 	if updated.C.GetChannelStatus() == channel.Challenge {
+		sideEffects.RequestToWait.ObjectiveId = updated.Id()
+		if updated.IsChallengeInitiatedByMe {
+			sideEffects.RequestToWait.TimeDuration = time.Duration(updated.C.ChallengeDuration)
+		} else {
+			sideEffects.RequestToWait.TimeDuration = time.Duration(updated.C.ChallengeDuration + 10)
+		}
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
-	if updated.C.GetChannelStatus() == channel.Finalized {
+	if updated.C.GetChannelStatus() == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.fullyWithdrawn() {
 		latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
 		// TODO: Can check on chain whether channel is finalized
 		transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
+		updated.withdrawTransactionSubmitted = true
 		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
 

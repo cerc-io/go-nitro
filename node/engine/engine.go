@@ -612,6 +612,13 @@ func (e *Engine) executeSideEffects(sideEffects protocols.SideEffects) error {
 	for _, proposal := range sideEffects.ProposalsToProcess {
 		e.fromLedger <- proposal
 	}
+
+	if sideEffects.RequestToWait.ObjectiveId != "" {
+		time.Sleep(sideEffects.RequestToWait.TimeDuration * time.Second)
+		objective, _ := e.store.GetObjectiveById(sideEffects.RequestToWait.ObjectiveId)
+		e.attemptProgress(objective)
+	}
+
 	return nil
 }
 

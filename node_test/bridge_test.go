@@ -9,7 +9,6 @@ import (
 	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/protocols"
-	"github.com/statechannels/go-nitro/protocols/bridgedfund"
 	"github.com/statechannels/go-nitro/types"
 )
 
@@ -63,7 +62,7 @@ func TestBridge(t *testing.T) {
 	nodeAPrime, _, _, _, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{}, dataFolder)
 	defer nodeAPrime.Close()
 
-	bridgeResponse := bridgedfund.ObjectiveResponse{}
+	mirroredLedgerChannelId := types.Destination{}
 
 	t.Run("Create ledger channel on L1 and mirror it on L2", func(t *testing.T) {
 		// Create ledger channel
@@ -80,6 +79,11 @@ func TestBridge(t *testing.T) {
 		l1ledgerChannelStateClone.State().Outcome[0].Allocations[0].Destination = types.AddressToDestination(*nodeAPrime.Address)
 		l1ledgerChannelStateClone.State().Outcome[0].Allocations[1].Destination = types.AddressToDestination(*nodeBPrime.Address)
 
+		// Put NodeBPrime's allocation at index 0 as it creates mirrored ledger channel
+		tempAllocation := l1ledgerChannelStateClone.State().Outcome[0].Allocations[0].Destination
+		l1ledgerChannelStateClone.State().Outcome[0].Allocations[0].Destination = l1ledgerChannelStateClone.State().Outcome[0].Allocations[1].Destination
+		l1ledgerChannelStateClone.State().Outcome[0].Allocations[1].Destination = tempAllocation
+
 		// Create extended state outcome based on l1ChannelState
 		l2ChannelOutcome := l1ledgerChannelStateClone.State().Outcome
 
@@ -89,7 +93,7 @@ func TestBridge(t *testing.T) {
 			t.Error(err)
 		}
 
-		bridgeResponse = response
+		mirroredLedgerChannelId = response.ChannelId
 
 		t.Log("Waiting for bridge-fund objective to complete...")
 
@@ -121,10 +125,13 @@ func TestBridge(t *testing.T) {
 		virtualDefundResponse, _ := nodeBPrime.ClosePaymentChannel(virtualChannel.Id)
 		waitForObjectives(t, nodeBPrime, nodeAPrime, []node.Node{}, []protocols.ObjectiveId{virtualDefundResponse})
 
-		latestSignedState := getLatestSignedState(storeBPrime, bridgeResponse.ChannelId)
+		ledgerChannelInfo, err := nodeBPrime.GetLedgerChannel(mirroredLedgerChannelId)
+		if err != nil {
+			t.Error(err)
+		}
 
-		balanceNodeAPrime := latestSignedState.State().Outcome[0].Allocations[0].Amount
-		balanceNodeBPrime := latestSignedState.State().Outcome[0].Allocations[1].Amount
+		balanceNodeAPrime := ledgerChannelInfo.Balance.TheirBalance.ToInt()
+		balanceNodeBPrime := ledgerChannelInfo.Balance.MyBalance.ToInt()
 		t.Log("Balance of node BPrime", balanceNodeBPrime, "\nBalance of node APrime", balanceNodeAPrime)
 
 		// BPrime's balance is determined by subtracting amount paid from it's ledger deposit, while APrime's balance is calculated by adding it's ledger deposit to the amount received

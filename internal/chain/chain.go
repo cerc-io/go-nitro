@@ -11,14 +11,17 @@ import (
 
 func StartAnvil() (*exec.Cmd, error) {
 	anvilChain, err := chainservice.StartAnvil()
-	return anvilChain.AnvilCmd, err
+	if err != nil {
+		return nil, err
+	}
+	return anvilChain.AnvilCmd, nil
 }
 
 // DeployContracts deploys the NitroAdjudicator, VirtualPaymentApp and ConsensusApp contracts.
-func DeployContracts(ctx context.Context, chainUrl, chainAuthToken, chainPk string) (chainservice.ContractAddresses, error) {
+func DeployContracts(ctx context.Context, chainUrl, chainAuthToken, chainPk string) (chainutils.ContractAddresses, error) {
 	ethClient, txSubmitter, err := chainutils.ConnectToChain(context.Background(), chainUrl, chainAuthToken, common.Hex2Bytes(chainPk))
 	if err != nil {
-		return chainservice.ContractAddresses{}, err
+		return chainutils.ContractAddresses{}, err
 	}
-	return chainservice.DeployContracts(ctx, ethClient, txSubmitter)
+	return chainutils.DeployContracts(ctx, ethClient, txSubmitter)
 }

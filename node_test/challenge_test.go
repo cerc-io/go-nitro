@@ -421,7 +421,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	latestLedgerState := getLatestSignedState(storeA, ledgerChannel)
 	latestState := latestLedgerState.State()
 
-	// Construct state with new outcome to and exit to chain
+	// Construct exit state with updated outcome allocations
 	latestState.Outcome[0].Allocations = outcome.Allocations{
 		{
 			Destination:    latestLedgerState.State().Outcome[0].Allocations[0].Destination,

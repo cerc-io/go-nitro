@@ -433,7 +433,7 @@ func (ecs *EthChainService) listenForEventLogs(errorChan chan<- error, eventChan
 			ecs.eventSub.Unsubscribe()
 
 		case chainEvent := <-eventChan:
-			ecs.logger.Debug("queueing new chainEvent", "block-num", chainEvent.BlockNumber)
+			ecs.logger.Debug("queueing new chainEvent", "block-num", chainEvent.BlockNumber, "block-hash", chainEvent.BlockHash.String())
 			ecs.updateEventTracker(errorChan, nil, &chainEvent)
 		}
 	}
@@ -475,7 +475,7 @@ func (ecs *EthChainService) listenForNewBlocks(errorChan chan<- error, newBlockC
 
 		case newBlock := <-newBlockChan:
 			newBlockNum := newBlock.Number.Uint64()
-			ecs.logger.Log(ecs.ctx, logging.LevelTrace, "detected new block", "block-num", newBlockNum)
+			ecs.logger.Debug("detected new block", "block-num", newBlockNum, "block-hash", newBlock.Hash())
 			ecs.updateEventTracker(errorChan, &newBlockNum, nil)
 		}
 	}
@@ -504,17 +504,20 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, blockNumb
 		// see https://git.vdb.to/cerc-io/fixturenet-eth-stacks/issues/11
 
 		// Ensure event & associated tx is still in the chain before adding to eventsToDispatch
-		//oldBlock, err := ecs.chain.BlockByNumber(context.Background(), new(big.Int).SetUint64(chainEvent.BlockNumber))
-		//if err != nil {
-		//	ecs.logger.Error("failed to fetch block: %v", err)
-		//	errorChan <- fmt.Errorf("failed to fetch block: %v", err)
-		//	return
-		//}
+		chainBlock, err := ecs.chain.BlockByNumber(context.Background(), new(big.Int).SetUint64(chainEvent.BlockNumber))
+		if err != nil {
+			ecs.logger.Error("failed to fetch block: %v", err)
+			errorChan <- fmt.Errorf("failed to fetch block: %v", err)
+			return
+		}
 
-		//if oldBlock.Hash() != chainEvent.BlockHash {
-		//	ecs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)", "blockNumber", chainEvent.BlockNumber, "blockHash", chainEvent.BlockHash)
-		//	continue
-		//}
+		if chainBlock.Hash() != chainEvent.BlockHash {
+			ecs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)",
+				"block-num", chainEvent.BlockNumber,
+				"block-hash", chainBlock.Hash(),
+				"event-block-hash", chainEvent.BlockHash)
+			continue
+		}
 
 		eventsToDispatch = append(eventsToDispatch, chainEvent)
 	}

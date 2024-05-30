@@ -78,7 +78,7 @@ func TestCrashTolerance(t *testing.T) {
 			anotherStoreA, &engine.PermissivePolicy{})
 		defer closeNode(t, &anotherClientA)
 
-		closeLedgerChannel(t, anotherClientA, nodeB, channelId, false)
+		closeLedgerChannel(t, anotherClientA, nodeB, channelId)
 
 	}
 }

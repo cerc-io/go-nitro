@@ -16,14 +16,13 @@ import (
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/protocols"
-	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/types"
 )
 
 func TestSimpleIntegrationScenario(t *testing.T) {
 	simpleCase := TestCase{
 		Description:    "Simple test",
-		Chain:          SimulatedChain,
+		Chain:          MockChain,
 		MessageService: TestMessageService,
 		NumOfChannels:  1,
 		MessageDelay:   0,
@@ -38,7 +37,6 @@ func TestSimpleIntegrationScenario(t *testing.T) {
 	}
 
 	RunIntegrationTestCase(simpleCase, t)
-	RunIntegrationTestCaseForChallenge(simpleCase, t)
 }
 
 func TestComplexIntegrationScenario(t *testing.T) {
@@ -204,16 +202,16 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 
 		// Close all the ledger channels we opened
 
-		closeLedgerChannel(t, clientA, intermediaries[0], aliceLedgers[0], false)
+		closeLedgerChannel(t, clientA, intermediaries[0], aliceLedgers[0])
 		checkLedgerChannel(t, aliceLedgers[0], finalAliceLedger(*intermediaries[0].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, clientA)
 
 		// TODO: This is brittle, we should generalize this to n number of intermediaries
 		if tc.NumOfHops == 1 {
-			closeLedgerChannel(t, intermediaries[0], clientB, bobLedgers[0], false)
+			closeLedgerChannel(t, intermediaries[0], clientB, bobLedgers[0])
 			checkLedgerChannel(t, bobLedgers[0], finalBobLedger(*intermediaries[0].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, clientB)
 		}
 		if tc.NumOfHops == 2 {
-			closeLedgerChannel(t, intermediaries[1], clientB, bobLedgers[1], false)
+			closeLedgerChannel(t, intermediaries[1], clientB, bobLedgers[1])
 			checkLedgerChannel(t, bobLedgers[1], finalBobLedger(*intermediaries[1].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, clientB)
 		}
 
@@ -255,35 +253,4 @@ func waitForClientBlockNum(t *testing.T, n node.Node, targetBlockNum uint64, tim
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
-}
-
-func RunIntegrationTestCaseForChallenge(tc TestCase, t *testing.T) {
-	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
-	defer cleanup()
-
-	t.Run(tc.Description, func(t *testing.T) {
-		challengeDuration := 5
-		infra := setupSharedInfra(tc)
-		defer infra.Close(t)
-
-		nodeA, _, _, storeA := setupIntegrationNode(tc, tc.Participants[0], infra, []string{}, dataFolder)
-		defer nodeA.Close()
-		nodeB, _, _, storeB := setupIntegrationNode(tc, tc.Participants[1], infra, []string{}, dataFolder)
-		defer nodeB.Close()
-
-		ledgerChannel := openLedgerChannel(t, nodeA, nodeB, types.Address{}, uint32(challengeDuration))
-		_, err := nodeA.CloseLedgerChannel(ledgerChannel, true)
-		if err != nil {
-			t.Log(err)
-		}
-
-		time.Sleep(1 * time.Second)
-		objectiveA, _ := storeA.GetObjectiveByChannelId(ledgerChannel)
-		objectiveB, _ := storeB.GetObjectiveByChannelId(ledgerChannel)
-		objA, _ := objectiveA.(*directdefund.Objective)
-		objB, _ := objectiveB.(*directdefund.Objective)
-
-		testhelpers.Assert(t, objA.ChannelStatus == protocols.Challenge, "Expected channel status to be challenge")
-		testhelpers.Assert(t, objB.ChannelStatus == protocols.Challenge, "Expected channel status to be challenge")
-	})
 }

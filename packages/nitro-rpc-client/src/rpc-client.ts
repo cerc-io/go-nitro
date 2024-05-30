@@ -172,8 +172,8 @@ export class NitroRpcClient implements RpcClientApi {
     return getAndValidateResult(res, "pay");
   }
 
-  public async CloseLedgerChannel(channelId: string, isChallengeInitiatedByMe: boolean): Promise<string> {
-    const payload: DirectDefundObjectiveRequest = { ChannelId: channelId, IsChallengeInitiatedByMe: isChallengeInitiatedByMe};
+  public async CloseLedgerChannel(channelId: string, isChallenge: boolean): Promise<string> {
+    const payload: DirectDefundObjectiveRequest = { ChannelId: channelId, IsChallenge: isChallenge};
     return this.sendRequest("close_ledger_channel", payload);
   }
 

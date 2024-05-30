@@ -222,7 +222,7 @@ func (rc *rpcClient) CreateLedgerChannel(counterparty types.Address, ChallengeDu
 
 // CloseLedger closes a ledger channel
 func (rc *rpcClient) CloseLedgerChannel(id types.Destination) (protocols.ObjectiveId, error) {
-	objReq := directdefund.NewObjectiveRequest(id, false, protocols.Open)
+	objReq := directdefund.NewObjectiveRequest(id, false)
 
 	return waitForAuthorizedRequest[directdefund.ObjectiveRequest, protocols.ObjectiveId](rc, serde.CloseLedgerChannelRequestMethod, objReq)
 }

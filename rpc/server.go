@@ -145,7 +145,7 @@ func (rs *RpcServer) registerHandlers() (err error) {
 			})
 		case serde.CloseLedgerChannelRequestMethod:
 			return processRequest(rs, permSign, requestData, func(req directdefund.ObjectiveRequest) (protocols.ObjectiveId, error) {
-				return rs.node.CloseLedgerChannel(req.ChannelId, req.IsChallengeInitiatedByMe)
+				return rs.node.CloseLedgerChannel(req.ChannelId, req.IsChallenge)
 			})
 		case serde.CreatePaymentChannelRequestMethod:
 			return processRequest(rs, permSign, requestData, func(req virtualfund.ObjectiveRequest) (virtualfund.ObjectiveResponse, error) {

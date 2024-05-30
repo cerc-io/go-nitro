@@ -46,7 +46,6 @@ type Objective struct {
 	withdrawTransactionSubmitted bool
 
 	IsChallengeInitiatedByMe      bool
-	ChannelStatus                 protocols.ChannelMode
 	challengeTransactionSubmitted bool
 }
 
@@ -126,8 +125,7 @@ func NewObjective(
 		init.finalTurnNum = latestSS.TurnNum
 	}
 
-	init.IsChallengeInitiatedByMe = request.IsChallengeInitiatedByMe
-	init.ChannelStatus = request.ChannelStatus
+	init.IsChallengeInitiatedByMe = request.IsChallenge
 	return init, nil
 }
 
@@ -156,7 +154,7 @@ func ConstructObjectiveFromPayload(
 	}
 
 	cId := s.ChannelId()
-	request := NewObjectiveRequest(cId, false, protocols.Open)
+	request := NewObjectiveRequest(cId, false)
 	return NewObjective(request, preapprove, getConsensusChannel)
 }
 
@@ -237,8 +235,11 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	}
 
 	if updated.IsChallengeInitiatedByMe && !updated.challengeTransactionSubmitted {
-		// TODO: Handle error
-		latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
+		latestSupportedSignedState, err := updated.C.LatestSupportedSignedState()
+		if err != nil {
+			return &updated, sideEffects, WaitingForNothing, err
+		}
+
 		challengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSupportedSignedState.State(), *secretKey)
 		challengeTx := protocols.NewChallengeTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0), challengerSig)
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
@@ -246,16 +247,11 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForChallenge, nil
 	}
 
-	if updated.IsChallengeInitiatedByMe && updated.challengeTransactionSubmitted && updated.ChannelStatus == protocols.Open {
-		updated.ChannelStatus = protocols.Challenge
+	if updated.C.GetChannelStatus() == channel.Challenge {
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
-	if updated.ChannelStatus == protocols.Challenge && !updated.IsChallengeInitiatedByMe {
-		return &updated, sideEffects, WaitingForFinalization, nil
-	}
-
-	if updated.challengeTransactionSubmitted && !updated.fullyWithdrawn() {
+	if updated.C.GetChannelStatus() == channel.Finalized {
 		latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
 		// TODO: Can check on chain whether channel is finalized
 		transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
@@ -263,7 +259,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
 
-	if updated.ChannelStatus != protocols.Challenge || !updated.IsChallengeInitiatedByMe {
+	if updated.C.GetChannelStatus() == channel.Open {
 		latestSignedState, err := updated.C.LatestSignedState()
 		if err != nil {
 			return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")
@@ -347,25 +343,22 @@ func (o *Objective) clone() Objective {
 	clone.withdrawTransactionSubmitted = o.withdrawTransactionSubmitted
 	clone.IsChallengeInitiatedByMe = o.IsChallengeInitiatedByMe
 	clone.challengeTransactionSubmitted = o.challengeTransactionSubmitted
-	clone.ChannelStatus = o.ChannelStatus
 	return clone
 }
 
 // ObjectiveRequest represents a request to create a new direct defund objective.
 type ObjectiveRequest struct {
-	ChannelId                types.Destination
-	objectiveStarted         chan struct{}
-	IsChallengeInitiatedByMe bool
-	ChannelStatus            protocols.ChannelMode
+	ChannelId        types.Destination
+	objectiveStarted chan struct{}
+	IsChallenge      bool
 }
 
 // NewObjectiveRequest creates a new ObjectiveRequest.
-func NewObjectiveRequest(channelId types.Destination, isChallengeInitiatedByMe bool, channelStatus protocols.ChannelMode) ObjectiveRequest {
+func NewObjectiveRequest(channelId types.Destination, isChallenge bool) ObjectiveRequest {
 	return ObjectiveRequest{
-		ChannelId:                channelId,
-		objectiveStarted:         make(chan struct{}),
-		IsChallengeInitiatedByMe: isChallengeInitiatedByMe,
-		ChannelStatus:            channelStatus,
+		ChannelId:        channelId,
+		objectiveStarted: make(chan struct{}),
+		IsChallenge:      isChallenge,
 	}
 }
 

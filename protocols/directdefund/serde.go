@@ -17,7 +17,6 @@ type jsonObjective struct {
 	TransactionSumbmitted         bool
 	IsChallengeInitiatedByMe      bool
 	ChallengeTransactionSubmitted bool
-	ChannelStatus                 protocols.ChannelMode
 }
 
 // MarshalJSON returns a JSON representation of the DirectDefundObjective
@@ -31,7 +30,6 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.withdrawTransactionSubmitted,
 		o.IsChallengeInitiatedByMe,
 		o.challengeTransactionSubmitted,
-		o.ChannelStatus,
 	}
 
 	return json.Marshal(jsonDDFO)
@@ -60,7 +58,6 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.withdrawTransactionSubmitted = jsonDDFO.TransactionSumbmitted
 	o.IsChallengeInitiatedByMe = jsonDDFO.IsChallengeInitiatedByMe
 	o.challengeTransactionSubmitted = jsonDDFO.ChallengeTransactionSubmitted
-	o.ChannelStatus = jsonDDFO.ChannelStatus
 
 	return nil
 }

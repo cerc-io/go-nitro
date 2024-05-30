@@ -194,8 +194,8 @@ func openLedgerChannel(t *testing.T, alpha node.Node, beta node.Node, asset comm
 	return response.ChannelId
 }
 
-func closeLedgerChannel(t *testing.T, alpha node.Node, beta node.Node, channelId types.Destination, isChallengeInitiatedByMe bool) {
-	response, err := alpha.CloseLedgerChannel(channelId, isChallengeInitiatedByMe)
+func closeLedgerChannel(t *testing.T, alpha node.Node, beta node.Node, channelId types.Destination) {
+	response, err := alpha.CloseLedgerChannel(channelId, false)
 	if err != nil {
 		t.Fatal(err)
 	}

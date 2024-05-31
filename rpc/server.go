@@ -185,6 +185,11 @@ func (rs *RpcServer) registerHandlers() (err error) {
 				}
 				return rs.node.GetPaymentChannelsByLedger(req.LedgerId)
 			})
+		case serde.CounterChallengeRequestMethod:
+			return processRequest(rs, permSign, requestData, func(req serde.CounterChallengeRequest) (serde.CounterChallengeRequest, error) {
+				rs.node.CounterChallenge(req.Channel, req.Action)
+				return req, nil
+			})
 		default:
 			errRes := serde.NewJsonRpcErrorResponse(jsonrpcReq.Id, serde.MethodNotFoundError)
 			return marshalResponse(errRes)

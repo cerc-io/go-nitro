@@ -596,6 +596,7 @@ func (e *Engine) handlePaymentRequest(request PaymentRequest) (EngineEvent, erro
 
 func (e *Engine) handleCounterChallengeRequest(request types.CounterChallengeRequest) error {
 	objective, _ := e.store.GetObjectiveById(protocols.ObjectiveId(directdefund.ObjectivePrefix + request.ChannelId.String()))
+	// TODO: Check objective type to be direct defund
 	_, err := e.attemptProgress(objective)
 	if err != nil {
 		return err

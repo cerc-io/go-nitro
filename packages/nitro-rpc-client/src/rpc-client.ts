@@ -14,6 +14,8 @@ import {
   LedgerChannelUpdatedNotification,
   PaymentChannelUpdatedNotification,
   DirectDefundObjectiveRequest,
+  CounterChallengePayload,
+  CounterChallengeAction
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -181,6 +183,16 @@ export class NitroRpcClient implements RpcClientApi {
       IsChallenge: isChallenge,
     };
     return this.sendRequest("close_ledger_channel", payload);
+  }
+
+  public async CounterChallenge(channelId: string, action: CounterChallengeAction): Promise<CounterChallengePayload> {
+    const payload = {
+      Channel: channelId,
+      Action: action
+    };
+    const request = generateRequest("counter_challenge", payload, this.authToken || "");
+    const res = await this.transport.sendRequest<"counter_challenge">(request);
+    return getAndValidateResult(res, "counter_challenge");
   }
 
   public async ClosePaymentChannel(channelId: string): Promise<string> {

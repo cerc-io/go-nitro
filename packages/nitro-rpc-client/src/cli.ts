@@ -7,6 +7,7 @@ import { hideBin } from "yargs/helpers";
 
 import { NitroRpcClient } from "./rpc-client";
 import { compactJson, getLocalRPCUrl, logOutChannelUpdates } from "./utils";
+import { CounterChallengeAction } from "./types";
 
 yargs(hideBin(process.argv))
   .scriptName("nitro-rpc-client")
@@ -321,6 +322,40 @@ yargs(hideBin(process.argv))
         yargs.amount
       );
       console.log(paymentChannelInfo);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
+    "counter-challenge <channelId> <action>",
+    "Counter challenge the registered challenge",
+    (yargsBuilder) => {
+      return yargsBuilder
+        .positional("channelId", {
+          describe: "The channel ID of the payment channel",
+          type: "string",
+          demandOption: true,
+        })
+        .positional("action", {
+          describe: "The action to take",
+          type: "string",
+          choices: ["counterChallenge", "checkpoint", "liquidateAssets", "doNothing"],
+          demandOption: true,
+        });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getLocalRPCUrl(rpcPort)
+      );
+      if (yargs.n) logOutChannelUpdates(rpcClient);
+
+      const response = await rpcClient.CounterChallenge(
+        yargs.channelId,
+        yargs.action as CounterChallengeAction
+      );
+      console.log(response);
       await rpcClient.Close();
       process.exit(0);
     }

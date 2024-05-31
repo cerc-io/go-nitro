@@ -62,8 +62,9 @@ type Engine struct {
 	// inbound go channels
 
 	// From API
-	ObjectiveRequestsFromAPI chan protocols.ObjectiveRequest
-	PaymentRequestsFromAPI   chan PaymentRequest
+	ObjectiveRequestsFromAPI        chan protocols.ObjectiveRequest
+	PaymentRequestsFromAPI          chan PaymentRequest
+	CounterChallengeRequestsFromAPI chan types.CounterChallengeRequest
 
 	fromChain    <-chan chainservice.Event
 	fromMsg      <-chan protocols.Message
@@ -139,6 +140,7 @@ func New(vm *payments.VoucherManager, msg messageservice.MessageService, chain c
 	// bind to inbound chans
 	e.ObjectiveRequestsFromAPI = make(chan protocols.ObjectiveRequest)
 	e.PaymentRequestsFromAPI = make(chan PaymentRequest)
+	e.CounterChallengeRequestsFromAPI = make(chan types.CounterChallengeRequest)
 
 	e.fromChain = chain.EventFeed()
 	e.fromMsg = msg.P2PMessages()
@@ -200,6 +202,8 @@ func (e *Engine) run(ctx context.Context) {
 			res, err = e.handleProposal(proposal)
 		case signReq := <-e.signRequests:
 			err = e.handleSignRequest(signReq)
+		case counterChallengeReq := <-e.CounterChallengeRequestsFromAPI:
+			err = e.handleCounterChallengeRequest(counterChallengeReq)
 		case <-blockTicker.C:
 			blockNum := e.chain.GetLastConfirmedBlockNum()
 			err = e.store.SetLastBlockNumSeen(blockNum)
@@ -588,6 +592,16 @@ func (e *Engine) handlePaymentRequest(request PaymentRequest) (EngineEvent, erro
 
 	se := protocols.SideEffects{MessagesToSend: protocols.CreateVoucherMessage(voucher, payee)}
 	return ee, e.executeSideEffects(se)
+}
+
+func (e *Engine) handleCounterChallengeRequest(request types.CounterChallengeRequest) error {
+	objective, _ := e.store.GetObjectiveById(protocols.ObjectiveId(directdefund.ObjectivePrefix + request.ChannelId.String()))
+	_, err := e.attemptProgress(objective)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // sendMessages sends out the messages and records the metrics.

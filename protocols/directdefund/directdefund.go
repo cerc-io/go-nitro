@@ -19,10 +19,12 @@ import (
 )
 
 const (
-	WaitingForFinalization protocols.WaitingFor = "WaitingForFinalization"
-	WaitingForWithdraw     protocols.WaitingFor = "WaitingForWithdraw"
-	WaitingForChallenge    protocols.WaitingFor = "WaitingForChallenge"
-	WaitingForNothing      protocols.WaitingFor = "WaitingForNothing" // Finished
+	WaitingForFinalization     protocols.WaitingFor = "WaitingForFinalization"
+	WaitingForCounterChallenge protocols.WaitingFor = "WaitingForCounterChallenge"
+	WaitingForWithdraw         protocols.WaitingFor = "WaitingForWithdraw"
+	WaitingForChallenge        protocols.WaitingFor = "WaitingForChallenge"
+	WaitingForChallengeCleared protocols.WaitingFor = "WaitingForChallengeCleared"
+	WaitingForNothing          protocols.WaitingFor = "WaitingForNothing" // Finished
 )
 
 const (
@@ -50,6 +52,12 @@ type Objective struct {
 
 	IsChallengeInitiatedByMe      bool
 	challengeTransactionSubmitted bool
+
+	IsCheckpointInitiatedByMe      bool
+	checkpointTransactionSubmitted bool
+
+	CounterChallengeAction  types.CounterChallengeAction
+	waitForCounterChallenge bool
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -129,6 +137,7 @@ func NewObjective(
 	}
 
 	init.IsChallengeInitiatedByMe = request.IsChallenge
+
 	return init, nil
 }
 

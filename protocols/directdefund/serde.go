@@ -11,12 +11,16 @@ import (
 // jsonObjective replaces the directdefund.Objective's channel pointer with
 // the channel's ID, making jsonObjective suitable for serialization
 type jsonObjective struct {
-	Status                        protocols.ObjectiveStatus
-	C                             types.Destination
-	FinalTurnNum                  uint64
-	TransactionSumbmitted         bool
-	IsChallengeInitiatedByMe      bool
-	ChallengeTransactionSubmitted bool
+	Status                         protocols.ObjectiveStatus
+	C                              types.Destination
+	FinalTurnNum                   uint64
+	TransactionSumbmitted          bool
+	IsChallengeInitiatedByMe       bool
+	ChallengeTransactionSubmitted  bool
+	CounterChallengeAction         types.CounterChallengeAction
+	IsCheckpointInitiatedByMe      bool
+	checkpointTransactionSubmitted bool
+	waitForCounterChallenge        bool
 }
 
 // MarshalJSON returns a JSON representation of the DirectDefundObjective
@@ -30,6 +34,10 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.withdrawTransactionSubmitted,
 		o.IsChallengeInitiatedByMe,
 		o.challengeTransactionSubmitted,
+		o.CounterChallengeAction,
+		o.checkpointTransactionSubmitted,
+		o.IsCheckpointInitiatedByMe,
+		o.waitForCounterChallenge,
 	}
 
 	return json.Marshal(jsonDDFO)
@@ -58,6 +66,10 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.withdrawTransactionSubmitted = jsonDDFO.TransactionSumbmitted
 	o.IsChallengeInitiatedByMe = jsonDDFO.IsChallengeInitiatedByMe
 	o.challengeTransactionSubmitted = jsonDDFO.ChallengeTransactionSubmitted
+	o.CounterChallengeAction = jsonDDFO.CounterChallengeAction
+	o.checkpointTransactionSubmitted = jsonDDFO.checkpointTransactionSubmitted
+	o.IsCheckpointInitiatedByMe = jsonDDFO.IsCheckpointInitiatedByMe
+	o.waitForCounterChallenge = jsonDDFO.waitForCounterChallenge
 
 	return nil
 }

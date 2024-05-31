@@ -323,3 +323,7 @@ func (n *Node) handleError(err error) {
 
 	}
 }
+
+func (n *Node) CounterChallenge(id types.Destination, action types.CounterChallengeAction) {
+	n.engine.CounterChallengeRequestsFromAPI <- types.CounterChallengeRequest{ChannelId: id, Action: action}
+}

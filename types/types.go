@@ -32,3 +32,18 @@ type Funds map[common.Address]*big.Int
 type ConstError string
 
 func (c ConstError) Error() string { return string(c) }
+
+type CounterChallengeAction int
+
+const (
+	// TODO: Check DoNothing is necessary or not
+	DoNothing CounterChallengeAction = iota
+	Checkpoint
+	CounterChallenge
+	LiquidateAssets
+)
+
+type CounterChallengeRequest struct {
+	ChannelId Destination
+	Action    CounterChallengeAction
+}

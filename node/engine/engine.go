@@ -616,7 +616,10 @@ func (e *Engine) executeSideEffects(sideEffects protocols.SideEffects) error {
 	if sideEffects.RequestToWait.ObjectiveId != "" {
 		time.Sleep(sideEffects.RequestToWait.TimeDuration * time.Second)
 		objective, _ := e.store.GetObjectiveById(sideEffects.RequestToWait.ObjectiveId)
-		e.attemptProgress(objective)
+		_, err := e.attemptProgress(objective)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -1,6 +1,7 @@
 package node_test
 
 import (
+	"math/big"
 	"testing"
 	"time"
 
@@ -36,7 +37,7 @@ func TestDirectDefundWithChallenge(t *testing.T) {
 	defer nodeB.Close()
 
 	ledgerChannel := openLedgerChannel(t, nodeA, nodeB, types.Address{}, uint32(testCase.ChallengeDuration))
-	_, err := nodeA.CloseLedgerChannel(ledgerChannel, true)
+	response, err := nodeA.CloseLedgerChannel(ledgerChannel, true)
 	if err != nil {
 		t.Log(err)
 	}
@@ -49,4 +50,14 @@ func TestDirectDefundWithChallenge(t *testing.T) {
 
 	testhelpers.Assert(t, objA.C.GetChannelStatus() == channel.Challenge, "Expected channel status to be challenge")
 	testhelpers.Assert(t, objB.C.GetChannelStatus() == channel.Challenge, "Expected channel status to be challenge")
+
+	<-nodeA.ObjectiveCompleteChan(response)
+
+	// Check assets are liquidated
+	balanceNodeA, _ := infra.anvilChain.GetAccountBalance(testCase.Participants[0].Address())
+	balanceNodeB, _ := infra.anvilChain.GetAccountBalance(testCase.Participants[1].Address())
+	t.Log("Balance of Alice", balanceNodeA, "\nBalance of Bob", balanceNodeB)
+	// Assert balance equals ledger channel deposit since no payment has been made
+	testhelpers.Assert(t, balanceNodeA.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "Balance of Alice (%v) should be equal to ledgerChannelDeposit (%v)", balanceNodeA, ledgerChannelDeposit)
+	testhelpers.Assert(t, balanceNodeB.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "Balance of Bob (%v) should be equal to ledgerChannelDeposit (%v)", balanceNodeB, ledgerChannelDeposit)
 }

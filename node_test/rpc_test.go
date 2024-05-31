@@ -297,11 +297,11 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 		<-client.ObjectiveCompleteChan(vabClosure)
 	}
 
-	laiClosure, _ := aliceClient.CloseLedgerChannel(aliceLedger.ChannelId)
+	laiClosure, _ := aliceClient.CloseLedgerChannel(aliceLedger.ChannelId, false)
 	<-aliceClient.ObjectiveCompleteChan(laiClosure)
 
 	if n != 2 { // for n=2, alice and bob share a ledger, which should only be closed once.
-		libClosure, _ := bobClient.CloseLedgerChannel(bobLedger.ChannelId)
+		libClosure, _ := bobClient.CloseLedgerChannel(bobLedger.ChannelId, false)
 		<-bobClient.ObjectiveCompleteChan(libClosure)
 	}
 

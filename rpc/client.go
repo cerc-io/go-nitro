@@ -63,7 +63,7 @@ type RpcClientApi interface {
 	CreateLedgerChannel(counterparty types.Address, ChallengeDuration uint32, outcome outcome.Exit) (directfund.ObjectiveResponse, error)
 
 	// CloseLedgerChannel attempts to close the ledger channel with the specified channelId
-	CloseLedgerChannel(id types.Destination) (protocols.ObjectiveId, error)
+	CloseLedgerChannel(id types.Destination, isChallenge bool) (protocols.ObjectiveId, error)
 
 	// Pay uses the specified channel to pay the specified amount
 	Pay(id types.Destination, amount uint64) (serde.PaymentRequest, error)
@@ -221,8 +221,8 @@ func (rc *rpcClient) CreateLedgerChannel(counterparty types.Address, ChallengeDu
 }
 
 // CloseLedger closes a ledger channel
-func (rc *rpcClient) CloseLedgerChannel(id types.Destination) (protocols.ObjectiveId, error) {
-	objReq := directdefund.NewObjectiveRequest(id, false)
+func (rc *rpcClient) CloseLedgerChannel(id types.Destination, isChallenge bool) (protocols.ObjectiveId, error) {
+	objReq := directdefund.NewObjectiveRequest(id, isChallenge)
 
 	return waitForAuthorizedRequest[directdefund.ObjectiveRequest, protocols.ObjectiveId](rc, serde.CloseLedgerChannelRequestMethod, objReq)
 }

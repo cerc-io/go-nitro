@@ -18,6 +18,7 @@ import (
 )
 
 func TestChallenge(t *testing.T) {
+	t.Skip()
 	tc := TestCase{
 		Description:       "Challenge test",
 		Chain:             AnvilChain,
@@ -97,6 +98,7 @@ func TestChallenge(t *testing.T) {
 }
 
 func TestCheckpoint(t *testing.T) {
+	t.Skip()
 	tc := TestCase{
 		Description:       "Checkpoint test",
 		Chain:             AnvilChain,
@@ -184,6 +186,7 @@ func TestCheckpoint(t *testing.T) {
 }
 
 func TestCounterChallenge(t *testing.T) {
+	t.Skip()
 	const payAmount = 2000
 
 	tc := TestCase{

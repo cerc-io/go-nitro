@@ -17,10 +17,8 @@ type jsonObjective struct {
 	TransactionSumbmitted          bool
 	IsChallengeInitiatedByMe       bool
 	ChallengeTransactionSubmitted  bool
-	CounterChallengeAction         types.CounterChallengeAction
-	IsCheckpointInitiatedByMe      bool
-	checkpointTransactionSubmitted bool
-	waitForCounterChallenge        bool
+	IsCheckpoint                   bool
+	CheckpointTransactionSubmitted bool
 }
 
 // MarshalJSON returns a JSON representation of the DirectDefundObjective
@@ -34,10 +32,8 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.withdrawTransactionSubmitted,
 		o.IsChallengeInitiatedByMe,
 		o.challengeTransactionSubmitted,
-		o.CounterChallengeAction,
 		o.checkpointTransactionSubmitted,
-		o.IsCheckpointInitiatedByMe,
-		o.waitForCounterChallenge,
+		o.IsCheckpoint,
 	}
 
 	return json.Marshal(jsonDDFO)
@@ -66,10 +62,8 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.withdrawTransactionSubmitted = jsonDDFO.TransactionSumbmitted
 	o.IsChallengeInitiatedByMe = jsonDDFO.IsChallengeInitiatedByMe
 	o.challengeTransactionSubmitted = jsonDDFO.ChallengeTransactionSubmitted
-	o.CounterChallengeAction = jsonDDFO.CounterChallengeAction
-	o.checkpointTransactionSubmitted = jsonDDFO.checkpointTransactionSubmitted
-	o.IsCheckpointInitiatedByMe = jsonDDFO.IsCheckpointInitiatedByMe
-	o.waitForCounterChallenge = jsonDDFO.waitForCounterChallenge
+	o.checkpointTransactionSubmitted = jsonDDFO.CheckpointTransactionSubmitted
+	o.IsCheckpoint = jsonDDFO.IsCheckpoint
 
 	return nil
 }

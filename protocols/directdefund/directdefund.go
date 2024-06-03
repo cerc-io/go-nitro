@@ -20,7 +20,6 @@ import (
 
 const (
 	WaitingForFinalization     protocols.WaitingFor = "WaitingForFinalization"
-	WaitingForCounterChallenge protocols.WaitingFor = "WaitingForCounterChallenge"
 	WaitingForWithdraw         protocols.WaitingFor = "WaitingForWithdraw"
 	WaitingForChallenge        protocols.WaitingFor = "WaitingForChallenge"
 	WaitingForChallengeCleared protocols.WaitingFor = "WaitingForChallengeCleared"
@@ -53,11 +52,8 @@ type Objective struct {
 	IsChallengeInitiatedByMe      bool
 	challengeTransactionSubmitted bool
 
-	IsCheckpointInitiatedByMe      bool
+	IsCheckpoint                   bool
 	checkpointTransactionSubmitted bool
-
-	CounterChallengeAction  types.CounterChallengeAction
-	waitForCounterChallenge bool
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -375,8 +371,13 @@ func (o *Objective) clone() Objective {
 	clone.C = cClone
 	clone.finalTurnNum = o.finalTurnNum
 	clone.withdrawTransactionSubmitted = o.withdrawTransactionSubmitted
+
 	clone.IsChallengeInitiatedByMe = o.IsChallengeInitiatedByMe
 	clone.challengeTransactionSubmitted = o.challengeTransactionSubmitted
+
+	clone.IsCheckpoint = o.IsCheckpoint
+	clone.checkpointTransactionSubmitted = o.checkpointTransactionSubmitted
+
 	return clone
 }
 

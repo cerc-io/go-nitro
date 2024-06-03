@@ -161,6 +161,10 @@ type ReclaimedEvent struct {
 	commonEvent
 }
 
+type ReclaimedEvent struct {
+	commonEvent
+}
+
 // ChainEventHandler describes an objective that can handle chain events
 type ChainEventHandler interface {
 	UpdateWithChainEvent(event Event) (protocols.Objective, error)

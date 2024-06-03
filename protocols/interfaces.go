@@ -95,7 +95,7 @@ func NewCheckpointTransaction(
 }
 
 type WaitRequest struct {
-	ObjectiveId  ObjectiveId
+	Objective    Objective
 	TimeDuration time.Duration
 }
 
@@ -104,7 +104,7 @@ type SideEffects struct {
 	MessagesToSend       []Message
 	TransactionsToSubmit []ChainTransaction
 	ProposalsToProcess   []consensus_channel.Proposal
-	RequestToWait        WaitRequest
+	AttemptsToWait       []WaitRequest
 }
 
 // WaitingFor is an enumerable "pause-point" computed from an Objective. It describes how the objective is blocked on actions by third parties (i.e. co-participants or the blockchain).

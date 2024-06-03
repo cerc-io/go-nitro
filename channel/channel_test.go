@@ -417,14 +417,7 @@ func TestSerde(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := cmp.Diff(c, someChannel, cmp.AllowUnexported(state.SignedState{}), cmp.Comparer(bigIntComparer)); diff != "" {
+	if diff := cmp.Diff(c, someChannel, cmp.AllowUnexported(state.SignedState{}, big.Int{})); diff != "" {
 		t.Fatalf("incorrect json unmarshaling (-want +got):\n%s", diff)
 	}
-}
-
-func bigIntComparer(x, y *big.Int) bool {
-	if x == nil || y == nil {
-		return x == y
-	}
-	return x.Cmp(y) == 0
 }

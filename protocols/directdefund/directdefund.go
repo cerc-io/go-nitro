@@ -235,6 +235,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
 	}
 
+	// Initiate challenge transaction
 	if updated.IsChallengeInitiatedByMe && !updated.challengeTransactionSubmitted {
 		latestSupportedSignedState, err := updated.C.LatestSupportedSignedState()
 		if err != nil {
@@ -248,15 +249,17 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForChallenge, nil
 	}
 
-	if updated.C.GetChannelStatus() == channel.Challenge {
+	// Wait for channel to finalize
+	if updated.C.GetChannelMode() == channel.Challenge {
 		if updated.IsChallengeInitiatedByMe {
-			sideEffects.RequestToWait.ObjectiveId = updated.Id()
-			sideEffects.RequestToWait.TimeDuration = time.Duration(updated.C.ChallengeDuration)
+			waitRequest := protocols.WaitRequest{Objective: &updated, TimeDuration: time.Duration(updated.C.ChallengeDuration)}
+			sideEffects.AttemptsToWait = append(sideEffects.AttemptsToWait, waitRequest)
 		}
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
-	if updated.C.GetChannelStatus() == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.fullyWithdrawn() {
+	// Liquidate the assets
+	if updated.C.GetChannelMode() == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.fullyWithdrawn() {
 		latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
 		transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
@@ -264,7 +267,8 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
 
-	if updated.C.GetChannelStatus() == channel.Open {
+	// Direct defund without challenge
+	if updated.C.GetChannelMode() == channel.Open {
 		latestSignedState, err := updated.C.LatestSignedState()
 		if err != nil {
 			return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")

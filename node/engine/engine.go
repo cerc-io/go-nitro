@@ -434,10 +434,11 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 
 		_, isChalllengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
 		if isChalllengeRegistered {
-			// TODO: Validate channelId of challenge registered event
 			ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById)
 			if err != nil {
-				return EngineEvent{}, err
+				// Node should not panic if it is unable to create an objective from the challenge registered event
+				e.logger.Error(err.Error())
+				return EngineEvent{}, nil
 			}
 			err = e.store.DestroyConsensusChannel(chainEvent.ChannelID())
 			if err != nil {
@@ -613,14 +614,15 @@ func (e *Engine) executeSideEffects(sideEffects protocols.SideEffects) error {
 		e.fromLedger <- proposal
 	}
 
-	if sideEffects.RequestToWait.ObjectiveId != "" {
-		time.Sleep(sideEffects.RequestToWait.TimeDuration * time.Second)
-		objective, _ := e.store.GetObjectiveById(sideEffects.RequestToWait.ObjectiveId)
-		_, err := e.attemptProgress(objective)
-		if err != nil {
-			return err
+	go func() {
+		for _, waitRequest := range sideEffects.AttemptsToWait {
+			time.Sleep(waitRequest.TimeDuration * time.Second)
+			_, err := e.attemptProgress(waitRequest.Objective)
+			if err != nil {
+				e.logger.Error(err.Error())
+			}
 		}
-	}
+	}()
 
 	return nil
 }

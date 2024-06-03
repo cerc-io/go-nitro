@@ -385,7 +385,7 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 	return c, nil
 }
 
-func (c Channel) GetChannelStatus() ChannelMode {
+func (c Channel) GetChannelMode() ChannelMode {
 	// TODO: Get timestamp from latest block as done in _mode method of StatusManager contract
 	currentTimestamp := big.NewInt(time.Now().Unix())
 

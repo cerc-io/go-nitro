@@ -2,6 +2,7 @@ import Ajv, { JTDDataType } from "ajv/dist/jtd";
 
 import {
   ChannelStatus,
+  CounterChallengePayload,
   LedgerChannelInfo,
   PaymentChannelInfo,
   RPCNotification,
@@ -167,7 +168,6 @@ export function getAndValidateResult<T extends RequestMethod>(
     case "close_ledger_channel":
     case "version":
     case "get_address":
-    case "counter_challenge":
     case "close_payment_channel":
       return validateAndConvertResult(
         stringSchema,
@@ -180,7 +180,9 @@ export function getAndValidateResult<T extends RequestMethod>(
         result,
         convertToInternalLedgerChannelType
       );
-
+    case "counter_challenge":
+      // TODO: Add validation for response
+      return {} as CounterChallengePayload
     case "get_all_ledger_channels":
       return validateAndConvertResult(
         ledgerChannelsSchema,

@@ -36,11 +36,8 @@ func (c ConstError) Error() string { return string(c) }
 type CounterChallengeAction int
 
 const (
-	// TODO: Check DoNothing is necessary or not
-	DoNothing CounterChallengeAction = iota
-	Checkpoint
+	Checkpoint CounterChallengeAction = iota
 	CounterChallenge
-	LiquidateAssets
 )
 
 type CounterChallengeRequest struct {

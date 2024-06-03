@@ -192,7 +192,8 @@ export class NitroRpcClient implements RpcClientApi {
     };
     const request = generateRequest("counter_challenge", payload, this.authToken || "");
     const res = await this.transport.sendRequest<"counter_challenge">(request);
-    return getAndValidateResult(res, "counter_challenge");
+    // TODO: Validate the response
+    return res as CounterChallengePayload
   }
 
   public async ClosePaymentChannel(channelId: string): Promise<string> {

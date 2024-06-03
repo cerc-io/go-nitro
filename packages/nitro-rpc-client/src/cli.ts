@@ -339,7 +339,7 @@ yargs(hideBin(process.argv))
         .positional("action", {
           describe: "The action to take",
           type: "string",
-          choices: ["counterChallenge", "checkpoint", "liquidateAssets", "doNothing"],
+          choices: ["Checkpoint", "CounterChallenge"],
           demandOption: true,
         });
     },
@@ -350,10 +350,9 @@ yargs(hideBin(process.argv))
         getLocalRPCUrl(rpcPort)
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
-
       const response = await rpcClient.CounterChallenge(
         yargs.channelId,
-        yargs.action as CounterChallengeAction
+        CounterChallengeAction[yargs.action as keyof typeof CounterChallengeAction]
       );
       console.log(response);
       await rpcClient.Close();

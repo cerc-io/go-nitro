@@ -53,10 +53,8 @@ export type PaymentPayload = {
 };
 
 export enum CounterChallengeAction {
-  CounterChallenge = "counterChallenge",
-  Checkpoint = "checkpoint",
-  LiquidateAssets = "liquidateAssets",
-  DoNothing = "doNothing"
+  Checkpoint,
+  CounterChallenge,
 }
 
 export type CounterChallengePayload = {

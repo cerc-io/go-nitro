@@ -157,6 +157,10 @@ func NewChallengeClearedEvent(channelId types.Destination, block Block, txIndex 
 	return ChallengeClearedEvent{commonEvent: commonEvent{channelID: channelId, block: block, txIndex: txIndex}, newTurnNumRecord: newTurnNumRecord}
 }
 
+type ReclaimedEvent struct {
+	commonEvent
+}
+
 // ChainEventHandler describes an objective that can handle chain events
 type ChainEventHandler interface {
 	UpdateWithChainEvent(event Event) (protocols.Objective, error)

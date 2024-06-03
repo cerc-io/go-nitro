@@ -104,7 +104,7 @@ describe('reclaim', () => {
 
     await (
       await testNitroAdjudicator.setStatusFromChannelData(sourceId, {
-        turnNumRecord: lChannel.someState(MAGIC_ADDRESS_INDICATING_ETH).turnNum,
+        turnNumRecord: 99,
         finalizesAt: 1,
         stateHash: lStateHash, // not realistic, but OK for purpose of this test
         outcomeHash: lOutcomeHash,
@@ -163,7 +163,7 @@ describe('reclaim', () => {
 
     const lChannelAfter = new TestChannel('0x0', [AWallet, BWallet], allocationAfter);
     const expectedStatusAfter = channelDataToStatus({
-      turnNumRecord: lChannel.someState(MAGIC_ADDRESS_INDICATING_ETH).turnNum,
+      turnNumRecord: 99,
       finalizesAt: 1,
       // stateHash will be set to HashZero by this helper fn
       // if state property of this object is undefined

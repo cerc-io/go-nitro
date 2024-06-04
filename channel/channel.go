@@ -374,7 +374,12 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 		}
 		c.AddSignedState(ss)
 
-	// TODO: Handle challenge cleared event
+	case chainservice.ChallengeClearedEvent:
+		c.OnChain.StateHash = common.Hash{}
+		c.OnChain.Outcome = outcome.Exit{}
+		c.OnChain.FinalizesAt = common.Big0
+
+	// TODO: Handle checkpoint event
 	default:
 		return &Channel{}, fmt.Errorf("channel %+v cannot handle event %+v", c, event)
 	}

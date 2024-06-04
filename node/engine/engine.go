@@ -701,6 +701,11 @@ func (e *Engine) attemptProgress(objective protocols.Objective) (outgoing Engine
 		if err != nil {
 			return
 		}
+
+		err = e.destoryObjectiveAndChannelIfDirectDeFundObjectiveInChallenge(crankedObjective)
+		if err != nil {
+			return
+		}
 	}
 	err = e.executeSideEffects(sideEffects)
 	return
@@ -779,6 +784,36 @@ func (e Engine) spawnConsensusChannelIfDirectFundObjective(crankedObjective prot
 			return fmt.Errorf("could not destroy consensus channel for objective %s: %w", crankedObjective.Id(), err)
 		}
 	}
+	return nil
+}
+
+func (e Engine) destoryObjectiveAndChannelIfDirectDeFundObjectiveInChallenge(crankedObjective protocols.Objective) error {
+	dDfo, isDdfo := crankedObjective.(*directdefund.Objective)
+
+	// TODO: Test the conditions
+	if isDdfo && (dDfo.IsChallengeInitiatedByMe || dDfo.IsCheckpoint) {
+		c, err := dDfo.CreateConsensusChannel()
+		if err != nil {
+			return fmt.Errorf("could not create consensus channel for objective %s: %w", crankedObjective.Id(), err)
+		}
+
+		err = e.store.SetConsensusChannel(c)
+		if err != nil {
+			return fmt.Errorf("could not store consensus channel for objective %s: %w", crankedObjective.Id(), err)
+		}
+
+		err = e.store.DestroyObjective(dDfo.Id())
+		if err != nil {
+			return fmt.Errorf("could not destroy objective %s: %w", crankedObjective.Id(), err)
+		}
+
+		// Destroy the channel since the consensus channel takes over governance:
+		err = e.store.DestroyChannel(c.Id)
+		if err != nil {
+			return fmt.Errorf("could not destroy consensus channel for objective %s: %w", crankedObjective.Id(), err)
+		}
+	}
+
 	return nil
 }
 

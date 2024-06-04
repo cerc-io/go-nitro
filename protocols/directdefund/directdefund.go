@@ -243,7 +243,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	}
 
 	// Direct defund with challenge
-	if updated.IsChallengeInitiatedByMe || updated.C.GetChannelMode() != channel.Open {
+	if updated.IsChallengeInitiatedByMe || updated.IsCheckpoint || updated.C.GetChannelMode() != channel.Open {
 		return o.crankWithChallenge(updated, sideEffects, secretKey)
 	}
 
@@ -266,6 +266,18 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		return &updated, sideEffects, WaitingForChallenge, nil
 	}
 
+	// Initiate checkpoint transaction
+	if updated.IsCheckpoint && !updated.checkpointTransactionSubmitted {
+		latestSupportedSignedState, err := updated.C.LatestSupportedSignedState()
+		if err != nil {
+			return &updated, sideEffects, WaitingForNothing, err
+		}
+		checkpointTx := protocols.NewCheckpointTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0))
+		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, checkpointTx)
+		updated.checkpointTransactionSubmitted = true
+		return &updated, sideEffects, WaitingForChallengeCleared, nil
+	}
+
 	// Wait for channel to finalize
 	if updated.C.GetChannelMode() == channel.Challenge {
 		return &updated, sideEffects, WaitingForFinalization, nil
@@ -280,9 +292,15 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
 
-	// Direct defund with challenge is complete
+	// Direct defund with challenge objective is complete after asset liquidation
 	if updated.C.GetChannelMode() == channel.Finalized && updated.fullyWithdrawn() {
 		updated.C.OnChain.FinalizesAt = common.Big0
+		updated.Status = protocols.Completed
+		return &updated, sideEffects, WaitingForNothing, nil
+	}
+
+	// Direct defund with challenge objective is complete after challenge is cleared
+	if updated.C.GetChannelMode() == channel.Open {
 		updated.Status = protocols.Completed
 		return &updated, sideEffects, WaitingForNothing, nil
 	}
@@ -431,4 +449,49 @@ func (o *Objective) otherParticipants() []types.Address {
 		}
 	}
 	return others
+}
+
+func (o *Objective) CreateConsensusChannel() (*consensus_channel.ConsensusChannel, error) {
+	ledger := o.C
+
+	signedState, err := ledger.LatestSupportedSignedState()
+	if err != nil {
+		return nil, fmt.Errorf("could not get latest supported signed state")
+	}
+	leaderSig, err := signedState.GetParticipantSignature(uint(consensus_channel.Leader))
+	if err != nil {
+		return nil, fmt.Errorf("could not get leader signature: %w", err)
+	}
+	followerSig, err := signedState.GetParticipantSignature(uint(consensus_channel.Follower))
+	if err != nil {
+		return nil, fmt.Errorf("could not get follower signature: %w", err)
+	}
+	signatures := [2]state.Signature{leaderSig, followerSig}
+
+	if len(signedState.State().Outcome) != 1 {
+		return nil, fmt.Errorf("a consensus channel only supports a single asset")
+	}
+	assetExit := signedState.State().Outcome[0]
+	turnNum := signedState.State().TurnNum
+	outcome, err := consensus_channel.FromExit(assetExit)
+	if err != nil {
+		return nil, fmt.Errorf("could not create ledger outcome from channel exit: %w", err)
+	}
+
+	if ledger.MyIndex == uint(consensus_channel.Leader) {
+		con, err := consensus_channel.NewLeaderChannel(ledger.FixedPart, turnNum, outcome, signatures)
+		con.OnChainFunding = ledger.OnChain.Holdings.Clone() // Copy OnChain.Holdings so we don't lose this information
+		if err != nil {
+			return nil, fmt.Errorf("could not create consensus channel as leader: %w", err)
+		}
+		return &con, nil
+
+	} else {
+		con, err := consensus_channel.NewFollowerChannel(ledger.FixedPart, turnNum, outcome, signatures)
+		con.OnChainFunding = ledger.OnChain.Holdings.Clone() // Copy OnChain.Holdings so we don't lose this information
+		if err != nil {
+			return nil, fmt.Errorf("could not create consensus channel as follower: %w", err)
+		}
+		return &con, nil
+	}
 }

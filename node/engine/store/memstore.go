@@ -166,6 +166,11 @@ func (ms *MemStore) DestroyChannel(id types.Destination) error {
 	return nil
 }
 
+func (ms *MemStore) DestroyObjective(id protocols.ObjectiveId) error {
+	ms.objectives.Delete(string(id))
+	return nil
+}
+
 // SetConsensusChannel sets the channel in the store.
 func (ms *MemStore) SetConsensusChannel(ch *consensus_channel.ConsensusChannel) error {
 	if ch.Id.IsZero() {

@@ -670,3 +670,8 @@ func (ds *DurableStore) RemoveVoucherInfo(channelId types.Destination) error {
 		return err
 	})
 }
+
+func (ds *DurableStore) DestroyObjective(id protocols.ObjectiveId) error {
+	// TODO: Destroy the objective
+	return nil
+}

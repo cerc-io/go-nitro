@@ -32,6 +32,7 @@ type Store interface {
 	GetChannelsByIds(ids []types.Destination) ([]*channel.Channel, error)         // Returns a collection of channels with the given ids
 	GetChannelById(id types.Destination) (c *channel.Channel, ok bool)
 	GetChannelsByParticipant(participant types.Address) ([]*channel.Channel, error) // Returns any channels that includes the given participant
+	GetAllChannels() ([]*channel.Channel, error)
 	SetChannel(*channel.Channel) error
 	DestroyChannel(id types.Destination) error
 	GetChannelsByAppDefinition(appDef types.Address) ([]*channel.Channel, error) // Returns any channels that includes the given app definition

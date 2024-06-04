@@ -161,7 +161,6 @@ func (ds *DurableStore) SetObjective(obj protocols.Objective) error {
 		_, _, err := tx.Set(string(obj.Id()), string(objJSON), nil)
 		return err
 	})
-
 	if err != nil {
 		return err
 	}
@@ -320,7 +319,6 @@ func (ds *DurableStore) getChannelById(id types.Destination) (channel.Channel, e
 	}
 	var ch channel.Channel
 	err = ch.UnmarshalJSON([]byte(chJSON))
-
 	if err != nil {
 		return channel.Channel{}, fmt.Errorf("error unmarshaling channel %s", ch.Id)
 	}
@@ -448,6 +446,31 @@ func (ds *DurableStore) GetAllConsensusChannels() ([]*consensus_channel.Consensu
 	return toReturn, nil
 }
 
+func (ds *DurableStore) GetAllChannels() ([]*channel.Channel, error) {
+	toReturn := []*channel.Channel{}
+	var unmarshErr error
+	err := ds.channels.View(func(tx *buntdb.Tx) error {
+		return tx.Ascend("", func(key, chJSON string) bool {
+			var ch channel.Channel
+
+			unmarshErr = json.Unmarshal([]byte(chJSON), &ch)
+			if unmarshErr != nil {
+				return false
+			}
+			toReturn = append(toReturn, &ch)
+			return true
+		})
+	})
+	if err != nil {
+		return []*channel.Channel{}, err
+	}
+
+	if unmarshErr != nil {
+		return []*channel.Channel{}, unmarshErr
+	}
+	return toReturn, nil
+}
+
 // GetConsensusChannelById returns a ConsensusChannel with the given channel id
 func (ds *DurableStore) GetConsensusChannelById(id types.Destination) (channel *consensus_channel.ConsensusChannel, err error) {
 	var ch *consensus_channel.ConsensusChannel
@@ -460,7 +483,6 @@ func (ds *DurableStore) GetConsensusChannelById(id types.Destination) (channel *
 
 		ch = &consensus_channel.ConsensusChannel{}
 		err = ch.UnmarshalJSON([]byte(chJSON))
-
 		if err != nil {
 			return fmt.Errorf("error unmarshaling channel %s", ch.Id)
 		}

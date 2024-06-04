@@ -301,7 +301,6 @@ func (ms *MemStore) GetConsensusChannelById(id types.Destination) (channel *cons
 
 	ch := &consensus_channel.ConsensusChannel{}
 	err = ch.UnmarshalJSON(chJSON)
-
 	if err != nil {
 		return &consensus_channel.ConsensusChannel{}, fmt.Errorf("error unmarshaling channel %s", ch.Id)
 	}
@@ -339,6 +338,26 @@ func (ms *MemStore) GetAllConsensusChannels() ([]*consensus_channel.ConsensusCha
 	var err error
 	ms.consensusChannels.Range(func(key string, chJSON []byte) bool {
 		var ch consensus_channel.ConsensusChannel
+
+		err = json.Unmarshal(chJSON, &ch)
+		if err != nil {
+			return false
+		}
+
+		toReturn = append(toReturn, &ch)
+		return true // channel not found: continue looking
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toReturn, nil
+}
+
+func (ms *MemStore) GetAllChannels() ([]*channel.Channel, error) {
+	toReturn := []*channel.Channel{}
+	var err error
+	ms.channels.Range(func(key string, chJSON []byte) bool {
+		var ch channel.Channel
 
 		err = json.Unmarshal(chJSON, &ch)
 		if err != nil {

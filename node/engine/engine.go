@@ -162,6 +162,7 @@ func New(vm *payments.VoucherManager, msg messageservice.MessageService, chain c
 
 	e.wg.Add(1)
 	go e.run(ctx)
+	go e.LiquidateChallengedChannels()
 
 	return e
 }
@@ -882,6 +883,29 @@ func (e *Engine) logMessage(msg protocols.Message, direction messageDirection) {
 		e.logger.Debug("Received message", "msg", msg.Summarize())
 	} else {
 		e.logger.Debug("Sent message", "msg", msg.Summarize())
+	}
+}
+
+func (e *Engine) LiquidateChallengedChannels() {
+	channels, err := e.store.GetAllChannels()
+	if err != nil {
+		e.logger.Error(err.Error())
+	}
+
+	for _, ch := range channels {
+		if ch.GetChannelMode() == channel.Challenge {
+			time.Sleep(time.Duration(ch.ChallengeDuration))
+			obj, ok := e.store.GetObjectiveByChannelId(ch.Id)
+			if !ok {
+				e.logger.Error("Objective not found", "channelId", ch.Id)
+				continue
+			}
+
+			_, err = e.attemptProgress(obj)
+			if err != nil {
+				e.logger.Error(err.Error())
+			}
+		}
 	}
 }
 

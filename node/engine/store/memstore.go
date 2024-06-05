@@ -353,6 +353,7 @@ func (ms *MemStore) GetAllConsensusChannels() ([]*consensus_channel.ConsensusCha
 	return toReturn, nil
 }
 
+// GetAllChannels retrieves all channels stored in the MemStore
 func (ms *MemStore) GetAllChannels() ([]*channel.Channel, error) {
 	toReturn := []*channel.Channel{}
 	var err error

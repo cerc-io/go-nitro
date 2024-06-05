@@ -434,15 +434,20 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 
 	c, ok := e.store.GetChannelById(chainEvent.ChannelID())
 	if !ok {
-
+		// If channel doesn't exist and chain event is ChallengeRegistered then create a new direct defund objective
+		// This doesn't occur for actor who registered the challenge
 		_, isChalllengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
 		if isChalllengeRegistered {
 			ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById)
 			if err != nil {
-				// Node should not panic if it is unable to create an objective from the challenge registered event
-				e.logger.Error(err.Error())
-				return EngineEvent{}, nil
+				// Node should not panic if it is unable to find the required consensus channel before creating objective
+				if errors.Is(err, directdefund.ErrChannelNotExist) {
+					return EngineEvent{}, nil
+				}
+
+				return EngineEvent{}, err
 			}
+			// If ddfo creation was successful, destroy the consensus channel to prevent it being used (a Channel will now take over governance)
 			err = e.store.DestroyConsensusChannel(chainEvent.ChannelID())
 			if err != nil {
 				return EngineEvent{}, err
@@ -878,6 +883,7 @@ func (e *Engine) logMessage(msg protocols.Message, direction messageDirection) {
 	}
 }
 
+// processStoreChannels perform necessary actions for all channels in store
 func (e *Engine) processStoreChannels() error {
 	channels, err := e.store.GetAllChannels()
 	if err != nil {

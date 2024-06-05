@@ -29,6 +29,8 @@ const (
 	SignedStatePayload protocols.PayloadType = "SignedStatePayload"
 )
 
+var ErrChannelNotExist error = errors.New("could not find channel")
+
 const ObjectivePrefix = "DirectDefunding-"
 
 const (
@@ -83,7 +85,7 @@ func NewObjective(
 ) (Objective, error) {
 	cc, err := getConsensusChannel(request.ChannelId)
 	if err != nil {
-		return Objective{}, fmt.Errorf("could not find channel %s; %w", request.ChannelId, err)
+		return Objective{}, fmt.Errorf("%w %s: %w", ErrChannelNotExist, request.ChannelId, err)
 	}
 
 	if len(cc.FundingTargets()) != 0 {

@@ -446,6 +446,7 @@ func (ds *DurableStore) GetAllConsensusChannels() ([]*consensus_channel.Consensu
 	return toReturn, nil
 }
 
+// GetAllChannels retrieves all channels stored in the DurableStore
 func (ds *DurableStore) GetAllChannels() ([]*channel.Channel, error) {
 	toReturn := []*channel.Channel{}
 	var unmarshErr error

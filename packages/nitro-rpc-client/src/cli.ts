@@ -352,7 +352,9 @@ yargs(hideBin(process.argv))
       if (yargs.n) logOutChannelUpdates(rpcClient);
       const response = await rpcClient.CounterChallenge(
         yargs.channelId,
-        CounterChallengeAction[yargs.action as keyof typeof CounterChallengeAction]
+        CounterChallengeAction[
+          yargs.action as keyof typeof CounterChallengeAction
+        ]
       );
       console.log(response);
       await rpcClient.Close();

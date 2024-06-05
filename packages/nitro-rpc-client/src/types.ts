@@ -59,9 +59,8 @@ export enum CounterChallengeAction {
 
 export type CounterChallengePayload = {
   Channel: string;
-  Action: CounterChallengeAction
+  Action: CounterChallengeAction;
 };
-
 
 export type Voucher = {
   ChannelId: string;
@@ -108,7 +107,10 @@ export type DirectFundRequest = JsonRpcRequest<
   DirectFundPayload
 >;
 export type PaymentRequest = JsonRpcRequest<"pay", PaymentPayload>;
-export type CounterChallengeRequest = JsonRpcRequest<"pay", CounterChallengePayload>;
+export type CounterChallengeRequest = JsonRpcRequest<
+  "pay",
+  CounterChallengePayload
+>;
 
 export type VirtualFundRequest = JsonRpcRequest<
   "create_payment_channel",
@@ -182,7 +184,7 @@ export type RPCRequestAndResponses = {
   get_ledger_channel: [GetLedgerChannelRequest, GetLedgerChannelResponse];
   get_payment_channel: [GetPaymentChannelRequest, GetPaymentChannelResponse];
   pay: [PaymentRequest, PaymentResponse];
-  counter_challenge: [CounterChallengeRequest, CounterChallengeResponse]
+  counter_challenge: [CounterChallengeRequest, CounterChallengeResponse];
   close_payment_channel: [VirtualDefundRequest, VirtualDefundResponse];
   get_all_ledger_channels: [
     GetAllLedgerChannelsRequest,

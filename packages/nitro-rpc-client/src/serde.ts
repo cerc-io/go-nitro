@@ -182,7 +182,7 @@ export function getAndValidateResult<T extends RequestMethod>(
       );
     case "counter_challenge":
       // TODO: Add validation for response
-      return {} as CounterChallengePayload
+      return {} as CounterChallengePayload;
     case "get_all_ledger_channels":
       return validateAndConvertResult(
         ledgerChannelsSchema,

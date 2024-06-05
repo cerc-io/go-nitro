@@ -235,6 +235,16 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
 	}
 
+	// Direct defund with challenge
+	if updated.IsChallengeInitiatedByMe || updated.C.GetChannelMode() != channel.Open {
+		return o.crankWithChallenge(updated, sideEffects, secretKey)
+	}
+
+	// Direct defund without challenge
+	return o.crank(updated, sideEffects, secretKey)
+}
+
+func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
 	// Initiate challenge transaction
 	if updated.IsChallengeInitiatedByMe && !updated.challengeTransactionSubmitted {
 		latestSupportedSignedState, err := updated.C.LatestSupportedSignedState()
@@ -270,50 +280,51 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, nil
 	}
 
-	// Direct defund without challenge
-	if updated.C.GetChannelMode() == channel.Open {
-		latestSignedState, err := updated.C.LatestSignedState()
+	return &updated, sideEffects, WaitingForNothing, fmt.Errorf("objective %s in invalid state", string(updated.Id()))
+}
+
+func (o *Objective) crank(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
+	latestSignedState, err := updated.C.LatestSignedState()
+	if err != nil {
+		return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")
+	}
+
+	// Sign a final state if no supported, final state exists
+	if !latestSignedState.State().IsFinal || !latestSignedState.HasSignatureForParticipant(updated.C.MyIndex) {
+		stateToSign := latestSignedState.State().Clone()
+		if !stateToSign.IsFinal {
+			stateToSign.TurnNum += 1
+			stateToSign.IsFinal = true
+		}
+		ss, err := updated.C.SignAndAddState(stateToSign, secretKey)
 		if err != nil {
-			return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")
+			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not sign final state %w", err)
 		}
-
-		// Sign a final state if no supported, final state exists
-		if !latestSignedState.State().IsFinal || !latestSignedState.HasSignatureForParticipant(updated.C.MyIndex) {
-			stateToSign := latestSignedState.State().Clone()
-			if !stateToSign.IsFinal {
-				stateToSign.TurnNum += 1
-				stateToSign.IsFinal = true
-			}
-			ss, err := updated.C.SignAndAddState(stateToSign, secretKey)
-			if err != nil {
-				return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not sign final state %w", err)
-			}
-			messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), ss, SignedStatePayload, o.otherParticipants()...)
-			if err != nil {
-				return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not create payload message %w", err)
-			}
-			sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, messages...)
-		}
-
-		latestSupportedState, err := updated.C.LatestSupportedState()
+		messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), ss, SignedStatePayload, o.otherParticipants()...)
 		if err != nil {
-			return &updated, sideEffects, WaitingForFinalization, fmt.Errorf("error finding a supported state: %w", err)
+			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not create payload message %w", err)
 		}
-		if !latestSupportedState.IsFinal {
-			return &updated, sideEffects, WaitingForFinalization, nil
-		}
+		sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, messages...)
+	}
 
-		// Withdrawal of funds
-		if !updated.fullyWithdrawn() {
-			// The first participant in the channel submits the withdrawAll transaction
-			if updated.C.MyIndex == 0 && !updated.withdrawTransactionSubmitted {
-				withdrawAll := protocols.NewWithdrawAllTransaction(updated.C.Id, latestSignedState)
-				sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, withdrawAll)
-				updated.withdrawTransactionSubmitted = true
-			}
-			// Every participant waits for all channel funds to be distributed, even if the participant has no funds in the channel
-			return &updated, sideEffects, WaitingForWithdraw, nil
+	latestSupportedState, err := updated.C.LatestSupportedState()
+	if err != nil {
+		return &updated, sideEffects, WaitingForFinalization, fmt.Errorf("error finding a supported state: %w", err)
+	}
+	if !latestSupportedState.IsFinal {
+		return &updated, sideEffects, WaitingForFinalization, nil
+	}
+
+	// Withdrawal of funds
+	if !updated.fullyWithdrawn() {
+		// The first participant in the channel submits the withdrawAll transaction
+		if updated.C.MyIndex == 0 && !updated.withdrawTransactionSubmitted {
+			withdrawAll := protocols.NewWithdrawAllTransaction(updated.C.Id, latestSignedState)
+			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, withdrawAll)
+			updated.withdrawTransactionSubmitted = true
 		}
+		// Every participant waits for all channel funds to be distributed, even if the participant has no funds in the channel
+		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
 
 	updated.Status = protocols.Completed

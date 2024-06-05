@@ -204,7 +204,7 @@ func (e *Engine) run(ctx context.Context) {
 			blockNum := e.chain.GetLastConfirmedBlockNum()
 			err = e.store.SetLastBlockNumSeen(blockNum)
 		case <-channelTicker.C:
-			err = e.liquidateChallengedChannels()
+			err = e.processStoreChannels()
 		case <-ctx.Done():
 			e.wg.Done()
 			return
@@ -878,25 +878,23 @@ func (e *Engine) logMessage(msg protocols.Message, direction messageDirection) {
 	}
 }
 
-func (e *Engine) liquidateChallengedChannels() error {
+func (e *Engine) processStoreChannels() error {
 	channels, err := e.store.GetAllChannels()
 	if err != nil {
 		return err
 	}
 
 	for _, ch := range channels {
+		// Liquidate assets for finalized channels
 		if ch.GetChannelMode() == channel.Finalized {
 			obj, ok := e.store.GetObjectiveByChannelId(ch.Id)
 			dDfo, isDdfo := obj.(*directdefund.Objective)
 
-			if !ok || !isDdfo || !dDfo.IsChallengeInitiatedByMe {
-				e.logger.Info("Ignoring liquidation for challenged channel", "channelId", ch.Id)
-				continue
-			}
-
-			_, err = e.attemptProgress(obj)
-			if err != nil {
-				return err
+			if ok && isDdfo && dDfo.IsChallengeInitiatedByMe {
+				_, err = e.attemptProgress(obj)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

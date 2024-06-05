@@ -464,7 +464,6 @@ func (ds *DurableStore) GetAllChannels() ([]*channel.Channel, error) {
 	if err != nil {
 		return []*channel.Channel{}, err
 	}
-
 	if unmarshErr != nil {
 		return []*channel.Channel{}, unmarshErr
 	}

@@ -71,8 +71,9 @@ func TestChallenge(t *testing.T) {
 	testhelpers.Assert(t, objA.C.GetChannelMode() == channel.Challenge, "Expected channel status to be challenge")
 	testhelpers.Assert(t, objB.C.GetChannelMode() == channel.Challenge, "Expected channel status to be challenge")
 
-	// Wait for assets to liquidate
+	// Wait for objectives to complete
 	<-nodeA.ObjectiveCompleteChan(response)
+	<-nodeB.ObjectiveCompleteChan(response)
 
 	// Check assets are liquidated
 	balanceNodeA, _ = infra.anvilChain.GetAccountBalance(testCase.Participants[0].Address())

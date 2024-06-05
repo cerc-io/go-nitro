@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/go-cmp/cmp"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
@@ -251,10 +251,6 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 
 	// Wait for channel to finalize
 	if updated.C.GetChannelMode() == channel.Challenge {
-		if updated.IsChallengeInitiatedByMe {
-			waitRequest := protocols.WaitRequest{Objective: &updated, TimeDuration: time.Duration(updated.C.ChallengeDuration)}
-			sideEffects.AttemptsToWait = append(sideEffects.AttemptsToWait, waitRequest)
-		}
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
@@ -265,6 +261,13 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
 		updated.withdrawTransactionSubmitted = true
 		return &updated, sideEffects, WaitingForWithdraw, nil
+	}
+
+	// Direct defund with challenge is complete
+	if updated.C.GetChannelMode() == channel.Finalized && updated.fullyWithdrawn() {
+		updated.C.OnChain.FinalizesAt = common.Big0
+		updated.Status = protocols.Completed
+		return &updated, sideEffects, WaitingForNothing, nil
 	}
 
 	// Direct defund without challenge

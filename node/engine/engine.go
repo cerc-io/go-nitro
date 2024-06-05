@@ -162,7 +162,6 @@ func New(vm *payments.VoucherManager, msg messageservice.MessageService, chain c
 
 	e.wg.Add(1)
 	go e.run(ctx)
-	go e.LiquidateChallengedChannels()
 
 	return e
 }
@@ -185,6 +184,7 @@ func (e *Engine) run(ctx context.Context) {
 		var err error
 
 		blockTicker := time.NewTicker(15 * time.Second)
+		channelTicker := time.NewTicker(5 * time.Second)
 
 		select {
 
@@ -203,6 +203,8 @@ func (e *Engine) run(ctx context.Context) {
 		case <-blockTicker.C:
 			blockNum := e.chain.GetLastConfirmedBlockNum()
 			err = e.store.SetLastBlockNumSeen(blockNum)
+		case <-channelTicker.C:
+			err = e.liquidateChallengedChannels()
 		case <-ctx.Done():
 			e.wg.Done()
 			return
@@ -615,16 +617,6 @@ func (e *Engine) executeSideEffects(sideEffects protocols.SideEffects) error {
 		e.fromLedger <- proposal
 	}
 
-	go func() {
-		for _, waitRequest := range sideEffects.AttemptsToWait {
-			time.Sleep(waitRequest.TimeDuration * time.Second)
-			_, err := e.attemptProgress(waitRequest.Objective)
-			if err != nil {
-				e.logger.Error(err.Error())
-			}
-		}
-	}()
-
 	return nil
 }
 
@@ -886,27 +878,29 @@ func (e *Engine) logMessage(msg protocols.Message, direction messageDirection) {
 	}
 }
 
-func (e *Engine) LiquidateChallengedChannels() {
+func (e *Engine) liquidateChallengedChannels() error {
 	channels, err := e.store.GetAllChannels()
 	if err != nil {
-		e.logger.Error(err.Error())
+		return err
 	}
 
 	for _, ch := range channels {
-		if ch.GetChannelMode() == channel.Challenge {
-			time.Sleep(time.Duration(ch.ChallengeDuration))
+		if ch.GetChannelMode() == channel.Finalized {
 			obj, ok := e.store.GetObjectiveByChannelId(ch.Id)
-			if !ok {
-				e.logger.Error("Objective not found", "channelId", ch.Id)
+			dDfo, isDdfo := obj.(*directdefund.Objective)
+
+			if !ok || !isDdfo || !dDfo.IsChallengeInitiatedByMe {
+				e.logger.Info("Ignoring liquidation for challenged channel", "channelId", ch.Id)
 				continue
 			}
 
 			_, err = e.attemptProgress(obj)
 			if err != nil {
-				e.logger.Error(err.Error())
+				return err
 			}
 		}
 	}
+	return nil
 }
 
 func (e *Engine) checkError(err error) {

@@ -58,7 +58,7 @@ export enum CounterChallengeAction {
 }
 
 export type CounterChallengePayload = {
-  Channel: string;
+  ChannelId: string;
   Action: CounterChallengeAction;
 };
 

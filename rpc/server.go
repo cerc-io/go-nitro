@@ -187,7 +187,7 @@ func (rs *RpcServer) registerHandlers() (err error) {
 			})
 		case serde.CounterChallengeRequestMethod:
 			return processRequest(rs, permSign, requestData, func(req serde.CounterChallengeRequest) (serde.CounterChallengeRequest, error) {
-				rs.node.CounterChallenge(req.Channel, req.Action)
+				rs.node.CounterChallenge(req.ChannelId, req.Action)
 				return req, nil
 			})
 		default:

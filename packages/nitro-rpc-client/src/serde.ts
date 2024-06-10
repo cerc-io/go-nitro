@@ -2,7 +2,6 @@ import Ajv, { JTDDataType } from "ajv/dist/jtd";
 
 import {
   ChannelStatus,
-  CounterChallengePayload,
   LedgerChannelInfo,
   PaymentChannelInfo,
   RPCNotification,
@@ -43,6 +42,14 @@ type ObjectiveSchemaType = JTDDataType<typeof objectiveSchema>;
 
 const stringSchema = { type: "string" } as const;
 type StringSchemaType = JTDDataType<typeof stringSchema>;
+
+const counterChallengeSchema = {
+  properties: {
+    ChannelId: { type: "string" },
+    Action: { type: "int32" },
+  },
+} as const;
+type CounterChallengeSchemaType = JTDDataType<typeof counterChallengeSchema>;
 
 const ledgerChannelSchema = {
   properties: {
@@ -129,7 +136,8 @@ type ResponseSchema =
   | typeof paymentChannelsSchema
   | typeof paymentSchema
   | typeof voucherSchema
-  | typeof receiveVoucherSchema;
+  | typeof receiveVoucherSchema
+  | typeof counterChallengeSchema;
 
 type ResponseSchemaType =
   | ObjectiveSchemaType
@@ -140,7 +148,8 @@ type ResponseSchemaType =
   | PaymentChannelsSchemaType
   | PaymentSchemaType
   | VoucherSchemaType
-  | ReceiveVoucherSchemaType;
+  | ReceiveVoucherSchemaType
+  | CounterChallengeSchemaType;
 
 /**
  * Validates that the response is a valid JSON RPC response with a valid result
@@ -181,8 +190,11 @@ export function getAndValidateResult<T extends RequestMethod>(
         convertToInternalLedgerChannelType
       );
     case "counter_challenge":
-      // TODO: Add validation for response
-      return {} as CounterChallengePayload;
+      return validateAndConvertResult(
+        counterChallengeSchema,
+        result,
+        (result: CounterChallengeSchemaType) => result
+      );
     case "get_all_ledger_channels":
       return validateAndConvertResult(
         ledgerChannelsSchema,

@@ -190,17 +190,10 @@ export class NitroRpcClient implements RpcClientApi {
     action: CounterChallengeAction
   ): Promise<CounterChallengePayload> {
     const payload = {
-      Channel: channelId,
+      ChannelId: channelId,
       Action: action,
     };
-    const request = generateRequest(
-      "counter_challenge",
-      payload,
-      this.authToken || ""
-    );
-    const res = await this.transport.sendRequest<"counter_challenge">(request);
-    // TODO: Validate the response
-    return res as CounterChallengePayload;
+    return this.sendRequest("counter_challenge", payload);
   }
 
   public async ClosePaymentChannel(channelId: string): Promise<string> {

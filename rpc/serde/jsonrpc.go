@@ -55,10 +55,9 @@ type PaymentRequest struct {
 	Channel types.Destination
 }
 
-// TODO: Check can we reuse type present in types package
 type CounterChallengeRequest struct {
-	Channel types.Destination
-	Action  types.CounterChallengeAction
+	ChannelId types.Destination
+	Action    types.CounterChallengeAction
 }
 
 type GetPaymentChannelRequest struct {

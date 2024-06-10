@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/go-cmp/cmp"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
@@ -284,7 +283,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 	}
 
 	// Liquidate the assets
-	if updated.C.GetChannelMode() == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.fullyWithdrawn() {
+	if updated.C.GetChannelMode() == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.FullyWithdrawn() {
 		latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
 		transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
@@ -293,8 +292,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 	}
 
 	// Direct defund with challenge objective is complete after asset liquidation
-	if updated.C.GetChannelMode() == channel.Finalized && updated.fullyWithdrawn() {
-		updated.C.OnChain.FinalizesAt = common.Big0
+	if updated.C.GetChannelMode() == channel.Finalized && updated.FullyWithdrawn() {
 		updated.Status = protocols.Completed
 		return &updated, sideEffects, WaitingForNothing, nil
 	}
@@ -341,7 +339,7 @@ func (o *Objective) crank(updated Objective, sideEffects protocols.SideEffects, 
 	}
 
 	// Withdrawal of funds
-	if !updated.fullyWithdrawn() {
+	if !updated.FullyWithdrawn() {
 		// The first participant in the channel submits the withdrawAll transaction
 		if updated.C.MyIndex == 0 && !updated.withdrawTransactionSubmitted {
 			withdrawAll := protocols.NewWithdrawAllTransaction(updated.C.Id, latestSignedState)
@@ -375,8 +373,8 @@ func CreateChannelFromConsensusChannel(cc consensus_channel.ConsensusChannel) (*
 	return c, nil
 }
 
-// fullyWithdrawn returns true if the channel contains no assets on chain
-func (o *Objective) fullyWithdrawn() bool {
+// FullyWithdrawn returns true if the channel contains no assets on chain
+func (o *Objective) FullyWithdrawn() bool {
 	return !o.C.OnChain.Holdings.IsNonZero()
 }
 

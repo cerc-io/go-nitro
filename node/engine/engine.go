@@ -702,7 +702,7 @@ func (e *Engine) attemptProgress(objective protocols.Objective) (outgoing Engine
 			return
 		}
 
-		err = e.destoryObjectiveAndChannelIfDirectDeFundObjectiveInChallenge(crankedObjective)
+		err = e.destoryObjectiveAndChannelIfDirectDeFundObjectivesChallengeIsCleared(crankedObjective)
 		if err != nil {
 			return
 		}
@@ -787,11 +787,13 @@ func (e Engine) spawnConsensusChannelIfDirectFundObjective(crankedObjective prot
 	return nil
 }
 
-func (e Engine) destoryObjectiveAndChannelIfDirectDeFundObjectiveInChallenge(crankedObjective protocols.Objective) error {
+// destoryObjectiveAndChannelIfDirectDeFundObjectivesChallengeIsCleared attempts to create and store a ConsensusChannel
+// derived from the supplied Objective if it is a directdefund.Objective and its challenge has been cleared.
+// If successful, the associated objective and channel will be destroyed.
+func (e Engine) destoryObjectiveAndChannelIfDirectDeFundObjectivesChallengeIsCleared(crankedObjective protocols.Objective) error {
 	dDfo, isDdfo := crankedObjective.(*directdefund.Objective)
 
-	// TODO: Test the conditions
-	if isDdfo && (dDfo.IsChallengeInitiatedByMe || dDfo.IsCheckpoint) {
+	if isDdfo && !dDfo.FullyWithdrawn() {
 		c, err := dDfo.CreateConsensusChannel()
 		if err != nil {
 			return fmt.Errorf("could not create consensus channel for objective %s: %w", crankedObjective.Id(), err)

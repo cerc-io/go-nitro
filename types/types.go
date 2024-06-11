@@ -37,7 +37,7 @@ type CounterChallengeAction int
 
 const (
 	Checkpoint CounterChallengeAction = iota
-	CounterChallenge
+	Challenge
 )
 
 type CounterChallengeRequest struct {

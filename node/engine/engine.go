@@ -608,7 +608,7 @@ func (e *Engine) handleCounterChallengeRequest(request types.CounterChallengeReq
 	switch request.Action {
 	case types.Checkpoint:
 		obj.IsCheckpoint = true
-	case types.CounterChallenge:
+	case types.Challenge:
 		obj.IsChallengeInitiatedByMe = true
 	default:
 		return fmt.Errorf("Unknown counter challenge action")

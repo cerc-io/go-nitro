@@ -186,8 +186,10 @@ func openLedgerChannel(t *testing.T, alpha node.Node, beta node.Node, asset comm
 
 	t.Log("Waiting for direct-fund objective to complete...")
 
-	<-alpha.ObjectiveCompleteChan(response.Id)
-	<-beta.ObjectiveCompleteChan(response.Id)
+	chA := alpha.ObjectiveCompleteChan(response.Id)
+	chB := beta.ObjectiveCompleteChan(response.Id)
+	<-chA
+	<-chB
 
 	t.Log("Completed direct-fund objective")
 
@@ -202,21 +204,31 @@ func closeLedgerChannel(t *testing.T, alpha node.Node, beta node.Node, channelId
 
 	t.Log("Waiting for direct-defund objective to complete...")
 
-	<-alpha.ObjectiveCompleteChan(response)
-	<-beta.ObjectiveCompleteChan(response)
+	chA := alpha.ObjectiveCompleteChan(response)
+	chB := beta.ObjectiveCompleteChan(response)
+	<-chA
+	<-chB
 
 	t.Log("Completed direct-defund objective")
 }
 
 func waitForObjectives(t *testing.T, a, b node.Node, intermediaries []node.Node, objectiveIds []protocols.ObjectiveId) {
-	for _, objectiveId := range objectiveIds {
-		<-a.ObjectiveCompleteChan(objectiveId)
+	var ObjectivesToWaitFor []<-chan struct{}
 
-		<-b.ObjectiveCompleteChan(objectiveId)
+	for _, objectiveId := range objectiveIds {
+		chA := a.ObjectiveCompleteChan(objectiveId)
+		ObjectivesToWaitFor = append(ObjectivesToWaitFor, chA)
+		chB := b.ObjectiveCompleteChan(objectiveId)
+		ObjectivesToWaitFor = append(ObjectivesToWaitFor, chB)
 
 		for _, intermediary := range intermediaries {
-			<-intermediary.ObjectiveCompleteChan(objectiveId)
+			chI := intermediary.ObjectiveCompleteChan(objectiveId)
+			ObjectivesToWaitFor = append(ObjectivesToWaitFor, chI)
 		}
+	}
+
+	for _, ch := range ObjectivesToWaitFor {
+		<-ch
 	}
 }
 

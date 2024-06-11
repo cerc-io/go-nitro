@@ -436,8 +436,8 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	if !ok {
 		// If channel doesn't exist and chain event is ChallengeRegistered then create a new direct defund objective
 		// This doesn't occur for actor who registered the challenge
-		_, isChalllengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
-		if isChalllengeRegistered {
+		_, isChallengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
+		if isChallengeRegistered {
 			ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById)
 			if err != nil {
 				// Node should not panic if it is unable to find the required consensus channel before creating objective

@@ -164,8 +164,10 @@ yargs(hideBin(process.argv))
         yargs["is-challenge"]
       );
       console.log(`Objective started ${id}`);
-      await rpcClient.WaitForLedgerChannelStatus(yargs.channelId, "Complete");
-      console.log(`Channel Complete ${yargs.channelId}`);
+      await rpcClient.WaitForObjectiveToComplete(
+        `DirectDefunding-${yargs.channelId}`
+      );
+      console.log(`Objective Complete ${yargs.channelId}`);
       await rpcClient.Close();
       process.exit(0);
     }
@@ -356,7 +358,13 @@ yargs(hideBin(process.argv))
           yargs.action as keyof typeof CounterChallengeAction
         ]
       );
-      console.log(response);
+      console.log(
+        `Sending ${response.Action} transaction for channel ${response.ChannelId}`
+      );
+      await rpcClient.WaitForObjectiveToComplete(
+        `DirectDefunding-${yargs.channelId}`
+      );
+      console.log(`Objective Complete ${response.ChannelId}`);
       await rpcClient.Close();
       process.exit(0);
     }

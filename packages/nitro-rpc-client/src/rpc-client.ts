@@ -16,6 +16,7 @@ import {
   DirectDefundObjectiveRequest,
   CounterChallengeAction,
   CounterChallengeResult,
+  ObjectiveCompleteNotification,
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -60,6 +61,20 @@ export class NitroRpcClient implements RpcClientApi {
     );
     const res = await this.transport.sendRequest<"receive_voucher">(request);
     return getAndValidateResult(res, "receive_voucher");
+  }
+
+  public async WaitForObjectiveToComplete(objectiveId: string): Promise<void> {
+    const promise = new Promise<void>((resolve) => {
+      this.transport.Notifications.on(
+        "objective_completed",
+        (payload: ObjectiveCompleteNotification["params"]["payload"]) => {
+          if (payload === objectiveId) {
+            resolve();
+          }
+        }
+      );
+    });
+    return promise;
   }
 
   public async WaitForLedgerChannelStatus(

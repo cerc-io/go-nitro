@@ -2,6 +2,8 @@ import Ajv, { JTDDataType } from "ajv/dist/jtd";
 
 import {
   ChannelStatus,
+  CounterChallengeAction,
+  CounterChallengeResult,
   LedgerChannelInfo,
   PaymentChannelInfo,
   RPCNotification,
@@ -193,7 +195,7 @@ export function getAndValidateResult<T extends RequestMethod>(
       return validateAndConvertResult(
         counterChallengeSchema,
         result,
-        (result: CounterChallengeSchemaType) => result
+        convertToCounterChallengeResultType
       );
     case "get_all_ledger_channels":
       return validateAndConvertResult(
@@ -320,6 +322,17 @@ function convertToInternalLedgerChannelType(
       TheirBalance: BigInt(result.Balance.TheirBalance),
       MyBalance: BigInt(result.Balance.MyBalance),
     },
+  };
+}
+
+function convertToCounterChallengeResultType(
+  result: CounterChallengeSchemaType
+): CounterChallengeResult {
+  return {
+    ChannelId: result.ChannelId,
+    Action: CounterChallengeAction[
+      result.Action
+    ] as keyof typeof CounterChallengeAction,
   };
 }
 

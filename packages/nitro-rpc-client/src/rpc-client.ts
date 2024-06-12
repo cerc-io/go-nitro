@@ -14,8 +14,8 @@ import {
   LedgerChannelUpdatedNotification,
   PaymentChannelUpdatedNotification,
   DirectDefundObjectiveRequest,
-  CounterChallengePayload,
   CounterChallengeAction,
+  CounterChallengeResult,
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -188,7 +188,7 @@ export class NitroRpcClient implements RpcClientApi {
   public async CounterChallenge(
     channelId: string,
     action: CounterChallengeAction
-  ): Promise<CounterChallengePayload> {
+  ): Promise<CounterChallengeResult> {
     const payload = {
       ChannelId: channelId,
       Action: action,

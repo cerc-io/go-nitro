@@ -62,6 +62,11 @@ export type CounterChallengePayload = {
   Action: CounterChallengeAction;
 };
 
+export type CounterChallengeResult = {
+  ChannelId: string;
+  Action: keyof typeof CounterChallengeAction;
+};
+
 export type Voucher = {
   ChannelId: string;
   // todo: this should be a bigint
@@ -108,7 +113,7 @@ export type DirectFundRequest = JsonRpcRequest<
 >;
 export type PaymentRequest = JsonRpcRequest<"pay", PaymentPayload>;
 export type CounterChallengeRequest = JsonRpcRequest<
-  "pay",
+  "counter_challenge",
   CounterChallengePayload
 >;
 
@@ -156,7 +161,7 @@ export type ReceiveVoucherRequest = JsonRpcRequest<"receive_voucher", Voucher>;
 export type GetAuthTokenResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelResponse = JsonRpcResponse<PaymentChannelInfo>;
 export type PaymentResponse = JsonRpcResponse<PaymentPayload>;
-export type CounterChallengeResponse = JsonRpcResponse<CounterChallengePayload>;
+export type CounterChallengeResponse = JsonRpcResponse<CounterChallengeResult>;
 export type GetLedgerChannelResponse = JsonRpcResponse<LedgerChannelInfo>;
 export type VirtualFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type VersionResponse = JsonRpcResponse<string>;

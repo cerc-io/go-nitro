@@ -132,7 +132,6 @@ func NewObjective(
 	}
 
 	init.IsChallengeInitiatedByMe = request.IsChallenge
-
 	return init, nil
 }
 
@@ -449,7 +448,8 @@ func (o *Objective) otherParticipants() []types.Address {
 	return others
 }
 
-func (o *Objective) CreateConsensusChannel() (*consensus_channel.ConsensusChannel, error) {
+// CreateConsensusChannelFromChannel creates a ConsensusChannel from the Objective by extracting signatures and a single asset outcome from the latest supported signed state.
+func (o *Objective) CreateConsensusChannelFromChannel() (*consensus_channel.ConsensusChannel, error) {
 	ledger := o.C
 
 	signedState, err := ledger.LatestSupportedSignedState()

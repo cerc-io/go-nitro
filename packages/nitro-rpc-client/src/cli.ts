@@ -145,7 +145,7 @@ yargs(hideBin(process.argv))
           type: "string",
           demandOption: true,
         })
-        .option("is-challenge", {
+        .option("isChallenge", {
           describe: "To initiate challenge transaction",
           type: "boolean",
           default: false,
@@ -161,7 +161,7 @@ yargs(hideBin(process.argv))
 
       const id = await rpcClient.CloseLedgerChannel(
         yargs.channelId,
-        yargs["is-challenge"]
+        yargs.isChallenge
       );
       console.log(`Objective started ${id}`);
       await rpcClient.WaitForObjectiveToComplete(
@@ -352,6 +352,7 @@ yargs(hideBin(process.argv))
         getLocalRPCUrl(rpcPort)
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
+
       const response = await rpcClient.CounterChallenge(
         yargs.channelId,
         CounterChallengeAction[

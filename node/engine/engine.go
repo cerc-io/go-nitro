@@ -594,6 +594,7 @@ func (e *Engine) handlePaymentRequest(request PaymentRequest) (EngineEvent, erro
 	return ee, e.executeSideEffects(se)
 }
 
+// handleCounterChallengeRequest handles a counter challenge request for the given channel.
 func (e *Engine) handleCounterChallengeRequest(request types.CounterChallengeRequest) error {
 	objective, err := e.store.GetObjectiveById(protocols.ObjectiveId(directdefund.ObjectivePrefix + request.ChannelId.String()))
 	if err != nil {
@@ -702,7 +703,7 @@ func (e *Engine) attemptProgress(objective protocols.Objective) (outgoing Engine
 			return
 		}
 
-		err = e.destoryObjectiveAndChannelIfDirectDeFundObjectivesChallengeIsCleared(crankedObjective)
+		err = e.destroyObjectiveAndChannelIfChallengeCleared(crankedObjective)
 		if err != nil {
 			return
 		}
@@ -787,14 +788,14 @@ func (e Engine) spawnConsensusChannelIfDirectFundObjective(crankedObjective prot
 	return nil
 }
 
-// destoryObjectiveAndChannelIfDirectDeFundObjectivesChallengeIsCleared attempts to create and store a ConsensusChannel
+// destroyObjectiveAndChannelIfChallengeCleared attempts to create and store a ConsensusChannel
 // derived from the supplied Objective if it is a directdefund.Objective and its challenge has been cleared.
 // If successful, the associated objective and channel will be destroyed.
-func (e Engine) destoryObjectiveAndChannelIfDirectDeFundObjectivesChallengeIsCleared(crankedObjective protocols.Objective) error {
+func (e Engine) destroyObjectiveAndChannelIfChallengeCleared(crankedObjective protocols.Objective) error {
 	dDfo, isDdfo := crankedObjective.(*directdefund.Objective)
 
 	if isDdfo && !dDfo.FullyWithdrawn() {
-		c, err := dDfo.CreateConsensusChannel()
+		c, err := dDfo.CreateConsensusChannelFromChannel()
 		if err != nil {
 			return fmt.Errorf("could not create consensus channel for objective %s: %w", crankedObjective.Id(), err)
 		}

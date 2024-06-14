@@ -379,7 +379,9 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 		c.OnChain.Outcome = outcome.Exit{}
 		c.OnChain.FinalizesAt = common.Big0
 
-	// TODO: Handle checkpoint event
+	// TODO: Handle Checkpointed event
+	// Checkpointed event is emitted after a checkpoint transaction occurs on an open channel
+	// checkpoint method of ForceMove.sol contract
 	default:
 		return &Channel{}, fmt.Errorf("channel %+v cannot handle event %+v", c, event)
 	}

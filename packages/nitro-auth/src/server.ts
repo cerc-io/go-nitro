@@ -114,18 +114,21 @@ const authTokenSchema = {
 };
 
 fastify.get('/auth/:token', authTokenSchema, async (req: any, res: any) => {
-  metrics.incCounter('get_auth_token');
+  metrics.incCounter('get_auth');
   const token = tokenByValue.get(req.params.token);
   if (token) {
     metrics.incCounter(`get_auth_${token.channel}`);
     if (token.use(1n)) {
+      metrics.incCounter('get_auth_200');
       return token;
     }
     res.code(402);
+    metrics.incCounter('get_auth_402');
     return '402 Payment Required';
 
   }
   res.code(401);
+  metrics.incCounter('get_auth_401');
   return '401 Unauthorized';
 });
 

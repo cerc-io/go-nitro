@@ -30,6 +30,10 @@ type ChainOpts struct {
 	NaAddress       common.Address
 	VpaAddress      common.Address
 	CaAddress       common.Address
+	GasPrice        *big.Int
+	GasFeeCap       *big.Int
+	GasTipCap       *big.Int
+	GasLimit        uint64
 }
 
 var (
@@ -117,6 +121,10 @@ func NewEthChainService(chainOpts ChainOpts) (ChainService, error) {
 	if err != nil {
 		panic(err)
 	}
+	txSigner.GasLimit = chainOpts.GasLimit
+	txSigner.GasPrice = chainOpts.GasPrice
+	txSigner.GasFeeCap = chainOpts.GasFeeCap
+	txSigner.GasTipCap = chainOpts.GasTipCap
 
 	na, err := NitroAdjudicator.NewNitroAdjudicator(chainOpts.NaAddress, ethClient)
 	if err != nil {
@@ -228,10 +236,10 @@ func (ecs *EthChainService) defaultTxOpts() *bind.TransactOpts {
 		From:      ecs.txSigner.From,
 		Nonce:     ecs.txSigner.Nonce,
 		Signer:    ecs.txSigner.Signer,
+		GasPrice:  ecs.txSigner.GasPrice,
 		GasFeeCap: ecs.txSigner.GasFeeCap,
 		GasTipCap: ecs.txSigner.GasTipCap,
 		GasLimit:  ecs.txSigner.GasLimit,
-		GasPrice:  ecs.txSigner.GasPrice,
 	}
 }
 
@@ -241,6 +249,9 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 	case protocols.DepositTransaction:
 		for tokenAddress, amount := range tx.Deposit {
 			txOpts := ecs.defaultTxOpts()
+			ecs.logger.Info("tx opts", "from", txOpts.From, "nonce", txOpts.Nonce,
+				"gasFeeCap", txOpts.GasFeeCap, "gasTipCap", txOpts.GasTipCap,
+				"gasLimit", txOpts.GasLimit, "gasPrice", txOpts.GasPrice)
 			ethTokenAddress := common.Address{}
 			if tokenAddress == ethTokenAddress {
 				txOpts.Value = amount
@@ -256,7 +267,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				// TODO: wait for the Approve tx to be mined before continuing
 			}
 			holdings, err := ecs.na.Holdings(&bind.CallOpts{}, tokenAddress, tx.ChannelId())
-			ecs.logger.Debug("existing holdings", "holdings", holdings)
+			ecs.logger.Info("existing holdings", "holdings", holdings)
 
 			if err != nil {
 				return err
@@ -422,7 +433,7 @@ func (ecs *EthChainService) listenForEventLogs(errorChan chan<- error, eventChan
 			ecs.eventSub.Unsubscribe()
 
 		case chainEvent := <-eventChan:
-			ecs.logger.Debug("queueing new chainEvent", "block-num", chainEvent.BlockNumber)
+			ecs.logger.Debug("queueing new chainEvent", "block-num", chainEvent.BlockNumber, "block-hash", chainEvent.BlockHash)
 			ecs.updateEventTracker(errorChan, nil, &chainEvent)
 		}
 	}
@@ -464,7 +475,7 @@ func (ecs *EthChainService) listenForNewBlocks(errorChan chan<- error, newBlockC
 
 		case newBlock := <-newBlockChan:
 			newBlockNum := newBlock.Number.Uint64()
-			ecs.logger.Log(ecs.ctx, logging.LevelTrace, "detected new block", "block-num", newBlockNum)
+			ecs.logger.Debug("detected new block", "block-num", newBlockNum, "block-hash", newBlock.Hash())
 			ecs.updateEventTracker(errorChan, &newBlockNum, nil)
 		}
 	}
@@ -489,16 +500,22 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, blockNumb
 		chainEvent := ecs.eventTracker.Pop()
 		ecs.logger.Debug("event popped from queue", "updated-queue-length", ecs.eventTracker.events.Len())
 
+		// This check seems to create false positives with geth 1.14.
+		// see https://git.vdb.to/cerc-io/fixturenet-eth-stacks/issues/11
+
 		// Ensure event & associated tx is still in the chain before adding to eventsToDispatch
-		oldBlock, err := ecs.chain.BlockByNumber(context.Background(), new(big.Int).SetUint64(chainEvent.BlockNumber))
+		chainBlock, err := ecs.chain.BlockByNumber(context.Background(), new(big.Int).SetUint64(chainEvent.BlockNumber))
 		if err != nil {
 			ecs.logger.Error("failed to fetch block: %v", err)
 			errorChan <- fmt.Errorf("failed to fetch block: %v", err)
 			return
 		}
 
-		if oldBlock.Hash() != chainEvent.BlockHash {
-			ecs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)", "blockNumber", chainEvent.BlockNumber, "blockHash", chainEvent.BlockHash)
+		if chainBlock.Hash() != chainEvent.BlockHash {
+			ecs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)",
+				"block-num", chainEvent.BlockNumber,
+				"block-hash", chainBlock.Hash(),
+				"event-block-hash", chainEvent.BlockHash)
 			continue
 		}
 

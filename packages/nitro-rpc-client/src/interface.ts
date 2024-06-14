@@ -1,11 +1,12 @@
 import {
+  ChannelStatus,
   LedgerChannelInfo,
   ObjectiveResponse,
   PaymentChannelInfo,
   PaymentPayload,
   ReceiveVoucherResult,
   Voucher,
-} from "./types";
+} from "./types.js";
 
 interface ledgerChannelApi {
   /**
@@ -16,7 +17,7 @@ interface ledgerChannelApi {
    */
   CreateLedgerChannel(
     counterParty: string,
-    amount: number
+    amount: bigint
   ): Promise<ObjectiveResponse>;
   /**
    * CloseLedgerChannel defunds a directly funded ledger channel.
@@ -49,7 +50,7 @@ interface paymentChannelApi {
   CreatePaymentChannel(
     counterParty: string,
     intermediaries: string[],
-    amount: number
+    amount: bigint
   ): Promise<ObjectiveResponse>;
   /**
    * ClosePaymentChannel defunds a virtually funded payment channel.
@@ -82,7 +83,7 @@ interface paymentApi {
    * @param amount The amount for the voucher
    * @returns A signed voucher
    */
-  CreateVoucher(channelId: string, amount: number): Promise<Voucher>;
+  CreateVoucher(channelId: string, amount: bigint): Promise<Voucher>;
   /**
    * Adds a voucher to the go-nitro node that was received from the other party to the channel.
    * @param voucher The voucher to add
@@ -95,16 +96,30 @@ interface paymentApi {
    * @param channelId - The ID of the payment channel to use
    * @param amount - The amount to pay
    */
-  Pay(channelId: string, amount: number): Promise<PaymentPayload>;
+  Pay(channelId: string, amount: bigint): Promise<PaymentPayload>;
 }
 
 interface syncAPI {
   /**
-   * WaitForObjective blocks until the objective with the given ID to complete.
+   * WaitForLedgerChannelStatus blocks until the ledger channel with the given ID to have the given status.
    *
-   * @param objectiveId - The id objective to wait for
+   * @param objectiveId - The channel id to wait for
+   * @param status - The channel id to wait for (e.g. Ready or Closing)
    */
-  WaitForObjective(objectiveId: string): Promise<void>;
+  WaitForLedgerChannelStatus(
+    objectiveId: string,
+    status: ChannelStatus
+  ): Promise<void>;
+  /**
+   * WaitForPaymentChannelStatus blocks until the payment channel with the given ID to have the given status.
+   *
+   * @param objectiveId - The channel id to wait for
+   * @param status - The channel id to wait for (e.g. Ready or Closing)
+   */
+  WaitForPaymentChannelStatus(
+    objectiveId: string,
+    status: ChannelStatus
+  ): Promise<void>;
   /**
    * PaymentChannelUpdated attaches a callback which is triggered when the channel with supplied ID is updated.
    * Returns a cleanup function which can be used to remove the subscription.

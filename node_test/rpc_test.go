@@ -442,7 +442,7 @@ func setupNitroNodeWithRPCClient(
 	}
 
 	paymentsManager := paymentsmanager.PaymentsManager{}
-	rpcServer, err := interRpc.InitializeRpcServer(&node, paymentsManager, rpcPort, useNats, &cert)
+	rpcServer, err := interRpc.InitializeRpcServer(&node, paymentsManager, messageService, rpcPort, useNats, &cert)
 	if err != nil {
 		t.Fatal(err)
 	}

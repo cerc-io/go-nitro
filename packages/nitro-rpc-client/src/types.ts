@@ -47,15 +47,13 @@ export type VirtualFundPayload = {
   AppDefinition: string;
 };
 export type PaymentPayload = {
-  // todo: this should be a bigint
-  Amount: number;
+  Amount: bigint;
   Channel: string;
 };
 
 export type Voucher = {
   ChannelId: string;
-  // todo: this should be a bigint
-  Amount: number;
+  Amount: bigint;
 
   Signature: string;
 };
@@ -87,6 +85,10 @@ export type GetAuthTokenRequest = JsonRpcRequest<
 >;
 export type GetAddressRequest = JsonRpcRequest<
   "get_address",
+  Record<string, never>
+>;
+export type GetPeerIdRequest = JsonRpcRequest<
+  "get_peerid",
   Record<string, never>
 >;
 export type DirectFundRequest = JsonRpcRequest<
@@ -142,6 +144,7 @@ export type GetLedgerChannelResponse = JsonRpcResponse<LedgerChannelInfo>;
 export type VirtualFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type VersionResponse = JsonRpcResponse<string>;
 export type GetAddressResponse = JsonRpcResponse<string>;
+export type GetPeerIdResponse = JsonRpcResponse<string>;
 export type DirectFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type DirectDefundResponse = JsonRpcResponse<string>;
 export type VirtualDefundResponse = JsonRpcResponse<string>;
@@ -162,6 +165,7 @@ export type RPCRequestAndResponses = {
   version: [VersionRequest, VersionResponse];
   create_payment_channel: [VirtualFundRequest, VirtualFundResponse];
   get_address: [GetAddressRequest, GetAddressResponse];
+  get_peerid: [GetPeerIdRequest, GetPeerIdResponse];
   get_ledger_channel: [GetLedgerChannelRequest, GetLedgerChannelResponse];
   get_payment_channel: [GetPaymentChannelRequest, GetPaymentChannelResponse];
   pay: [PaymentRequest, PaymentResponse];
@@ -250,7 +254,7 @@ export type SingleAssetOutcome = {
 
 export type Allocation = {
   Destination: string;
-  Amount: number;
+  Amount: bigint;
   AllocationType: number;
   Metadata: null;
 };
@@ -259,4 +263,4 @@ export type AssetMetadata = {
   Metadata: null;
 };
 
-export type ChannelStatus = "Proposed" | "Ready" | "Closing" | "Complete";
+export type ChannelStatus = "Proposed" | "Open" | "Closing" | "Complete";

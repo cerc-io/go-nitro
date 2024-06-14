@@ -1,7 +1,8 @@
 import https from "https";
 
 import axios from "axios";
-import { w3cwebsocket } from "websocket";
+import JSONBig from "json-bigint";
+import websocket from "websocket";
 import { EventEmitter } from "eventemitter3";
 
 import {
@@ -9,26 +10,22 @@ import {
   NotificationParams,
   RequestMethod,
   RPCRequestAndResponses,
-} from "../types";
-import { getAndValidateNotification } from "../serde";
+} from "../types.js";
+import { getAndValidateNotification } from "../serde.js";
 
 import { Transport } from ".";
 
 export class HttpTransport {
   Notifications: EventEmitter<NotificationMethod, NotificationParams>;
-  isSecure: boolean;
 
   public static async createTransport(
     server: string,
-    isSecure: boolean
+    isSecure = true
   ): Promise<Transport> {
-    let wsPrefix = "ws://";
-    if (isSecure) {
-      wsPrefix = "wss://";
-    }
-
     // eslint-disable-next-line new-cap
-    const ws = new w3cwebsocket(`${wsPrefix}${server}/subscribe`);
+    const ws = new websocket.w3cwebsocket(
+      `${isSecure ? "wss" : "ws"}://${server}/subscribe`
+    );
 
     // throw any websocket errors so we don't fail silently
     ws.onerror = (e) => {
@@ -46,14 +43,11 @@ export class HttpTransport {
   public async sendRequest<K extends RequestMethod>(
     req: RPCRequestAndResponses[K][0]
   ): Promise<unknown> {
-    let httpPrefix = "http://";
-    if (this.isSecure) {
-      httpPrefix = "https://";
-    }
+    const url = new URL(
+      `${this.isSecure ? "https" : "http"}://${this.server}`
+    ).toString();
 
-    const url = new URL(`${httpPrefix}${this.server}`).toString();
-
-    const result = await axios.post(url.toString(), JSON.stringify(req));
+    const result = await axios.post(url.toString(), JSONBig.stringify(req));
 
     return result.data;
   }
@@ -62,11 +56,16 @@ export class HttpTransport {
     this.ws.close(1000);
   }
 
-  private ws: w3cwebsocket;
+  private ws: websocket.w3cwebsocket;
 
   private server: string;
+  private isSecure: boolean;
 
-  private constructor(ws: w3cwebsocket, server: string, isSecure: boolean) {
+  private constructor(
+    ws: websocket.w3cwebsocket,
+    server: string,
+    isSecure = true
+  ) {
     this.ws = ws;
     this.server = server;
     this.isSecure = isSecure;

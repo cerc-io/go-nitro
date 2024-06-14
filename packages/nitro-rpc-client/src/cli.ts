@@ -1,12 +1,18 @@
 #!/usr/bin/env ts-node
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable @typescript-eslint/no-shadow */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 
-import { NitroRpcClient } from "./rpc-client";
-import { compactJson, getCustomRPCUrl, logOutChannelUpdates } from "./utils";
+import { NitroRpcClient } from "./rpc-client.js";
+import {
+  JSONbn,
+  compactJson,
+  getCustomRPCUrl,
+  logOutChannelUpdates,
+} from "./utils.js";
 
 yargs(hideBin(process.argv))
   .scriptName("nitro-rpc-client")
@@ -70,6 +76,25 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "multiaddr",
+    "Get the multiaddr of the Nitro RPC server",
+    async () => {},
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+      const multiaddr = await rpcClient.GetPeerId();
+      console.log(multiaddr);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "get-all-ledger-channels",
     "Get all ledger channels",
     async () => {},
@@ -83,9 +108,7 @@ yargs(hideBin(process.argv))
         isSecure
       );
       const ledgers = await rpcClient.GetAllLedgerChannels();
-      for (const ledger of ledgers) {
-        console.log(`${compactJson(ledger)}`);
-      }
+      console.log(`${compactJson(ledgers)}`);
       await rpcClient.Close();
       process.exit(0);
     }
@@ -113,9 +136,7 @@ yargs(hideBin(process.argv))
       const paymentChans = await rpcClient.GetPaymentChannelsByLedger(
         yargs.ledgerId
       );
-      for (const p of paymentChans) {
-        console.log(`${compactJson(p)}`);
-      }
+      console.log(`${compactJson(paymentChans)}`);
       await rpcClient.Close();
       process.exit(0);
     }
@@ -150,13 +171,13 @@ yargs(hideBin(process.argv))
 
       const dfObjective = await rpcClient.CreateLedgerChannel(
         yargs.counterparty,
-        yargs.amount
+        BigInt(yargs.amount)
       );
-      const { Id } = dfObjective;
+      const { Id, ChannelId } = dfObjective;
 
       console.log(`Objective started ${Id}`);
-      await rpcClient.WaitForObjective(Id);
-      console.log(`Objective complete ${Id}`);
+      await rpcClient.WaitForLedgerChannelStatus(ChannelId, "Open");
+      console.log(`Channel Open ${ChannelId}`);
       await rpcClient.Close();
       process.exit(0);
     }
@@ -184,8 +205,8 @@ yargs(hideBin(process.argv))
 
       const id = await rpcClient.CloseLedgerChannel(yargs.channelId);
       console.log(`Objective started ${id}`);
-      await rpcClient.WaitForObjective(id);
-      console.log(`Objective complete ${id}`);
+      await rpcClient.WaitForPaymentChannelStatus(yargs.channelId, "Complete");
+      console.log(`Channel Complete ${yargs.channelId}`);
       await rpcClient.Close();
       process.exit(0);
     }
@@ -230,13 +251,13 @@ yargs(hideBin(process.argv))
       const vfObjective = await rpcClient.CreatePaymentChannel(
         yargs.counterparty,
         intermediaries,
-        yargs.amount
+        BigInt(yargs.amount)
       );
 
-      const { Id } = vfObjective;
+      const { ChannelId, Id } = vfObjective;
       console.log(`Objective started ${Id}`);
-      await rpcClient.WaitForObjective(Id);
-      console.log(`Objective complete ${Id}`);
+      await rpcClient.WaitForPaymentChannelStatus(ChannelId, "Open");
+      console.log(`Channel Open ${ChannelId}`);
       await rpcClient.Close();
       process.exit(0);
     }
@@ -266,8 +287,8 @@ yargs(hideBin(process.argv))
       const id = await rpcClient.ClosePaymentChannel(yargs.channelId);
 
       console.log(`Objective started ${id}`);
-      await rpcClient.WaitForObjective(id);
-      console.log(`Objective complete ${id}`);
+      await rpcClient.WaitForPaymentChannelStatus(yargs.channelId, "Complete");
+      console.log(`Channel complete ${yargs.channelId}`);
       await rpcClient.Close();
       process.exit(0);
     }
@@ -293,7 +314,7 @@ yargs(hideBin(process.argv))
       );
 
       const ledgerInfo = await rpcClient.GetLedgerChannel(yargs.channelId);
-      console.log(ledgerInfo);
+      console.log(compactJson(ledgerInfo));
       await rpcClient.Close();
       process.exit(0);
     }
@@ -320,7 +341,7 @@ yargs(hideBin(process.argv))
       const paymentChannelInfo = await rpcClient.GetPaymentChannel(
         yargs.channelId
       );
-      console.log(paymentChannelInfo);
+      console.log(compactJson(paymentChannelInfo));
       await rpcClient.Close();
       process.exit(0);
     }
@@ -354,9 +375,9 @@ yargs(hideBin(process.argv))
 
       const paymentChannelInfo = await rpcClient.Pay(
         yargs.channelId,
-        yargs.amount
+        BigInt(yargs.amount)
       );
-      console.log(paymentChannelInfo);
+      console.log(compactJson(paymentChannelInfo));
       await rpcClient.Close();
       process.exit(0);
     }
@@ -390,9 +411,37 @@ yargs(hideBin(process.argv))
 
       const voucher = await rpcClient.CreateVoucher(
         yargs.channelId,
-        yargs.amount
+        BigInt(yargs.amount)
       );
-      console.log(voucher);
+      console.log(compactJson(voucher));
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
+    "receive-voucher <voucher>",
+    "Receive a payment voucher",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("voucher", {
+        describe: "voucher JSON",
+        type: "string",
+        demandOption: true,
+      });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getCustomRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+      if (yargs.n) logOutChannelUpdates(rpcClient);
+
+      const voucher = JSONbn.parse(yargs.voucher);
+      const result = await rpcClient.ReceiveVoucher(voucher);
+      console.log(compactJson(result));
       await rpcClient.Close();
       process.exit(0);
     }

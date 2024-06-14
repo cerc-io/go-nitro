@@ -136,7 +136,9 @@ func (ms *P2PMessageService) setupDht(bootPeers []string) error {
 	ctx := context.Background()
 
 	var bootAddrs []peer.AddrInfo
+	ms.logger.Info("Boot peer list", "bootPeers", bootPeers)
 	for _, p := range bootPeers {
+		ms.logger.Info("Adding boot peer", "peer", p)
 		addr, err := multiaddr.NewMultiaddr(p)
 		ms.checkError(err)
 
@@ -163,13 +165,13 @@ func (ms *P2PMessageService) setupDht(bootPeers []string) error {
 	// Setup network connection notifications
 	n := &network.NotifyBundle{}
 	n.ConnectedF = func(n network.Network, conn network.Conn) {
-		ms.logger.Debug("notification: connected to peer", "peerId", conn.RemotePeer().String(), "peerCount", len(ms.p2pHost.Network().Peers()))
+		ms.logger.Info("notification: connected to peer", "peerId", conn.RemotePeer().String(), "peerCount", len(ms.p2pHost.Network().Peers()))
 
 		peerInfo := basicPeerInfo{Id: conn.RemotePeer()}
 		ms.newPeerInfo <- peerInfo
 	}
 	n.DisconnectedF = func(n network.Network, conn network.Conn) {
-		ms.logger.Debug("notification: disconnected from peer", "peerId", conn.RemotePeer().String(), "peerCount", len(ms.p2pHost.Network().Peers()))
+		ms.logger.Info("notification: disconnected from peer", "peerId", conn.RemotePeer().String(), "peerCount", len(ms.p2pHost.Network().Peers()))
 	}
 	ms.p2pHost.Network().Notify(n)
 	ms.connectBootPeers(bootAddrs)

@@ -1,4 +1,4 @@
-import Ajv, { JTDDataType } from "ajv/dist/jtd";
+import Ajv, { JTDDataType } from "ajv/dist/jtd.js";
 
 import {
   ChannelStatus,
@@ -7,9 +7,9 @@ import {
   RPCNotification,
   RPCRequestAndResponses,
   RequestMethod,
-} from "./types";
+} from "./types.js";
 
-const ajv = new Ajv();
+const ajv = new Ajv({ int32range: false });
 
 const jsonRpcSchema = {
   properties: {
@@ -112,8 +112,8 @@ type VoucherSchemaType = JTDDataType<typeof voucherSchema>;
 
 const receiveVoucherSchema = {
   properties: {
-    Total: { type: "string" },
-    Delta: { type: "string" },
+    Total: { type: "uint32" },
+    Delta: { type: "uint32" },
   },
 } as const;
 
@@ -167,6 +167,7 @@ export function getAndValidateResult<T extends RequestMethod>(
     case "close_ledger_channel":
     case "version":
     case "get_address":
+    case "get_peerid":
     case "close_payment_channel":
       return validateAndConvertResult(
         stringSchema,
@@ -202,7 +203,10 @@ export function getAndValidateResult<T extends RequestMethod>(
       return validateAndConvertResult(
         paymentSchema,
         result,
-        (result: PaymentSchemaType) => result
+        (result: PaymentSchemaType) => ({
+          Amount: BigInt(result.Amount),
+          Channel: result.Channel,
+        })
       );
     case "receive_voucher":
       return validateAndConvertResult(
@@ -217,11 +221,11 @@ export function getAndValidateResult<T extends RequestMethod>(
       return validateAndConvertResult(
         voucherSchema,
         result,
-        (result: VoucherSchemaType) => {
-          return {
-            ...result,
-          };
-        }
+        (result: VoucherSchemaType) => ({
+          ChannelId: result.ChannelId,
+          Signature: result.Signature,
+          Amount: BigInt(result.Amount),
+        })
       );
 
     default:

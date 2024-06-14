@@ -8,15 +8,17 @@ import {
   RequestMethod,
   RPCRequestAndResponses,
   ObjectiveResponse,
-  ObjectiveCompleteNotification,
   Voucher,
   ReceiveVoucherResult,
-} from "./types";
-import { Transport } from "./transport";
-import { createOutcome, generateRequest } from "./utils";
-import { HttpTransport } from "./transport/http";
-import { getAndValidateResult } from "./serde";
-import { RpcClientApi } from "./interface";
+  ChannelStatus,
+  LedgerChannelUpdatedNotification,
+  PaymentChannelUpdatedNotification,
+} from "./types.js";
+import { Transport } from "./transport/index.js";
+import { createOutcome, generateRequest } from "./utils.js";
+import { HttpTransport } from "./transport/http.js";
+import { getAndValidateResult } from "./serde.js";
+import { RpcClientApi } from "./interface.js";
 
 export class NitroRpcClient implements RpcClientApi {
   private transport: Transport;
@@ -32,7 +34,7 @@ export class NitroRpcClient implements RpcClientApi {
 
   public async CreateVoucher(
     channelId: string,
-    amount: number
+    amount: bigint
   ): Promise<Voucher> {
     const payload = {
       Amount: amount,
@@ -57,17 +59,66 @@ export class NitroRpcClient implements RpcClientApi {
     return getAndValidateResult(res, "receive_voucher");
   }
 
-  public async WaitForObjective(objectiveId: string): Promise<void> {
-    return new Promise((resolve) => {
+  public async WaitForLedgerChannelStatus(
+    channelId: string,
+    status: ChannelStatus
+  ): Promise<void> {
+    const promise = new Promise<void>((resolve) => {
+      const checkFn = async () => {
+        const channel = await this.GetLedgerChannel(channelId);
+        if (channel.Status == status) {
+          resolve();
+        } else {
+          setTimeout(checkFn, 1000);
+        }
+      };
+
       this.transport.Notifications.on(
-        "objective_completed",
-        (params: ObjectiveCompleteNotification["params"]) => {
-          if (params["payload"] === objectiveId) {
-            resolve();
+        "ledger_channel_updated",
+        (payload: LedgerChannelUpdatedNotification["params"]["payload"]) => {
+          if (payload.ID === channelId) {
+            this.GetLedgerChannel(channelId).then((l) => {
+              if (l.Status == status) resolve();
+            });
           }
         }
       );
+
+      setTimeout(checkFn, 0);
     });
+
+    return promise;
+  }
+
+  public async WaitForPaymentChannelStatus(
+    channelId: string,
+    status: ChannelStatus
+  ): Promise<void> {
+    const promise = new Promise<void>((resolve) => {
+      const checkFn = async () => {
+        const channel = await this.GetPaymentChannel(channelId);
+        if (channel.Status == status) {
+          resolve();
+        } else {
+          setTimeout(checkFn, 1000);
+        }
+      };
+
+      this.transport.Notifications.on(
+        "payment_channel_updated",
+        (payload: PaymentChannelUpdatedNotification["params"]["payload"]) => {
+          if (payload.ID === channelId) {
+            this.GetPaymentChannel(channelId).then((l) => {
+              if (l.Status == status) resolve();
+            });
+          }
+        }
+      );
+
+      setTimeout(checkFn, 0);
+    });
+
+    return promise;
   }
 
   public onPaymentChannelUpdated(
@@ -87,7 +138,7 @@ export class NitroRpcClient implements RpcClientApi {
 
   public async CreateLedgerChannel(
     counterParty: string,
-    amount: number
+    amount: bigint
   ): Promise<ObjectiveResponse> {
     const asset = `0x${"00".repeat(20)}`;
     const payload: DirectFundPayload = {
@@ -109,7 +160,7 @@ export class NitroRpcClient implements RpcClientApi {
   public async CreatePaymentChannel(
     counterParty: string,
     intermediaries: string[],
-    amount: number
+    amount: bigint
   ): Promise<ObjectiveResponse> {
     const asset = `0x${"00".repeat(20)}`;
     const payload: VirtualFundPayload = {
@@ -129,7 +180,7 @@ export class NitroRpcClient implements RpcClientApi {
     return this.sendRequest("create_payment_channel", payload);
   }
 
-  public async Pay(channelId: string, amount: number): Promise<PaymentPayload> {
+  public async Pay(channelId: string, amount: bigint): Promise<PaymentPayload> {
     const payload = {
       Amount: amount,
       Channel: channelId,
@@ -160,6 +211,10 @@ export class NitroRpcClient implements RpcClientApi {
 
     this.myAddress = await this.sendRequest("get_address", {});
     return this.myAddress;
+  }
+
+  public async GetPeerId(): Promise<string> {
+    return this.sendRequest("get_peerid", {});
   }
 
   public async GetLedgerChannel(channelId: string): Promise<LedgerChannelInfo> {
@@ -208,14 +263,14 @@ export class NitroRpcClient implements RpcClientApi {
   /**
    * Creates an RPC client that uses HTTP/WS as the transport.
    *
-   * @param url - The URL of the HTTP/WS server
+   * @param server - The server[:port] of the HTTP/WS server
    * @returns A NitroRpcClient that uses WS as the transport
    */
   public static async CreateHttpNitroClient(
-    url: string,
-    isSecure: boolean
+    server: string,
+    isSecure = true
   ): Promise<NitroRpcClient> {
-    const transport = await HttpTransport.createTransport(url, isSecure);
+    const transport = await HttpTransport.createTransport(server, isSecure);
     const rpcClient = new NitroRpcClient(transport);
     rpcClient.authToken = await rpcClient.getAuthToken();
     return rpcClient;

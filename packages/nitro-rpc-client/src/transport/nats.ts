@@ -9,7 +9,7 @@ import {
   RPCRequestAndResponses,
 } from "../types";
 
-import { Transport } from ".";
+import { Transport } from "./index.js";
 
 const NITRO_REQUEST_TOPIC = "nitro-request";
 const NITRO_NOTIFICATION_TOPIC = "nitro-notify";

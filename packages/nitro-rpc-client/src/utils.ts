@@ -1,13 +1,16 @@
-import { NitroRpcClient } from "./rpc-client";
+import JSONBig from "json-bigint";
+
+import { NitroRpcClient } from "./rpc-client.js";
 import {
   LedgerChannelInfo,
   Outcome,
   PaymentChannelInfo,
   RequestMethod,
   RPCRequestAndResponses,
-} from "./types";
+} from "./types.js";
 
 export const RPC_PATH = "api/v1";
+export const JSONbn = JSONBig({ useNativeBigInt: true });
 
 /**
  * createOutcome creates a basic outcome for a channel
@@ -22,7 +25,7 @@ export function createOutcome(
   asset: string,
   alpha: string,
   beta: string,
-  amount: number
+  amount: bigint
 ): Outcome {
   return [
     {
@@ -85,7 +88,7 @@ export function generateRequest<
 }
 
 export function getLocalRPCUrl(port: number): string {
-  return `127.0.0.1:${port}/${RPC_PATH}`;
+  return getCustomRPCUrl("127.0.0.1", port);
 }
 
 export function getCustomRPCUrl(host: string, port: number): string {
@@ -114,8 +117,8 @@ export async function logOutChannelUpdates(rpcClient: NitroRpcClient) {
 }
 
 function prettyJson(obj: unknown): string {
-  return JSON.stringify(obj, null, 2);
+  return JSONbn.stringify(obj, undefined, 2);
 }
 export function compactJson(obj: unknown): string {
-  return JSON.stringify(obj, null, 0);
+  return JSONbn.stringify(obj, undefined, 0);
 }

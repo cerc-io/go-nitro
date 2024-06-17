@@ -375,6 +375,7 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 		c.AddSignedState(ss)
 
 	case chainservice.ChallengeClearedEvent:
+		// On chain, statusOf map is updated with the same values below following a checkpoint transaction in ForceMove contract
 		c.OnChain.StateHash = common.Hash{}
 		c.OnChain.Outcome = outcome.Exit{}
 		c.OnChain.FinalizesAt = common.Big0

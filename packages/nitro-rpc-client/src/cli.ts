@@ -164,6 +164,7 @@ yargs(hideBin(process.argv))
         yargs.isChallenge
       );
       console.log(`Objective started ${id}`);
+      // Not using WaitForLedgerChannelStatus method with complete status, as the ledger channel status will be open if a challenge is cleared using checkpoint
       await rpcClient.WaitForObjectiveToComplete(
         `DirectDefunding-${yargs.channelId}`
       );

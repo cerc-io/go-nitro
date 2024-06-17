@@ -178,3 +178,9 @@ type ObjectiveRequest interface {
 	WaitForObjectiveToStart()
 	SignalObjectiveStarted()
 }
+
+// VoucherAmountSignature is the voucher data encoded in `AppData` of channel state while calling challenge method on virtual payment channel
+type VoucherAmountSignature struct {
+	Amount    *big.Int
+	Signature NitroAdjudicator.INitroTypesSignature
+}

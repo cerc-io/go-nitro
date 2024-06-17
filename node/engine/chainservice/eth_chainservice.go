@@ -425,7 +425,7 @@ func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 			ecs.out <- event
 
 		case reclaimedTopic:
-			ecs.logger.Debug("Processing Concluded event")
+			ecs.logger.Debug("Processing Reclaimed event")
 			ce, err := ecs.na.ParseReclaimed(l)
 			if err != nil {
 				return fmt.Errorf("error in ParseReclaimed: %w", err)

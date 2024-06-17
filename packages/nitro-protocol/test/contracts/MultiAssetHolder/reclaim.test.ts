@@ -106,7 +106,7 @@ describe('reclaim', () => {
       await testNitroAdjudicator.setStatusFromChannelData(sourceId, {
         turnNumRecord: 99,
         finalizesAt: 1,
-        stateHash: lStateHash, // not realistic, but OK for purpose of this test
+        stateHash: lStateHash,
         outcomeHash: lOutcomeHash,
       })
     ).wait();

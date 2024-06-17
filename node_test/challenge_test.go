@@ -22,11 +22,6 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
-type VoucherAmountSignature struct {
-	Amount    *big.Int
-	Signature NitroAdjudicator.INitroTypesSignature
-}
-
 func TestChallenge(t *testing.T) {
 	testCase := TestCase{
 		Description:       "Direct defund with Challenge",
@@ -343,7 +338,7 @@ const payAmount = 2000
 	t.Logf("Voucher recieved %+v", nodeBVoucher)
 
 	// As Alice's node has closed, Bob has to force the defunding from virtual and ledger channel
-	// To call challenge method on virtual channel with voucher, the voucher info needs to be encoded in `appData` field of channel state
+	// To call challenge method on virtual channel with voucher, the voucher info needs to be encoded in `AppData` field of channel state
 
 	virtualChannel, _ := storeB.GetChannelById(virtualResponse.ChannelId)
 	voucherState, _ := virtualChannel.LatestSignedState()
@@ -362,7 +357,7 @@ const payAmount = 2000
 		{Type: voucherAmountSigTy},
 	}
 
-	voucherAmountSignatureData := VoucherAmountSignature{
+	voucherAmountSignatureData := protocols.VoucherAmountSignature{
 		Amount:    nodeBVoucher.Amount,
 		Signature: NitroAdjudicator.ConvertSignature(nodeBVoucher.Signature),
 	}

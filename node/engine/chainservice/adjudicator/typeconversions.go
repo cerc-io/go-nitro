@@ -70,6 +70,8 @@ func ConvertSignedStateToFixedPartAndSignedVariablePart(s state.SignedState) (IN
 		Sigs:         make([]INitroTypesSignature, 0, len(s.Signatures())),
 	}
 	for _, sig := range s.Signatures() {
+		// `NitroUtils` contract library method `recoverSigner` recovers signer address from the signature and reverts for empty signature value
+		// We recover signer address from signature to find which participants have signed the state, hence the empty signature value is not required
 		if (sig.Equal(nc.Signature{})) {
 			continue
 		}

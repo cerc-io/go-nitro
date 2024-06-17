@@ -603,7 +603,7 @@ func (e *Engine) handleCounterChallengeRequest(request types.CounterChallengeReq
 	obj, ok := objective.(*directdefund.Objective)
 
 	if !ok {
-		return fmt.Errorf("Direct defund objective required")
+		return fmt.Errorf("direct defund objective required")
 	}
 
 	switch request.Action {
@@ -612,7 +612,7 @@ func (e *Engine) handleCounterChallengeRequest(request types.CounterChallengeReq
 	case types.Challenge:
 		obj.IsChallengeInitiatedByMe = true
 	default:
-		return fmt.Errorf("Unknown counter challenge action")
+		return fmt.Errorf("unknown counter challenge action")
 	}
 
 	_, err = e.attemptProgress(objective)

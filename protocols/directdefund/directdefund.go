@@ -53,6 +53,10 @@ type Objective struct {
 
 	IsCheckpoint                   bool
 	checkpointTransactionSubmitted bool
+
+	FundedTargets []types.Destination
+
+	GetChannelById  GetChannelByIdFunction
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -85,19 +89,20 @@ func NewObjective(
 	request ObjectiveRequest,
 	preApprove bool,
 	getConsensusChannel GetConsensusChannel,
+	isOnChainChallengeRegistered bool,
 ) (Objective, error) {
 	cc, err := getConsensusChannel(request.ChannelId)
 	if err != nil {
 		return Objective{}, fmt.Errorf("%w %s: %w", ErrChannelNotExist, request.ChannelId, err)
 	}
 
-	if len(cc.FundingTargets()) != 0 {
-		return Objective{}, ErrNotEmpty
-	}
-
 	c, err := CreateChannelFromConsensusChannel(*cc)
 	if err != nil {
 		return Objective{}, fmt.Errorf("could not create Channel from ConsensusChannel; %w", err)
+	}
+
+	if (len(cc.FundingTargets()) != 0 && (!request.IsChallenge || !isOnChainChallengeRegistered))  {
+		return Objective{}, ErrNotEmpty
 	}
 
 	// We choose to disallow creating an objective if the channel has an in-progress update.
@@ -119,6 +124,9 @@ func NewObjective(
 		init.Status = protocols.Unapproved
 	}
 	init.C = c.Clone()
+
+	// Array of funded virtual channel IDs
+	init.FundedTargets = cc.FundingTargets()
 
 	latestSS, err := c.LatestSupportedState()
 	if err != nil {
@@ -161,7 +169,7 @@ func ConstructObjectiveFromPayload(
 
 	cId := s.ChannelId()
 	request := NewObjectiveRequest(cId, false)
-	return NewObjective(request, preapprove, getConsensusChannel)
+	return NewObjective(request, preapprove, getConsensusChannel, request.IsChallenge)
 }
 
 // Public methods on the DirectDefundingObjective
@@ -250,6 +258,21 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 }
 
 func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
+
+	// if len(updated.FundedTargets) != 0 {
+	// 	// Loop over funded targets and call challenge on each channel serially
+
+	// 	//
+	// 	// for _, fundedTarget := range updated.FundedTargets {
+	// 	// 	// Get channel by id
+	// 	// 	// check if voucher exists
+	// 	// 	// if voucher
+	// 	// 	 	// construct new state by encoding voucher info in appData, call challenge with postfund state as proof
+	// 	// 	// else call challenge without proof
+	// 	// }
+	// 	// return once all channels are finalized
+	// }
+
 	// Initiate challenge transaction
 	if updated.IsChallenge && !updated.challengeTransactionSubmitted {
 		latestSupportedSignedState, err := updated.C.LatestSupportedSignedState()
@@ -392,6 +415,8 @@ func (o *Objective) clone() Objective {
 
 	clone.IsCheckpoint = o.IsCheckpoint
 	clone.checkpointTransactionSubmitted = o.checkpointTransactionSubmitted
+	clone.FundedTargets = o.FundedTargets
+	clone.GetChannelById = o.GetChannelById
 
 	return clone
 }

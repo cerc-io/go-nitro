@@ -76,7 +76,7 @@ func newTestObjective() (Objective, error) {
 	}
 	request := NewObjectiveRequest(cc.Id, false)
 	// Assert that valid constructor args do not result in error
-	o, err := NewObjective(request, true, getConsensusChannel)
+	o, err := NewObjective(request, true, getConsensusChannel, false)
 	if err != nil {
 		return Objective{}, err
 	}

@@ -119,6 +119,9 @@ func (ms *MemStore) SetObjective(obj protocols.Objective) error {
 		}
 	}
 
+	// TODO: Create new map for virtualChannelId -> ledgerChannelId
+	// TODO: Set relation in map in SetObjective after storing channels
+
 	// Objective ownership can only be transferred if the channel is not owned by another objective
 	prevOwner, isOwned := ms.channelToObjective.Load(obj.OwnsChannel().String())
 	if status := obj.GetStatus(); status == protocols.Approved {

@@ -487,6 +487,8 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	if ok {
 		return e.attemptProgress(objective)
 	}
+
+	// TODO: Check vId->lId map to get ddfo for the ledger channel (on challengeRegistered event for virtual channel)
 	return EngineEvent{}, nil
 }
 

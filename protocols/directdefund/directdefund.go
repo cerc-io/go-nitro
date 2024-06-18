@@ -259,20 +259,21 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 
 func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
 
-	// if len(updated.FundedTargets) != 0 {
-	// 	// Loop over funded targets and call challenge on each channel serially
+	// TODO: For Alice -> Loop over funded targets and call challenge on each channel serially
 
-	// 	//
-	// 	// for _, fundedTarget := range updated.FundedTargets {
-	// 	// 	// Get channel by id
-	// 	// 	// check if voucher exists
-	// 	// 	// if voucher
-	// 	// 	 	// construct new state by encoding voucher info in appData, call challenge with postfund state as proof
-	// 	// 	// else call challenge without proof
-	// 	// }
-	// 	// return once all channels are finalized
-	// }
+		// for _, fundedTarget := range updated.FundedTargets {
+		// 	// Get channel by id
+		// 	// check if voucher exists
+		// 	// if voucher
+		// 	 	// construct new state by encoding voucher info in appData, call challenge with postfund state as proof
+		// 	// else call challenge without proof
+		// }
 
+		// TODO: Both Alice and Bob listen for ChallengeRegistered  events for all virtual channels
+			// Alice calls challenge on ledger channel once all virtual channels are challenge
+			// Bob updates virtual channels in store to have challenge status
+
+	// TODO: Verify that both Alice and Bob listen for ChallengeRegistered  events for ledger channel and update channel and objective
 	// Initiate challenge transaction
 	if updated.IsChallenge && !updated.challengeTransactionSubmitted {
 		latestSupportedSignedState, err := updated.C.LatestSupportedSignedState()
@@ -303,6 +304,10 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 	if updated.C.OnChain.ChannelMode == channel.Challenge {
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
+
+	// TODO: Alice calls reclaim for each of the virtual channels after ledger channel and respective virtual channel is finalized
+
+	// TODO: Alice calls transferAllAssets on Reclaimed events for all virtual channel and exit
 
 	// Liquidate the assets
 	if updated.C.OnChain.ChannelMode == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.FullyWithdrawn() {

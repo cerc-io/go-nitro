@@ -56,7 +56,8 @@ type Objective struct {
 
 	FundedTargets []types.Destination
 
-	GetChannelById  GetChannelByIdFunction
+	GetChannelById         GetChannelByIdFunction
+	IsVoucherAmountPresent func(channelId types.Destination) bool
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -101,8 +102,14 @@ func NewObjective(
 		return Objective{}, fmt.Errorf("could not create Channel from ConsensusChannel; %w", err)
 	}
 
-	if (len(cc.FundingTargets()) != 0 && (!request.IsChallenge || !isOnChainChallengeRegistered))  {
-		return Objective{}, ErrNotEmpty
+	if len(cc.FundingTargets()) != 0 {
+		if !request.IsChallenge {
+			if !isOnChainChallengeRegistered {
+				return Objective{}, ErrNotEmpty
+			}
+
+			// TODO: Check if isOnChainChallengeRegistered and its virtual channels of that ledger channels are in challenge mode
+		}
 	}
 
 	// We choose to disallow creating an objective if the channel has an in-progress update.
@@ -258,22 +265,36 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 }
 
 func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
+	// TODO: For Alice loops over funded targets and call challenge on each channel serially
+	if updated.IsChallengeInitiatedByMe && len(updated.FundedTargets) != 0 {
+		for _, fundedTarget := range updated.FundedTargets {
+			// Get channel by id
+			virtualChannel, _ := updated.GetChannelById(fundedTarget)
 
-	// TODO: For Alice -> Loop over funded targets and call challenge on each channel serially
+			// Check if voucher exists and have value in it
+			if updated.IsVoucherAmountPresent(fundedTarget) {
+				// TODO: Construct new state with turnNum 2
+				// TODO: Encode voucher info in appData
+				// TODO: Call challenge with postfund state as proof
+				return &updated, sideEffects, WaitingForNothing, nil
+			} else {
+				// Call challenge without proof if voucher doesn't exist
+				latestSupportedSignedState, _ := virtualChannel.LatestSupportedSignedState()
+				challengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSupportedSignedState.State(), *secretKey)
+				challengeTx := protocols.NewChallengeTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0), challengerSig)
+				sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
+				return &updated, sideEffects, WaitingForChallenge, nil
+			}
+		}
+	}
 
-		// for _, fundedTarget := range updated.FundedTargets {
-		// 	// Get channel by id
-		// 	// check if voucher exists
-		// 	// if voucher
-		// 	 	// construct new state by encoding voucher info in appData, call challenge with postfund state as proof
-		// 	// else call challenge without proof
-		// }
+	// TODO: Both Alice and Bob handle ChallengeRegistered  events for all virtual channels
+	// TODO: Alice checks if all virtual channels are challenged and calls challenge on ledger channel
 
-		// TODO: Both Alice and Bob listen for ChallengeRegistered  events for all virtual channels
-			// Alice calls challenge on ledger channel once all virtual channels are challenge
-			// Bob updates virtual channels in store to have challenge status
+	// TODO: Alice calls reclaim for each of the virtual channels after ledger channel and respective virtual channel is finalized
 
-	// TODO: Verify that both Alice and Bob listen for ChallengeRegistered  events for ledger channel and update channel and objective
+	// TODO: Call transferAllAssets on ledger channel once Reclaimed events for all virtual channels are emitted and exit
+
 	// Initiate challenge transaction
 	if updated.IsChallenge && !updated.challengeTransactionSubmitted {
 		latestSupportedSignedState, err := updated.C.LatestSupportedSignedState()
@@ -304,10 +325,6 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 	if updated.C.OnChain.ChannelMode == channel.Challenge {
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
-
-	// TODO: Alice calls reclaim for each of the virtual channels after ledger channel and respective virtual channel is finalized
-
-	// TODO: Alice calls transferAllAssets on Reclaimed events for all virtual channel and exit
 
 	// Liquidate the assets
 	if updated.C.OnChain.ChannelMode == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.FullyWithdrawn() {
@@ -422,6 +439,7 @@ func (o *Objective) clone() Objective {
 	clone.checkpointTransactionSubmitted = o.checkpointTransactionSubmitted
 	clone.FundedTargets = o.FundedTargets
 	clone.GetChannelById = o.GetChannelById
+	clone.IsVoucherAmountPresent = o.IsVoucherAmountPresent
 
 	return clone
 }

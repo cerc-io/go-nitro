@@ -481,6 +481,7 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 		return EngineEvent{}, err
 	}
 
+	// TODO: Both Alice and Bob handle ChallengeRegistered events for all virtual channels
 	objective, ok := e.store.GetObjectiveByChannelId(chainEvent.ChannelID())
 
 	if ok {
@@ -556,6 +557,18 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 		if err != nil {
 			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not destroy consensus channel for %+v: %w", request, err)
 		}
+
+		if len(ddfo.FundedTargets) != 0 {
+			ddfo.GetChannelById = e.store.GetChannelById
+			ddfo.IsVoucherAmountPresent = func(channelId types.Destination) bool {
+				if e.vm.ChannelRegistered(channelId) {
+					paid, _ := e.vm.Paid(channelId)
+					return paid.Cmp(big.NewInt(0)) != 0
+				}
+				return false
+			}
+		}
+
 		return e.attemptProgress(&ddfo)
 
 	default:

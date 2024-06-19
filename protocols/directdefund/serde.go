@@ -11,15 +11,16 @@ import (
 // jsonObjective replaces the directdefund.Objective's channel pointer with
 // the channel's ID, making jsonObjective suitable for serialization
 type jsonObjective struct {
-	Status                         protocols.ObjectiveStatus
-	C                              types.Destination
-	FinalTurnNum                   uint64
-	TransactionSumbmitted          bool
-	IsChallenge                    bool
-	ChallengeTransactionSubmitted  bool
-	IsCheckpoint                   bool
-	CheckpointTransactionSubmitted bool
-	FundedTargets                  []types.Destination
+	Status                           protocols.ObjectiveStatus
+	C                                types.Destination
+	FinalTurnNum                     uint64
+	TransactionSumbmitted            bool
+	IsChallenge         			       bool
+	ChallengeTransactionSubmitted    bool
+	IsCheckpoint                     bool
+	CheckpointTransactionSubmitted   bool
+	FundedTargets                    []types.Destination
+	VirtualChannelChallengeSubmitted bool
 }
 
 // MarshalJSON returns a JSON representation of the DirectDefundObjective
@@ -36,6 +37,7 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.checkpointTransactionSubmitted,
 		o.IsCheckpoint,
 		o.FundedTargets,
+		o.virtualChannelChallengeSubmitted,
 	}
 
 	return json.Marshal(jsonDDFO)
@@ -67,6 +69,6 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.checkpointTransactionSubmitted = jsonDDFO.CheckpointTransactionSubmitted
 	o.IsCheckpoint = jsonDDFO.IsCheckpoint
 	o.FundedTargets = jsonDDFO.FundedTargets
-
+	o.virtualChannelChallengeSubmitted = jsonDDFO.VirtualChannelChallengeSubmitted
 	return nil
 }

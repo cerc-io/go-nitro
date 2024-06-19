@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
@@ -485,10 +486,34 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	objective, ok := e.store.GetObjectiveByChannelId(chainEvent.ChannelID())
 
 	if ok {
+		dDfo, ok := objective.(*directdefund.Objective)
+		if ok {
+			dDfo.GetChannelById = e.store.GetChannelById
+			return e.attemptProgress(objective)
+		}
+
 		return e.attemptProgress(objective)
 	}
 
-	// TODO: Check vId->lId map to get ddfo for the ledger channel (on challengeRegistered event for virtual channel)
+	// Get ledger channel id from virtual channel id and find the objective associated with the ledher channel id and crank it
+	// TODO: Check channel id is virtual channel
+	// TODO: Challenge registered on virtual channels are handled only by the one who raised the challenge
+	add := common.HexToAddress("0xAAA6628Ec44A8a742987EF3A114dDFE2D4F7aDCE")
+	if add == *e.store.GetAddress() {
+		// TODO: Add logic to find counterparty address
+		consensusChannel, ok := e.store.GetConsensusChannel(c.Participants[1])
+		if ok {
+			obj, ok := e.store.GetObjectiveByChannelId(consensusChannel.Id)
+			if ok {
+				dDfo, ok := obj.(*directdefund.Objective)
+				if ok {
+					dDfo.GetChannelById = e.store.GetChannelById
+					return e.attemptProgress(obj)
+				}
+			}
+		}
+	}
+
 	return EngineEvent{}, nil
 }
 
@@ -555,10 +580,10 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not create directdefund objective for %+v: %w", request, err)
 		}
 		// If ddfo creation was successful, destroy the consensus channel to prevent it being used (a Channel will now take over governance)
-		err = e.store.DestroyConsensusChannel(request.ChannelId)
-		if err != nil {
-			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not destroy consensus channel for %+v: %w", request, err)
-		}
+		// err = e.store.DestroyConsensusChannel(request.ChannelId)
+		// if err != nil {
+		// 	return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not destroy consensus channel for %+v: %w", request, err)
+		// }
 
 		if len(ddfo.FundedTargets) != 0 {
 			ddfo.GetChannelById = e.store.GetChannelById
@@ -989,6 +1014,7 @@ func (e *Engine) processStoreChannels(latestblock chainservice.Block) error {
 		}
 
 		// Liquidate assets for finalized channels
+		// TODO: Ignore liquidation for virtual channels
 		if ch.OnChain.ChannelMode == channel.Finalized {
 			obj, ok := e.store.GetObjectiveByChannelId(ch.Id)
 			dDfo, isDdfo := obj.(*directdefund.Objective)

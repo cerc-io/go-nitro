@@ -48,8 +48,9 @@ type Objective struct {
 	// Whether a withdraw transaction has been declared as a side effect in a previous crank
 	withdrawTransactionSubmitted bool
 
-	IsChallenge                   bool
-	challengeTransactionSubmitted bool
+	IsChallenge                   	 bool
+	challengeTransactionSubmitted    bool
+	virtualChannelChallengeSubmitted bool
 
 	IsCheckpoint                   bool
 	checkpointTransactionSubmitted bool
@@ -266,7 +267,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 
 func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
 	// TODO: For Alice loops over funded targets and call challenge on each channel serially
-	if updated.IsChallengeInitiatedByMe && len(updated.FundedTargets) != 0 {
+	if updated.IsChallenge && len(updated.FundedTargets) != 0 && !updated.virtualChannelChallengeSubmitted {
 		for _, fundedTarget := range updated.FundedTargets {
 			// Get channel by id
 			virtualChannel, _ := updated.GetChannelById(fundedTarget)
@@ -276,6 +277,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 				// TODO: Construct new state with turnNum 2
 				// TODO: Encode voucher info in appData
 				// TODO: Call challenge with postfund state as proof
+				updated.virtualChannelChallengeSubmitted = true
 				return &updated, sideEffects, WaitingForNothing, nil
 			} else {
 				// Call challenge without proof if voucher doesn't exist
@@ -283,6 +285,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 				challengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSupportedSignedState.State(), *secretKey)
 				challengeTx := protocols.NewChallengeTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0), challengerSig)
 				sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
+				updated.virtualChannelChallengeSubmitted = true
 				return &updated, sideEffects, WaitingForChallenge, nil
 			}
 		}
@@ -290,6 +293,20 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 
 	// TODO: Both Alice and Bob handle ChallengeRegistered  events for all virtual channels
 	// TODO: Alice checks if all virtual channels are challenged and calls challenge on ledger channel
+	if updated.IsChallenge && len(updated.FundedTargets) != 0 && updated.virtualChannelChallengeSubmitted {
+		// Alice check if all virtual channels are challenged
+		var isVirtualChannelsStillOpen bool
+		for _, fundedTarget := range updated.FundedTargets {
+			virtualChannel, _ := updated.GetChannelById(fundedTarget)
+			if virtualChannel.OnChain.ChannelMode == channel.Open {
+				isVirtualChannelsStillOpen = true
+				break
+			}
+		}
+		if isVirtualChannelsStillOpen {
+			return &updated, sideEffects, WaitingForChallenge, nil
+		}
+	}
 
 	// TODO: Alice calls reclaim for each of the virtual channels after ledger channel and respective virtual channel is finalized
 
@@ -440,6 +457,7 @@ func (o *Objective) clone() Objective {
 	clone.FundedTargets = o.FundedTargets
 	clone.GetChannelById = o.GetChannelById
 	clone.IsVoucherAmountPresent = o.IsVoucherAmountPresent
+	clone.virtualChannelChallengeSubmitted = o.virtualChannelChallengeSubmitted
 
 	return clone
 }

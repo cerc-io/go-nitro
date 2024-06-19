@@ -21,6 +21,7 @@ type jsonObjective struct {
 	CheckpointTransactionSubmitted   bool
 	FundedTargets                    []types.Destination
 	VirtualChannelChallengeSubmitted bool
+	ReclaimTransactionSubmitted      bool
 }
 
 // MarshalJSON returns a JSON representation of the DirectDefundObjective
@@ -38,6 +39,7 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.IsCheckpoint,
 		o.FundedTargets,
 		o.virtualChannelChallengeSubmitted,
+		o.reclaimTransactionSubmitted,
 	}
 
 	return json.Marshal(jsonDDFO)
@@ -70,5 +72,6 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.IsCheckpoint = jsonDDFO.IsCheckpoint
 	o.FundedTargets = jsonDDFO.FundedTargets
 	o.virtualChannelChallengeSubmitted = jsonDDFO.VirtualChannelChallengeSubmitted
+	o.reclaimTransactionSubmitted = jsonDDFO.ReclaimTransactionSubmitted
 	return nil
 }

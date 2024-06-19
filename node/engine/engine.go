@@ -1013,14 +1013,14 @@ func (e *Engine) processStoreChannels(latestblock chainservice.Block) error {
 			}
 		}
 
-		// Liquidate assets for finalized channels
-		// TODO: Ignore liquidation for virtual channels
-		if ch.OnChain.ChannelMode == channel.Finalized {
+		// Liquidate assets for finalized ledger channels
+		if ch.Type == channel.Ledger && ch.OnChain.ChannelMode == channel.Finalized {
 			obj, ok := e.store.GetObjectiveByChannelId(ch.Id)
 			dDfo, isDdfo := obj.(*directdefund.Objective)
 
 			if ok && isDdfo && dDfo.C.OnChain.IsChallengeInitiatedByMe {
-				_, err = e.attemptProgress(dDfo)
+				dDfo.GetChannelById = e.store.GetChannelById
+				_, err = e.attemptProgress(obj)
 				if err != nil {
 					return err
 				}

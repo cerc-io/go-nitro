@@ -69,7 +69,7 @@ func TestNew(t *testing.T) {
 	}
 
 	getByParticipantHasChannel := func(id types.Address) ([]*channel.Channel, error) {
-		c, _ := channel.New(testState, 0)
+		c, _ := channel.New(testState, 0, channel.Ledger)
 		return []*channel.Channel{c}, nil
 	}
 

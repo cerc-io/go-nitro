@@ -431,7 +431,7 @@ func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 				return fmt.Errorf("error in ParseReclaimed: %w", err)
 			}
 
-			event := ReclaimedEvent{commonEvent: commonEvent{channelID: ce.ChannelId, txIndex: l.TxIndex}}
+			event := ReclaimedEvent{commonEvent: commonEvent{channelID: ce.ChannelId, blockNum: l.BlockNumber, txIndex: l.TxIndex}}
 			ecs.out <- event
 
 		case reclaimedTopic:

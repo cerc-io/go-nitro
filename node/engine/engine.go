@@ -594,6 +594,11 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 				}
 				return false
 			}
+
+			ddfo.GetVoucherInfo = func(channelId types.Destination) payments.VoucherInfo {
+				voucherInfo, _ := e.vm.Store.GetVoucherInfo(channelId)
+				return *voucherInfo
+			}
 		}
 
 		return e.attemptProgress(&ddfo)

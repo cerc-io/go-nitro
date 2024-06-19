@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/go-cmp/cmp"
 	"github.com/statechannels/go-nitro/channel"
@@ -15,6 +16,7 @@ import (
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	NitroAdjudicator "github.com/statechannels/go-nitro/node/engine/chainservice/adjudicator"
+	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
 	"github.com/statechannels/go-nitro/types"
 )
@@ -63,6 +65,7 @@ type Objective struct {
 
 	GetChannelById         GetChannelByIdFunction
 	IsVoucherAmountPresent func(channelId types.Destination) bool
+	GetVoucherInfo         func(channelId types.Destination) payments.VoucherInfo
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -275,12 +278,63 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		for _, fundedTarget := range updated.FundedTargets {
 			// Get channel by id
 			virtualChannel, _ := updated.GetChannelById(fundedTarget)
+			latestSupportedState, _ := virtualChannel.LatestSupportedSignedState()
+			signedPostFundState := virtualChannel.SignedPostFundState()
 
 			// Check if voucher exists and have value in it
 			if updated.IsVoucherAmountPresent(fundedTarget) {
 				// TODO: Construct new state with turnNum 2
 				// TODO: Encode voucher info in appData
 				// TODO: Call challenge with postfund state as proof
+				voucherInfo := updated.GetVoucherInfo(fundedTarget)
+
+				// Create type to encode voucher amount and signature
+				voucherAmountSigTy, _ := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+					{Name: "amount", Type: "uint256"},
+					{Name: "signature", Type: "tuple", Components: []abi.ArgumentMarshaling{
+						{Name: "v", Type: "uint8"},
+						{Name: "r", Type: "bytes32"},
+						{Name: "s", Type: "bytes32"},
+					}},
+				})
+
+				arguments := abi.Arguments{
+					{Type: voucherAmountSigTy},
+				}
+
+				voucherAmountSignatureData := protocols.VoucherAmountSignature{
+					Amount:    voucherInfo.Paid(),
+					Signature: NitroAdjudicator.ConvertSignature(voucherInfo.LargestVoucher.Signature),
+				}
+
+				// Use above created type and encode voucher amount and signature
+				dataEncoded, _ := arguments.Pack(voucherAmountSignatureData)
+				oldOutcome := latestSupportedState.State().Outcome[0]
+				aliceAllocation := outcome.Allocation{
+					Destination:    oldOutcome.Allocations[0].Destination,
+					AllocationType: oldOutcome.Allocations[0].AllocationType,
+					Metadata:       oldOutcome.Allocations[0].Metadata,
+					Amount:         voucherInfo.Remaining(),
+				}
+				bobAllocation := outcome.Allocation{
+					Destination:    oldOutcome.Allocations[1].Destination,
+					AllocationType: oldOutcome.Allocations[1].AllocationType,
+					Metadata:       oldOutcome.Allocations[1].Metadata,
+					Amount:         voucherInfo.Paid(),
+				}
+				newOutcome := outcome.SingleAssetExit{
+					Asset:         oldOutcome.Asset,
+					AssetMetadata: oldOutcome.AssetMetadata,
+					Allocations:   outcome.Allocations{aliceAllocation, bobAllocation},
+				}
+				vp := state.VariablePart{Outcome: outcome.Exit{newOutcome}, TurnNum: latestSupportedState.State().TurnNum + 1, AppData: dataEncoded, IsFinal: false}
+				newState := state.StateFromFixedAndVariablePart(latestSupportedState.State().FixedPart(), vp)
+				latestSignedState, _ := virtualChannel.SignAndAddState(newState, secretKey)
+
+				// Bob calls challenge method on virtual channel
+				virtualChallengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSignedState.State(), *secretKey)
+				virtualChallengeTx := protocols.NewChallengeTransaction(virtualChannel.Id, latestSignedState, []state.SignedState{signedPostFundState}, virtualChallengerSig)
+				sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, virtualChallengeTx)
 			} else {
 				// Call challenge without proof if voucher doesn't exist
 				latestSupportedSignedState, _ := virtualChannel.LatestSupportedSignedState()
@@ -357,7 +411,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 
 		for _, fundedTarget := range updated.FundedTargets {
 			virtualChannel, _ := updated.GetChannelById(fundedTarget)
-			latestVirtualState, _ := virtualChannel.LatestSupportedSignedState()
+			latestVirtualState, _ := virtualChannel.LatestSignedState()
 			virtualStateHash, _ := latestVirtualState.State().Hash()
 			targetOutcome := latestVirtualState.State().Outcome
 			targetOb, _ := targetOutcome.Encode()
@@ -398,7 +452,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 
 			// TODO: Discuss how funds are liquidated from mulitple virtual channles to ledger channel
 			virtualChannel, _ := updated.GetChannelById(updated.FundedTargets[0])
-			latestVirtualState, _ := virtualChannel.LatestSupportedSignedState()
+			latestVirtualState, _ := virtualChannel.LatestSignedState()
 
 			aliceOutcomeAllocationAmount.Add(aliceOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[0].Amount)
 			bobOutcomeAllocationAmount.Add(bobOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[1].Amount)
@@ -543,6 +597,7 @@ func (o *Objective) clone() Objective {
 	clone.IsVoucherAmountPresent = o.IsVoucherAmountPresent
 	clone.virtualChannelChallengeSubmitted = o.virtualChannelChallengeSubmitted
 	clone.reclaimTransactionSubmitted = o.reclaimTransactionSubmitted
+	clone.GetVoucherInfo = o.GetVoucherInfo
 
 	return clone
 }

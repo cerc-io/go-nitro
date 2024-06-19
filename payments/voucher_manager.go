@@ -19,7 +19,7 @@ type VoucherStore interface {
 // VoucherInfo stores the status of payments for a given payment channel.
 // VoucherManager receives and generates vouchers. It is responsible for storing vouchers.
 type VoucherManager struct {
-	store VoucherStore
+	Store VoucherStore
 	me    common.Address
 }
 
@@ -33,15 +33,15 @@ func (vm *VoucherManager) Register(channelId types.Destination, payer common.Add
 	voucher := Voucher{ChannelId: channelId, Amount: big.NewInt(0)}
 	data := VoucherInfo{payer, payee, big.NewInt(0).Set(startingBalance), voucher}
 
-	if v, _ := vm.store.GetVoucherInfo(channelId); v != nil {
+	if v, _ := vm.Store.GetVoucherInfo(channelId); v != nil {
 		return fmt.Errorf("channel already registered")
 	}
-	return vm.store.SetVoucherInfo(channelId, data)
+	return vm.Store.SetVoucherInfo(channelId, data)
 }
 
 // Remove deletes the channel's status
 func (vm *VoucherManager) Remove(channelId types.Destination) error {
-	err := vm.store.RemoveVoucherInfo(channelId)
+	err := vm.Store.RemoveVoucherInfo(channelId)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (vm *VoucherManager) Remove(channelId types.Destination) error {
 // Pay will deduct amount from balance and add it to paid, returning a signed voucher for the
 // total amount paid.
 func (vm *VoucherManager) Pay(channelId types.Destination, amount *big.Int, pk []byte) (Voucher, error) {
-	vInfo, err := vm.store.GetVoucherInfo(channelId)
+	vInfo, err := vm.Store.GetVoucherInfo(channelId)
 	if err != nil {
 		return Voucher{}, fmt.Errorf("channel not registered: %w", err)
 	}
@@ -72,7 +72,7 @@ func (vm *VoucherManager) Pay(channelId types.Destination, amount *big.Int, pk [
 		return voucher, err
 	}
 
-	err = vm.store.SetVoucherInfo(channelId, *vInfo)
+	err = vm.Store.SetVoucherInfo(channelId, *vInfo)
 	if err != nil {
 		return Voucher{}, err
 	}
@@ -81,7 +81,7 @@ func (vm *VoucherManager) Pay(channelId types.Destination, amount *big.Int, pk [
 
 // Receive validates the incoming voucher, and returns the total amount received so far as well as the amount received from the voucher
 func (vm *VoucherManager) Receive(voucher Voucher) (total *big.Int, delta *big.Int, err error) {
-	vInfo, err := vm.store.GetVoucherInfo(voucher.ChannelId)
+	vInfo, err := vm.Store.GetVoucherInfo(voucher.ChannelId)
 	if err != nil {
 		return &big.Int{}, &big.Int{}, fmt.Errorf("channel not registered: %w", err)
 	}
@@ -113,7 +113,7 @@ func (vm *VoucherManager) Receive(voucher Voucher) (total *big.Int, delta *big.I
 	total = voucher.Amount
 	vInfo.LargestVoucher = voucher
 
-	err = vm.store.SetVoucherInfo(voucher.ChannelId, *vInfo)
+	err = vm.Store.SetVoucherInfo(voucher.ChannelId, *vInfo)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,13 +122,13 @@ func (vm *VoucherManager) Receive(voucher Voucher) (total *big.Int, delta *big.I
 
 // ChannelRegistered returns  whether a channel has been registered with the voucher manager or not
 func (vm *VoucherManager) ChannelRegistered(channelId types.Destination) bool {
-	_, err := vm.store.GetVoucherInfo(channelId)
+	_, err := vm.Store.GetVoucherInfo(channelId)
 	return err == nil
 }
 
 // Paid returns the total amount paid so far on a channel
 func (vm *VoucherManager) Paid(chanId types.Destination) (*big.Int, error) {
-	v, err := vm.store.GetVoucherInfo(chanId)
+	v, err := vm.Store.GetVoucherInfo(chanId)
 	if err != nil {
 		return &big.Int{}, fmt.Errorf("channel not registered: %w", err)
 	}
@@ -137,7 +137,7 @@ func (vm *VoucherManager) Paid(chanId types.Destination) (*big.Int, error) {
 
 // Remaining returns the remaining amount of funds in the channel
 func (vm *VoucherManager) Remaining(chanId types.Destination) (*big.Int, error) {
-	v, err := vm.store.GetVoucherInfo(chanId)
+	v, err := vm.Store.GetVoucherInfo(chanId)
 	if err != nil {
 		return &big.Int{}, fmt.Errorf("channel not registered: %w", err)
 	}

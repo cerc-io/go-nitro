@@ -297,26 +297,15 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 				}
 
 				// Use above created type and encode voucher amount and signature
-				// TODO: Use clone to create outcome
 				dataEncoded, _ := arguments.Pack(voucherAmountSignatureData)
-				oldOutcome := latestSupportedState.State().Outcome[0]
-				aliceAllocation := outcome.Allocation{
-					Destination:    oldOutcome.Allocations[0].Destination,
-					AllocationType: oldOutcome.Allocations[0].AllocationType,
-					Metadata:       oldOutcome.Allocations[0].Metadata,
-					Amount:         voucher.Remaining(),
-				}
-				bobAllocation := outcome.Allocation{
-					Destination:    oldOutcome.Allocations[1].Destination,
-					AllocationType: oldOutcome.Allocations[1].AllocationType,
-					Metadata:       oldOutcome.Allocations[1].Metadata,
-					Amount:         voucher.Paid(),
-				}
-				newOutcome := outcome.SingleAssetExit{
-					Asset:         oldOutcome.Asset,
-					AssetMetadata: oldOutcome.AssetMetadata,
-					Allocations:   outcome.Allocations{aliceAllocation, bobAllocation},
-				}
+
+				// Update allocation based on voucher
+				newOutcome := latestSupportedState.State().Outcome[0].Clone()
+				// Return the remaining voucher amounts to the node that created the virtual channel
+				newOutcome.Allocations[0].Amount = voucher.Remaining()
+				// Return the amounts received via the voucher to the node that joined the virtual channel
+				newOutcome.Allocations[1].Amount = voucher.Paid()
+
 				vp := state.VariablePart{Outcome: outcome.Exit{newOutcome}, TurnNum: latestSupportedState.State().TurnNum + 1, AppData: dataEncoded, IsFinal: false}
 				newState := state.StateFromFixedAndVariablePart(latestSupportedState.State().FixedPart(), vp)
 				latestSignedState, _ := virtualChannel.SignAndAddState(newState, secretKey)

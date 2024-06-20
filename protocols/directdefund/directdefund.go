@@ -61,9 +61,8 @@ type Objective struct {
 	IsCheckpoint                   bool
 	checkpointTransactionSubmitted bool
 
-	FundedChannels         map[types.Destination]*channel.Channel
-	IsVoucherAmountPresent func(channelId types.Destination) bool
-	GetVoucherInfo         func(channelId types.Destination) payments.VoucherInfo
+	FundedChannels            map[types.Destination]*channel.Channel
+	GetVoucherIfAmountPresent func(channelId types.Destination) (*payments.VoucherInfo, bool)
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -271,13 +270,12 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 	// Alice loops over funded targets and call challenge on each channel serially
 	if updated.IsChallenge && len(updated.FundedChannels) != 0 && !updated.virtualChannelChallengeSubmitted {
 		for virtualChannelId, virtualChannel := range updated.FundedChannels {
-			// Get channel by id
 			latestSupportedState, _ := virtualChannel.LatestSupportedSignedState()
 			signedPostFundState := virtualChannel.SignedPostFundState()
 
-			// TODO: Check redemption state signed by node who received voucher
-			if updated.IsVoucherAmountPresent(virtualChannelId) {
-				voucherInfo := updated.GetVoucherInfo(virtualChannelId)
+			// Construct state with voucher only if this node has received the voucher
+			voucher, ok := updated.GetVoucherIfAmountPresent(virtualChannelId)
+			if ok && virtualChannel.Participants[virtualChannel.MyIndex] == voucher.ChannelPayee {
 
 				// Create type to encode voucher amount and signature
 				voucherAmountSigTy, _ := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
@@ -294,8 +292,8 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 				}
 
 				voucherAmountSignatureData := protocols.VoucherAmountSignature{
-					Amount:    voucherInfo.Paid(),
-					Signature: NitroAdjudicator.ConvertSignature(voucherInfo.LargestVoucher.Signature),
+					Amount:    voucher.Paid(),
+					Signature: NitroAdjudicator.ConvertSignature(voucher.LargestVoucher.Signature),
 				}
 
 				// Use above created type and encode voucher amount and signature
@@ -306,13 +304,13 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 					Destination:    oldOutcome.Allocations[0].Destination,
 					AllocationType: oldOutcome.Allocations[0].AllocationType,
 					Metadata:       oldOutcome.Allocations[0].Metadata,
-					Amount:         voucherInfo.Remaining(),
+					Amount:         voucher.Remaining(),
 				}
 				bobAllocation := outcome.Allocation{
 					Destination:    oldOutcome.Allocations[1].Destination,
 					AllocationType: oldOutcome.Allocations[1].AllocationType,
 					Metadata:       oldOutcome.Allocations[1].Metadata,
-					Amount:         voucherInfo.Paid(),
+					Amount:         voucher.Paid(),
 				}
 				newOutcome := outcome.SingleAssetExit{
 					Asset:         oldOutcome.Asset,
@@ -447,10 +445,10 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 					if err != nil {
 						panic(err)
 					}
-					if(participantAddress == aliceAddress){
+					if participantAddress == aliceAddress {
 						aliceOutcomeAllocationAmount.Add(aliceOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[i].Amount)
 					}
-					if(participantAddress == bobAddress){
+					if participantAddress == bobAddress {
 						bobOutcomeAllocationAmount.Add(bobOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[i].Amount)
 					}
 				}
@@ -591,10 +589,9 @@ func (o *Objective) clone() Objective {
 
 	clone.IsCheckpoint = o.IsCheckpoint
 	clone.checkpointTransactionSubmitted = o.checkpointTransactionSubmitted
-	clone.IsVoucherAmountPresent = o.IsVoucherAmountPresent
 	clone.virtualChannelChallengeSubmitted = o.virtualChannelChallengeSubmitted
 	clone.reclaimTransactionSubmitted = o.reclaimTransactionSubmitted
-	clone.GetVoucherInfo = o.GetVoucherInfo
+	clone.GetVoucherIfAmountPresent = o.GetVoucherIfAmountPresent
 	clone.FundedChannels = o.FundedChannels
 
 	return clone

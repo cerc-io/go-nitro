@@ -489,10 +489,10 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	}
 
 	// Get ledger channel id from virtual channel id and find the objective associated with the ledher channel id and crank it
-	// TODO: Check channel id is virtual channel
-	// TODO: Challenge registered on virtual channels are handled only by the one who raised the challenge
+	// Challenge registered on virtual channels are handled only by the one who raised the challenge
+	// TODO: Get address of challenger node
 	add := common.HexToAddress("0xAAA6628Ec44A8a742987EF3A114dDFE2D4F7aDCE")
-	if add == *e.store.GetAddress() {
+	if c.Type == channel.Virtual && add == *e.store.GetAddress() {
 		// TODO: Add logic to find counterparty address
 		consensusChannel, ok := e.store.GetConsensusChannel(c.Participants[1])
 		if ok {
@@ -585,19 +585,15 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 				ddfo.FundedChannels[virtulChannelId] = virtualChannel
 			}
 
-			// Method to check whether voucher has amount in it
-			ddfo.IsVoucherAmountPresent = func(channelId types.Destination) bool {
+			ddfo.GetVoucherIfAmountPresent = func(channelId types.Destination) (*payments.VoucherInfo, bool) {
 				if e.vm.ChannelRegistered(channelId) {
-					paid, _ := e.vm.Paid(channelId)
-					return paid.Cmp(big.NewInt(0)) != 0
+					amountPaid, _ := e.vm.Paid(channelId)
+					if amountPaid.Cmp(big.NewInt(0)) != 0 {
+						voucherInfo, _ := e.vm.Store.GetVoucherInfo(channelId)
+						return voucherInfo, true
+					}
 				}
-				return false
-			}
-
-			// Method to get voucher info
-			ddfo.GetVoucherInfo = func(channelId types.Destination) payments.VoucherInfo {
-				voucherInfo, _ := e.vm.Store.GetVoucherInfo(channelId)
-				return *voucherInfo
+				return nil, false
 			}
 		}
 

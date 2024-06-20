@@ -493,8 +493,15 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	// TODO: Get address of challenger node
 	add := common.HexToAddress("0xAAA6628Ec44A8a742987EF3A114dDFE2D4F7aDCE")
 	if c.Type == channel.Virtual && add == *e.store.GetAddress() {
-		// TODO: Add logic to find counterparty address
-		consensusChannel, ok := e.store.GetConsensusChannel(c.Participants[1])
+		counterParty := common.Address{}
+
+		if add == c.Participants[0] {
+			counterParty = c.Participants[len(c.Participants)-1]
+		} else if add == c.Participants[len(c.Participants)-1] {
+			counterParty = c.Participants[0]
+		}
+
+		consensusChannel, ok := e.store.GetConsensusChannel(counterParty)
 		if ok {
 			obj, ok := e.store.GetObjectiveByChannelId(consensusChannel.Id)
 			if ok {

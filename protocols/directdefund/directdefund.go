@@ -408,6 +408,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		return &updated, sideEffects, WaitingForReclaim, nil
 	}
 
+	// TODO: Wait for all reclaim txs to complete
 	// Transfer assets
 	if updated.IsChallenge && updated.C.OnChain.ChannelMode == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.FullyWithdrawn() {
 
@@ -417,28 +418,21 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
 		} else {
 
-			latestLedgerState, _ := updated.C.LatestSupportedSignedState()
 			// Compute new state outcome allocations
-			aliceOutcomeAllocationAmount := latestLedgerState.State().Outcome[0].Allocations[0].Amount
-			aliceAddress := latestLedgerState.State().Participants[0]
-			bobOutcomeAllocationAmount := latestLedgerState.State().Outcome[0].Allocations[1].Amount
-			bobAddress := latestLedgerState.State().Participants[1]
+			latestLedgerState, _ := updated.C.LatestSupportedSignedState()
+			aliceAllocation := latestLedgerState.State().Outcome[0].Allocations[0]
+			bobAllocation := latestLedgerState.State().Outcome[0].Allocations[1]
 
 			for _, virtualChannel := range updated.FundedChannels {
 				latestVirtualState, _ := virtualChannel.LatestSignedState()
 				// TODO: Discuss how funds are liquidated from mulitple virtual channles to ledger channel
 				// Distribute allocations based on address
-
 				for i, allocation := range latestVirtualState.State().Outcome[0].Allocations {
-					participantAddress, err := allocation.Destination.ToAddress()
-					if err != nil {
-						panic(err)
+					if aliceAllocation.Destination == allocation.Destination {
+						aliceAllocation.Amount.Add(aliceAllocation.Amount, latestVirtualState.State().Outcome[0].Allocations[i].Amount)
 					}
-					if participantAddress == aliceAddress {
-						aliceOutcomeAllocationAmount.Add(aliceOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[i].Amount)
-					}
-					if participantAddress == bobAddress {
-						bobOutcomeAllocationAmount.Add(bobOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[i].Amount)
+					if bobAllocation.Destination == allocation.Destination {
+						bobAllocation.Amount.Add(bobAllocation.Amount, latestVirtualState.State().Outcome[0].Allocations[i].Amount)
 					}
 				}
 			}
@@ -447,20 +441,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 			latestState := latestLedgerState.State()
 
 			// Construct exit state with updated outcome allocations
-			latestState.Outcome[0].Allocations = outcome.Allocations{
-				{
-					Destination:    latestLedgerState.State().Outcome[0].Allocations[0].Destination,
-					Amount:         aliceOutcomeAllocationAmount,
-					AllocationType: outcome.SimpleAllocationType,
-					Metadata:       latestLedgerState.State().Outcome[0].Allocations[0].Metadata,
-				},
-				{
-					Destination:    latestLedgerState.State().Outcome[0].Allocations[1].Destination,
-					Amount:         bobOutcomeAllocationAmount,
-					AllocationType: outcome.SimpleAllocationType,
-					Metadata:       latestLedgerState.State().Outcome[0].Allocations[1].Metadata,
-				},
-			}
+			latestState.Outcome[0].Allocations = outcome.Allocations{aliceAllocation, bobAllocation}
 
 			signedConstructedState := state.NewSignedState(latestState)
 			transferTx := protocols.NewTransferAllTransaction(updated.C.Id, signedConstructedState)

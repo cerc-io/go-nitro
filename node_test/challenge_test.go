@@ -1,6 +1,7 @@
 package node_test
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -525,4 +526,71 @@ func listenForLedgerUpdates(ledgerUpdatesChan <-chan query.LedgerChannelInfo, li
 			return
 		}
 	}
+}
+
+func TestVirtualPaymentChannelWithObjective(t *testing.T) {
+	testCase := TestCase{
+		Description:       "Virtual channel test with objective",
+		Chain:             AnvilChain,
+		MessageService:    TestMessageService,
+		ChallengeDuration: 10,
+		MessageDelay:      0,
+		LogName:           "Virtual_channel_test_with_objective",
+		Participants: []TestParticipant{
+			{StoreType: MemStore, Actor: testactors.Alice},
+			{StoreType: MemStore, Actor: testactors.Bob},
+		},
+	}
+
+	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	defer cleanup()
+
+	infra := setupSharedInfra(testCase)
+	defer infra.Close(t)
+
+	// Create go-nitro nodes
+	nodeA, _, _, _, _ := setupIntegrationNode(testCase, testCase.Participants[0], infra, []string{}, dataFolder)
+	defer nodeA.Close()
+	nodeB, _, _, _, _ := setupIntegrationNode(testCase, testCase.Participants[1], infra, []string{}, dataFolder)
+	defer nodeB.Close()
+
+	// Create ledger channel and virtual fund
+	ledgerChannel := openLedgerChannel(t, nodeB, nodeA, types.Address{}, uint32(testCase.ChallengeDuration))
+	// Check balance of node
+	balanceNodeA, _ := infra.anvilChain.GetAccountBalance(testCase.Participants[0].Address())
+	balanceNodeB, _ := infra.anvilChain.GetAccountBalance(testCase.Participants[1].Address())
+	t.Log("Balance of Alice", balanceNodeA, "\nBalance of Bob", balanceNodeB)
+	testhelpers.Assert(t, balanceNodeA.Int64() == 0, "Balance of Alice should be zero")
+	testhelpers.Assert(t, balanceNodeB.Int64() == 0, "Balance of Bob should be zero")
+
+	virtualOutcome := initialPaymentOutcome(*nodeB.Address, *nodeA.Address, common.BigToAddress(common.Big0))
+	response, err := nodeB.CreatePaymentChannel([]common.Address{}, *nodeA.Address, uint32(testCase.ChallengeDuration), virtualOutcome)
+	if err != nil {
+		t.Error(err)
+	}
+	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{response.Id})
+
+	paymentAmount := 2000
+	nodeB.Pay(response.ChannelId, big.NewInt(int64(paymentAmount)))
+	nodeAVoucher := <-nodeA.ReceivedVouchers()
+	fmt.Printf("VOUCHER %+v", nodeAVoucher)
+
+	// Alice initiates the challenge transaction
+	ledgerResponse, err := nodeA.CloseLedgerChannel(ledgerChannel, true)
+	if err != nil {
+		t.Log(err)
+	}
+
+	// Wait for objectives to complete
+	chA := nodeA.ObjectiveCompleteChan(ledgerResponse)
+	chB := nodeB.ObjectiveCompleteChan(ledgerResponse)
+	<-chA
+	<-chB
+
+	// Check assets are liquidated
+	balanceNodeA, _ = infra.anvilChain.GetAccountBalance(testCase.Participants[0].Address())
+	balanceNodeB, _ = infra.anvilChain.GetAccountBalance(testCase.Participants[1].Address())
+	t.Log("Balance of Alice", balanceNodeA, "\nBalance of Bob", balanceNodeB)
+	testhelpers.Assert(t, balanceNodeA.Cmp(big.NewInt(int64(ledgerChannelDeposit+paymentAmount))) == 0, "Balance of Alice (%v) should be equal to ledgerChannelDeposit (%v)", balanceNodeA, ledgerChannelDeposit+paymentAmount)
+	testhelpers.Assert(t, balanceNodeB.Cmp(big.NewInt(int64(ledgerChannelDeposit-paymentAmount))) == 0, "Balance of Bob (%v) should be equal to ledgerChannelDeposit (%v)", balanceNodeB, ledgerChannelDeposit-paymentAmount)
 }

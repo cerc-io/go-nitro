@@ -482,7 +482,6 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 		return EngineEvent{}, err
 	}
 
-	// TODO: Both Alice and Bob handle ChallengeRegistered events for all virtual channels
 	objective, ok := e.store.GetObjectiveByChannelId(chainEvent.ChannelID())
 
 	if ok {

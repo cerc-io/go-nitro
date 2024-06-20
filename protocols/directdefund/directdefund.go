@@ -63,6 +63,7 @@ type Objective struct {
 
 	FundedTargets []types.Destination
 
+	// TODO: Refactor to get latest virtual channel
 	GetChannelById         GetChannelByIdFunction
 	IsVoucherAmountPresent func(channelId types.Destination) bool
 	GetVoucherInfo         func(channelId types.Destination) payments.VoucherInfo
@@ -273,7 +274,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 }
 
 func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
-	// TODO: For Alice loops over funded targets and call challenge on each channel serially
+	// For Alice loops over funded targets and call challenge on each channel serially
 	if updated.IsChallenge && len(updated.FundedTargets) != 0 && !updated.virtualChannelChallengeSubmitted {
 		for _, fundedTarget := range updated.FundedTargets {
 			// Get channel by id
@@ -281,11 +282,8 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 			latestSupportedState, _ := virtualChannel.LatestSupportedSignedState()
 			signedPostFundState := virtualChannel.SignedPostFundState()
 
-			// Check if voucher exists and have value in it
+			// TODO: Check redemption state signed by node who received voucher
 			if updated.IsVoucherAmountPresent(fundedTarget) {
-				// TODO: Construct new state with turnNum 2
-				// TODO: Encode voucher info in appData
-				// TODO: Call challenge with postfund state as proof
 				voucherInfo := updated.GetVoucherInfo(fundedTarget)
 
 				// Create type to encode voucher amount and signature
@@ -308,6 +306,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 				}
 
 				// Use above created type and encode voucher amount and signature
+				// TODO: Use clone to create outcome
 				dataEncoded, _ := arguments.Pack(voucherAmountSignatureData)
 				oldOutcome := latestSupportedState.State().Outcome[0]
 				aliceAllocation := outcome.Allocation{
@@ -348,8 +347,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		return &updated, sideEffects, WaitingForChallenge, nil
 	}
 
-	// TODO: Both Alice and Bob handle ChallengeRegistered  events for all virtual channels
-	// TODO: Alice checks if all virtual channels are challenged and calls challenge on ledger channel
+	// Alice checks if all virtual channels are challenged and calls challenge on ledger channel
 	if updated.IsChallenge && len(updated.FundedTargets) != 0 && updated.virtualChannelChallengeSubmitted {
 		// Alice check if all virtual channels are challenged
 		var isVirtualChannelsStillOpen bool
@@ -364,10 +362,6 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 			return &updated, sideEffects, WaitingForChallenge, nil
 		}
 	}
-
-	// TODO: Alice calls reclaim for each of the virtual channels after ledger channel and respective virtual channel is finalized
-
-	// TODO: Call transferAllAssets on ledger channel once Reclaimed events for all virtual channels are emitted and exit
 
 	// Initiate challenge transaction
 	if updated.IsChallenge && !updated.challengeTransactionSubmitted {
@@ -400,7 +394,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
-	// TODO: Alice calls reclaim for each of the virtual channels after ledger channel and respective virtual channel is finalized
+	// Alice calls reclaim for each of the virtual channels after ledger channel and respective virtual channel is finalized
 	if updated.C.OnChain.ChannelMode == channel.Finalized && updated.IsChallenge && len(updated.FundedTargets) != 0 && !updated.reclaimTransactionSubmitted {
 		latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
 
@@ -436,7 +430,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		return &updated, sideEffects, WaitingForReclaim, nil
 	}
 
-	// Liquidate the assets
+	// Transfer assets
 	if updated.IsChallenge && updated.C.OnChain.ChannelMode == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.FullyWithdrawn() {
 
 		if len(updated.FundedTargets) == 0 {
@@ -450,7 +444,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 			aliceOutcomeAllocationAmount := latestLedgerState.State().Outcome[0].Allocations[0].Amount
 			bobOutcomeAllocationAmount := latestLedgerState.State().Outcome[0].Allocations[1].Amount
 
-			// TODO: Discuss how funds are liquidated from mulitple virtual channles to ledger channel
+			// TODO: Discuss how funds are liquidated from mulitple virtual channels to ledger channel
 			virtualChannel, _ := updated.GetChannelById(updated.FundedTargets[0])
 			latestVirtualState, _ := virtualChannel.LatestSignedState()
 

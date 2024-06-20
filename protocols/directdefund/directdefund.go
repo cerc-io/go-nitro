@@ -433,14 +433,27 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 			latestLedgerState, _ := updated.C.LatestSupportedSignedState()
 			// Compute new state outcome allocations
 			aliceOutcomeAllocationAmount := latestLedgerState.State().Outcome[0].Allocations[0].Amount
+			aliceAddress := latestLedgerState.State().Participants[0]
 			bobOutcomeAllocationAmount := latestLedgerState.State().Outcome[0].Allocations[1].Amount
+			bobAddress := latestLedgerState.State().Participants[1]
 
 			for _, virtualChannel := range updated.FundedChannels {
 				latestVirtualState, _ := virtualChannel.LatestSignedState()
 				// TODO: Discuss how funds are liquidated from mulitple virtual channles to ledger channel
-				// TODO: Distribute allocations based on address
-				aliceOutcomeAllocationAmount.Add(aliceOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[0].Amount)
-				bobOutcomeAllocationAmount.Add(bobOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[1].Amount)
+				// Distribute allocations based on address
+
+				for i, allocation := range latestVirtualState.State().Outcome[0].Allocations {
+					participantAddress, err := allocation.Destination.ToAddress()
+					if err != nil {
+						panic(err)
+					}
+					if(participantAddress == aliceAddress){
+						aliceOutcomeAllocationAmount.Add(aliceOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[i].Amount)
+					}
+					if(participantAddress == bobAddress){
+						bobOutcomeAllocationAmount.Add(bobOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[i].Amount)
+					}
+				}
 			}
 
 			latestLedgerState, _ = updated.C.LatestSupportedSignedState()

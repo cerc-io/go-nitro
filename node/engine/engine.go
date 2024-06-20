@@ -485,12 +485,6 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	objective, ok := e.store.GetObjectiveByChannelId(chainEvent.ChannelID())
 
 	if ok {
-		dDfo, ok := objective.(*directdefund.Objective)
-		if ok {
-			dDfo.GetChannelById = e.store.GetChannelById
-			return e.attemptProgress(objective)
-		}
-
 		return e.attemptProgress(objective)
 	}
 
@@ -504,11 +498,7 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 		if ok {
 			obj, ok := e.store.GetObjectiveByChannelId(consensusChannel.Id)
 			if ok {
-				dDfo, ok := obj.(*directdefund.Objective)
-				if ok {
-					dDfo.GetChannelById = e.store.GetChannelById
-					return e.attemptProgress(obj)
-				}
+				return e.attemptProgress(obj)
 			}
 		}
 	}
@@ -578,14 +568,24 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 		if err != nil {
 			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not create directdefund objective for %+v: %w", request, err)
 		}
+
+		// consensus channel is required when processing a challenge-registered event for a virtual channel to obtain the ledger channel ID
 		// If ddfo creation was successful, destroy the consensus channel to prevent it being used (a Channel will now take over governance)
 		// err = e.store.DestroyConsensusChannel(request.ChannelId)
 		// if err != nil {
 		// 	return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not destroy consensus channel for %+v: %w", request, err)
 		// }
 
-		if len(ddfo.FundedTargets) != 0 {
-			ddfo.GetChannelById = e.store.GetChannelById
+		consensusChannel, _ := e.store.GetConsensusChannelById(request.ChannelId)
+		if len(consensusChannel.FundingTargets()) != 0 {
+			// Store the virtual channels
+			ddfo.FundedChannels = make(map[types.Destination]*channel.Channel)
+			for _, virtulChannelId := range consensusChannel.FundingTargets() {
+				virtualChannel, _ := e.store.GetChannelById(virtulChannelId)
+				ddfo.FundedChannels[virtulChannelId] = virtualChannel
+			}
+
+			// Method to check whether voucher has amount in it
 			ddfo.IsVoucherAmountPresent = func(channelId types.Destination) bool {
 				if e.vm.ChannelRegistered(channelId) {
 					paid, _ := e.vm.Paid(channelId)
@@ -594,6 +594,7 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 				return false
 			}
 
+			// Method to get voucher info
 			ddfo.GetVoucherInfo = func(channelId types.Destination) payments.VoucherInfo {
 				voucherInfo, _ := e.vm.Store.GetVoucherInfo(channelId)
 				return *voucherInfo
@@ -1023,7 +1024,6 @@ func (e *Engine) processStoreChannels(latestblock chainservice.Block) error {
 			dDfo, isDdfo := obj.(*directdefund.Objective)
 
 			if ok && isDdfo && dDfo.C.OnChain.IsChallengeInitiatedByMe {
-				dDfo.GetChannelById = e.store.GetChannelById
 				_, err = e.attemptProgress(obj)
 				if err != nil {
 					return err

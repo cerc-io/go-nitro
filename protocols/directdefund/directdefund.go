@@ -61,10 +61,7 @@ type Objective struct {
 	IsCheckpoint                   bool
 	checkpointTransactionSubmitted bool
 
-	FundedTargets []types.Destination
-
-	// TODO: Refactor to get latest virtual channel
-	GetChannelById         GetChannelByIdFunction
+	FundedChannels         map[types.Destination]*channel.Channel
 	IsVoucherAmountPresent func(channelId types.Destination) bool
 	GetVoucherInfo         func(channelId types.Destination) payments.VoucherInfo
 }
@@ -140,9 +137,6 @@ func NewObjective(
 		init.Status = protocols.Unapproved
 	}
 	init.C = c.Clone()
-
-	// Array of funded virtual channel IDs
-	init.FundedTargets = cc.FundingTargets()
 
 	latestSS, err := c.LatestSupportedState()
 	if err != nil {
@@ -274,17 +268,16 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 }
 
 func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
-	// For Alice loops over funded targets and call challenge on each channel serially
-	if updated.IsChallenge && len(updated.FundedTargets) != 0 && !updated.virtualChannelChallengeSubmitted {
-		for _, fundedTarget := range updated.FundedTargets {
+	// Alice loops over funded targets and call challenge on each channel serially
+	if updated.IsChallenge && len(updated.FundedChannels) != 0 && !updated.virtualChannelChallengeSubmitted {
+		for virtualChannelId, virtualChannel := range updated.FundedChannels {
 			// Get channel by id
-			virtualChannel, _ := updated.GetChannelById(fundedTarget)
 			latestSupportedState, _ := virtualChannel.LatestSupportedSignedState()
 			signedPostFundState := virtualChannel.SignedPostFundState()
 
 			// TODO: Check redemption state signed by node who received voucher
-			if updated.IsVoucherAmountPresent(fundedTarget) {
-				voucherInfo := updated.GetVoucherInfo(fundedTarget)
+			if updated.IsVoucherAmountPresent(virtualChannelId) {
+				voucherInfo := updated.GetVoucherInfo(virtualChannelId)
 
 				// Create type to encode voucher amount and signature
 				voucherAmountSigTy, _ := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
@@ -348,11 +341,10 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 	}
 
 	// Alice checks if all virtual channels are challenged and calls challenge on ledger channel
-	if updated.IsChallenge && len(updated.FundedTargets) != 0 && updated.virtualChannelChallengeSubmitted {
+	if updated.IsChallenge && len(updated.FundedChannels) != 0 && updated.virtualChannelChallengeSubmitted {
 		// Alice check if all virtual channels are challenged
 		var isVirtualChannelsStillOpen bool
-		for _, fundedTarget := range updated.FundedTargets {
-			virtualChannel, _ := updated.GetChannelById(fundedTarget)
+		for _, virtualChannel := range updated.FundedChannels {
 			if virtualChannel.OnChain.ChannelMode == channel.Open {
 				isVirtualChannelsStillOpen = true
 				break
@@ -395,7 +387,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 	}
 
 	// Alice calls reclaim for each of the virtual channels after ledger channel and respective virtual channel is finalized
-	if updated.C.OnChain.ChannelMode == channel.Finalized && updated.IsChallenge && len(updated.FundedTargets) != 0 && !updated.reclaimTransactionSubmitted {
+	if updated.C.OnChain.ChannelMode == channel.Finalized && updated.IsChallenge && len(updated.FundedChannels) != 0 && !updated.reclaimTransactionSubmitted {
 		latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
 
 		convertedLedgerFixedPart := NitroAdjudicator.ConvertFixedPart(latestSupportedSignedState.State().FixedPart())
@@ -403,8 +395,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		sourceOutcome := latestSupportedSignedState.State().Outcome
 		sourceOb, _ := sourceOutcome.Encode()
 
-		for _, fundedTarget := range updated.FundedTargets {
-			virtualChannel, _ := updated.GetChannelById(fundedTarget)
+		for _, virtualChannel := range updated.FundedChannels {
 			latestVirtualState, _ := virtualChannel.LatestSignedState()
 			virtualStateHash, _ := latestVirtualState.State().Hash()
 			targetOutcome := latestVirtualState.State().Outcome
@@ -433,7 +424,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 	// Transfer assets
 	if updated.IsChallenge && updated.C.OnChain.ChannelMode == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.FullyWithdrawn() {
 
-		if len(updated.FundedTargets) == 0 {
+		if len(updated.FundedChannels) == 0 {
 			latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
 			transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
 			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
@@ -444,12 +435,13 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 			aliceOutcomeAllocationAmount := latestLedgerState.State().Outcome[0].Allocations[0].Amount
 			bobOutcomeAllocationAmount := latestLedgerState.State().Outcome[0].Allocations[1].Amount
 
-			// TODO: Discuss how funds are liquidated from mulitple virtual channels to ledger channel
-			virtualChannel, _ := updated.GetChannelById(updated.FundedTargets[0])
-			latestVirtualState, _ := virtualChannel.LatestSignedState()
-
-			aliceOutcomeAllocationAmount.Add(aliceOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[0].Amount)
-			bobOutcomeAllocationAmount.Add(bobOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[1].Amount)
+			for _, virtualChannel := range updated.FundedChannels {
+				latestVirtualState, _ := virtualChannel.LatestSignedState()
+				// TODO: Discuss how funds are liquidated from mulitple virtual channles to ledger channel
+				// TODO: Distribute allocations based on address
+				aliceOutcomeAllocationAmount.Add(aliceOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[0].Amount)
+				bobOutcomeAllocationAmount.Add(bobOutcomeAllocationAmount, latestVirtualState.State().Outcome[0].Allocations[1].Amount)
+			}
 
 			latestLedgerState, _ = updated.C.LatestSupportedSignedState()
 			latestState := latestLedgerState.State()
@@ -586,12 +578,11 @@ func (o *Objective) clone() Objective {
 
 	clone.IsCheckpoint = o.IsCheckpoint
 	clone.checkpointTransactionSubmitted = o.checkpointTransactionSubmitted
-	clone.FundedTargets = o.FundedTargets
-	clone.GetChannelById = o.GetChannelById
 	clone.IsVoucherAmountPresent = o.IsVoucherAmountPresent
 	clone.virtualChannelChallengeSubmitted = o.virtualChannelChallengeSubmitted
 	clone.reclaimTransactionSubmitted = o.reclaimTransactionSubmitted
 	clone.GetVoucherInfo = o.GetVoucherInfo
+	clone.FundedChannels = o.FundedChannels
 
 	return clone
 }

@@ -11,20 +11,23 @@ import (
 // jsonObjective replaces the directdefund.Objective's channel pointer with
 // the channel's ID, making jsonObjective suitable for serialization
 type jsonObjective struct {
-	Status                         protocols.ObjectiveStatus
-	C                              types.Destination
-	FinalTurnNum                   uint64
-	TransactionSumbmitted          bool
-	IsChallenge                    bool
-	ChallengeTransactionSubmitted  bool
-	IsCheckpoint                   bool
-	CheckpointTransactionSubmitted bool
+	Status                           protocols.ObjectiveStatus
+	C                                types.Destination
+	FinalTurnNum                     uint64
+	TransactionSumbmitted            bool
+	IsChallenge                      bool
+	ChallengeTransactionSubmitted    bool
+	IsCheckpoint                     bool
+	CheckpointTransactionSubmitted   bool
+	VirtualChannelChallengeSubmitted bool
+	ReclaimTransactionSubmitted      bool
+	FundedChannels                   map[types.Destination]*channel.Channel
 }
 
 // MarshalJSON returns a JSON representation of the DirectDefundObjective
 // NOTE: Marshal -> Unmarshal is a lossy process. All channel data
 // (other than Id) from the field C is discarded
-func (o Objective) MarshalJSON() ([]byte, error) {
+func (o *Objective) MarshalJSON() ([]byte, error) {
 	jsonDDFO := jsonObjective{
 		o.Status,
 		o.C.Id,
@@ -34,6 +37,9 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.challengeTransactionSubmitted,
 		o.checkpointTransactionSubmitted,
 		o.IsCheckpoint,
+		o.virtualChannelChallengeSubmitted,
+		o.reclaimTransactionSubmitted,
+		o.FundedChannels,
 	}
 
 	return json.Marshal(jsonDDFO)
@@ -64,6 +70,8 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.challengeTransactionSubmitted = jsonDDFO.ChallengeTransactionSubmitted
 	o.checkpointTransactionSubmitted = jsonDDFO.CheckpointTransactionSubmitted
 	o.IsCheckpoint = jsonDDFO.IsCheckpoint
-
+	o.virtualChannelChallengeSubmitted = jsonDDFO.VirtualChannelChallengeSubmitted
+	o.reclaimTransactionSubmitted = jsonDDFO.ReclaimTransactionSubmitted
+	o.FundedChannels = jsonDDFO.FundedChannels
 	return nil
 }

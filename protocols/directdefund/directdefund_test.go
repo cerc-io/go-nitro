@@ -1,7 +1,6 @@
 package directdefund
 
 import (
-	"encoding/json"
 	"math/big"
 	"testing"
 
@@ -76,7 +75,7 @@ func newTestObjective() (Objective, error) {
 	}
 	request := NewObjectiveRequest(cc.Id, false)
 	// Assert that valid constructor args do not result in error
-	o, err := NewObjective(request, true, getConsensusChannel)
+	o, err := NewObjective(request, true, getConsensusChannel, nil, nil, false)
 	if err != nil {
 		return Objective{}, err
 	}
@@ -297,7 +296,7 @@ func TestCrankBob(t *testing.T) {
 func TestMarshalJSON(t *testing.T) {
 	ddfo, _ := newTestObjective()
 
-	encodedDdfo, err := json.Marshal(ddfo)
+	encodedDdfo, err := ddfo.MarshalJSON()
 	if err != nil {
 		t.Fatalf("error encoding directdefund objective %v", ddfo)
 	}

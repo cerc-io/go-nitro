@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
@@ -441,8 +442,9 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 		// If channel doesn't exist and chain event is ChallengeRegistered then create a new direct defund objective
 		// This doesn't occur for actor who registered the challenge
 		_, isChallengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
+
 		if isChallengeRegistered {
-			ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById)
+			ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent, true)
 			if err != nil {
 				// Node should not panic if it is unable to find the required consensus channel before creating objective
 				if errors.Is(err, directdefund.ErrChannelNotExist) {
@@ -485,6 +487,30 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	if ok {
 		return e.attemptProgress(objective)
 	}
+
+	// When a challenge is registered on a virtual channel, identify the related ledger channel and its associated objective, and then process it.
+	// Challenge registered on virtual channels are handled only by the one who raised the challenge
+	_, isChallengeRegisteredEvent := chainEvent.(chainservice.ChallengeRegisteredEvent)
+	if isChallengeRegisteredEvent && c.Type == channel.Virtual && c.OnChain.IsChallengeInitiatedByMe {
+		myAddress := *e.store.GetAddress()
+		counterParty := common.Address{}
+
+		// Find counterparty address to get consensus channel between us
+		if myAddress == c.Participants[0] {
+			counterParty = c.Participants[len(c.Participants)-1]
+		} else if myAddress == c.Participants[len(c.Participants)-1] {
+			counterParty = c.Participants[0]
+		}
+
+		consensusChannel, ok := e.store.GetConsensusChannel(counterParty)
+		if ok {
+			obj, ok := e.store.GetObjectiveByChannelId(consensusChannel.Id)
+			if ok {
+				return e.attemptProgress(obj)
+			}
+		}
+	}
+
 	return EngineEvent{}, nil
 }
 
@@ -546,15 +572,13 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 		return e.attemptProgress(&dfo)
 
 	case directdefund.ObjectiveRequest:
-		ddfo, err := directdefund.NewObjective(request, true, e.store.GetConsensusChannelById)
+		ddfo, err := directdefund.NewObjective(request, true, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent, false)
 		if err != nil {
 			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not create directdefund objective for %+v: %w", request, err)
 		}
-		// If ddfo creation was successful, destroy the consensus channel to prevent it being used (a Channel will now take over governance)
-		err = e.store.DestroyConsensusChannel(request.ChannelId)
-		if err != nil {
-			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not destroy consensus channel for %+v: %w", request, err)
-		}
+
+		// Retaining the consensus channel since it's needed to process a challenge-registered event for a virtual channel and obtain the ledger channel ID.
+
 		return e.attemptProgress(&ddfo)
 
 	default:
@@ -887,7 +911,7 @@ func (e *Engine) constructObjectiveFromMessage(id protocols.ObjectiveId, p proto
 		}
 		return &vdfo, nil
 	case directdefund.IsDirectDefundObjective(id):
-		ddfo, err := directdefund.ConstructObjectiveFromPayload(p, false, e.store.GetConsensusChannelById)
+		ddfo, err := directdefund.ConstructObjectiveFromPayload(p, false, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent)
 		if err != nil {
 			return &directdefund.Objective{}, fromMsgErr(id, err)
 		}
@@ -972,8 +996,8 @@ func (e *Engine) processStoreChannels(latestblock chainservice.Block) error {
 			}
 		}
 
-		// Liquidate assets for finalized channels
-		if ch.OnChain.ChannelMode == channel.Finalized {
+		// Liquidate assets for finalized ledger channels
+		if ch.Type == channel.Ledger && ch.OnChain.ChannelMode == channel.Finalized {
 			obj, ok := e.store.GetObjectiveByChannelId(ch.Id)
 			dDfo, isDdfo := obj.(*directdefund.Objective)
 

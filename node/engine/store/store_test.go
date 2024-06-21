@@ -282,7 +282,7 @@ func TestBigNumberStorage(t *testing.T) {
 			},
 		}}
 		s := state.State{Outcome: reallyLargeOutcome}
-		c, err := channel.New(s, 0)
+		c, err := channel.New(s, 0, channel.Ledger)
 		if err != nil {
 			t.Fatalf("error constructing channel: %v", err)
 		}

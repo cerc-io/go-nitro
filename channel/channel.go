@@ -32,6 +32,7 @@ type Channel struct {
 	state.FixedPart
 	Id      types.Destination
 	MyIndex uint
+	Type    ChannelType
 
 	OnChain  OnChainData
 	OffChain OffChainData
@@ -51,7 +52,7 @@ func (c *Channel) isNewChainEvent(event chainservice.Event) bool {
 }
 
 // New constructs a new Channel from the supplied state.
-func New(s state.State, myIndex uint) (*Channel, error) {
+func New(s state.State, myIndex uint, channelType ChannelType) (*Channel, error) {
 	c := Channel{}
 	var err error = s.Validate()
 
@@ -86,6 +87,7 @@ func New(s state.State, myIndex uint) (*Channel, error) {
 		c.OnChain.Holdings[asset] = big.NewInt(0)
 	}
 
+	c.Type = channelType
 	return &c, nil
 }
 
@@ -97,6 +99,7 @@ type jsonChannel struct {
 	state.FixedPart
 	OnChain  OnChainData
 	OffChain OffChainData
+	Type     ChannelType
 }
 
 // MarshalJSON returns a JSON representation of the Channel
@@ -107,6 +110,7 @@ func (c Channel) MarshalJSON() ([]byte, error) {
 		OnChain:   c.OnChain,
 		OffChain:  c.OffChain,
 		FixedPart: c.FixedPart,
+		Type:      c.Type,
 	}
 	return json.Marshal(jsonCh)
 }
@@ -126,6 +130,7 @@ func (c *Channel) UnmarshalJSON(data []byte) error {
 	c.OffChain = jsonCh.OffChain
 
 	c.FixedPart = jsonCh.FixedPart
+	c.Type = jsonCh.Type
 
 	return nil
 }
@@ -140,7 +145,7 @@ func (c *Channel) Clone() *Channel {
 	if c == nil {
 		return nil
 	}
-	d, _ := New(c.PreFundState().Clone(), c.MyIndex)
+	d, _ := New(c.PreFundState().Clone(), c.MyIndex, c.Type)
 	d.OffChain.LatestSupportedStateTurnNum = c.OffChain.LatestSupportedStateTurnNum
 	for i, ss := range c.OffChain.SignedStateForTurnNum {
 		d.OffChain.SignedStateForTurnNum[i] = ss.Clone()
@@ -389,6 +394,8 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 	// TODO: Handle Checkpointed event
 	// Checkpointed event is emitted after a checkpoint transaction occurs on an open channel
 	// checkpoint method of ForceMove.sol contract
+	case chainservice.ReclaimedEvent:
+	// TODO: Handle ReclaimedEvent
 	default:
 		return &Channel{}, fmt.Errorf("channel %+v cannot handle event %+v", c, event)
 	}

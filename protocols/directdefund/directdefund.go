@@ -8,11 +8,15 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/go-cmp/cmp"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
 	"github.com/statechannels/go-nitro/channel/state"
+	"github.com/statechannels/go-nitro/channel/state/outcome"
 	NitroAdjudicator "github.com/statechannels/go-nitro/node/engine/chainservice/adjudicator"
+	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
 	"github.com/statechannels/go-nitro/types"
 )
@@ -22,6 +26,7 @@ const (
 	WaitingForWithdraw         protocols.WaitingFor = "WaitingForWithdraw"
 	WaitingForChallenge        protocols.WaitingFor = "WaitingForChallenge"
 	WaitingForChallengeCleared protocols.WaitingFor = "WaitingForChallengeCleared"
+	WaitingForReclaim          protocols.WaitingFor = "WaitingForReclaim"
 	WaitingForNothing          protocols.WaitingFor = "WaitingForNothing" // Finished
 )
 
@@ -48,11 +53,16 @@ type Objective struct {
 	// Whether a withdraw transaction has been declared as a side effect in a previous crank
 	withdrawTransactionSubmitted bool
 
-	IsChallenge                   bool
-	challengeTransactionSubmitted bool
+	IsChallenge                      bool
+	challengeTransactionSubmitted    bool
+	virtualChannelChallengeSubmitted bool
+	reclaimTransactionSubmitted      bool
 
 	IsCheckpoint                   bool
 	checkpointTransactionSubmitted bool
+
+	FundedChannels            map[types.Destination]*channel.Channel
+	GetVoucherIfAmountPresent func(channelId types.Destination) (*payments.VoucherInfo, bool) `json:"-"`
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -80,19 +90,20 @@ type GetChannelByIdFunction func(id types.Destination) (channel *channel.Channel
 // GetConsensusChannel describes functions which return a ConsensusChannel ledger channel for a channel id.
 type GetConsensusChannel func(channelId types.Destination) (ledger *consensus_channel.ConsensusChannel, err error)
 
+type GetVoucherIfAmountPresent func(channelId types.Destination) (*payments.VoucherInfo, bool)
+
 // NewObjective initiates an Objective with the supplied channel
 func NewObjective(
 	request ObjectiveRequest,
 	preApprove bool,
 	getConsensusChannel GetConsensusChannel,
+	getChannelById GetChannelByIdFunction,
+	getVoucherIfAmountPresent GetVoucherIfAmountPresent,
+	isOnChainChallengeRegistered bool,
 ) (Objective, error) {
 	cc, err := getConsensusChannel(request.ChannelId)
 	if err != nil {
 		return Objective{}, fmt.Errorf("%w %s: %w", ErrChannelNotExist, request.ChannelId, err)
-	}
-
-	if len(cc.FundingTargets()) != 0 {
-		return Objective{}, ErrNotEmpty
 	}
 
 	c, err := CreateChannelFromConsensusChannel(*cc)
@@ -112,6 +123,25 @@ func NewObjective(
 	}
 
 	init := Objective{}
+
+	if len(cc.FundingTargets()) != 0 {
+		if !request.IsChallenge {
+			if !isOnChainChallengeRegistered {
+				return Objective{}, ErrNotEmpty
+			}
+		}
+
+		// Store the virtual channels
+		init.FundedChannels = make(map[types.Destination]*channel.Channel)
+		for _, virtulChannelId := range cc.FundingTargets() {
+			virtualChannel, ok := getChannelById(virtulChannelId)
+			if ok {
+				init.FundedChannels[virtulChannelId] = virtualChannel
+			}
+		}
+
+		init.GetVoucherIfAmountPresent = getVoucherIfAmountPresent
+	}
 
 	if preApprove {
 		init.Status = protocols.Approved
@@ -140,6 +170,8 @@ func ConstructObjectiveFromPayload(
 	p protocols.ObjectivePayload,
 	preapprove bool,
 	getConsensusChannel GetConsensusChannel,
+	getChannelById GetChannelByIdFunction,
+	getVoucherIfAmountPresent GetVoucherIfAmountPresent,
 ) (Objective, error) {
 	ss, err := getSignedStatePayload(p.PayloadData)
 	if err != nil {
@@ -161,7 +193,7 @@ func ConstructObjectiveFromPayload(
 
 	cId := s.ChannelId()
 	request := NewObjectiveRequest(cId, false)
-	return NewObjective(request, preapprove, getConsensusChannel)
+	return NewObjective(request, preapprove, getConsensusChannel, getChannelById, getVoucherIfAmountPresent, request.IsChallenge)
 }
 
 // Public methods on the DirectDefundingObjective
@@ -250,6 +282,81 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 }
 
 func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
+	// Alice loops over funded targets and call challenge on each channel serially
+	if updated.IsChallenge && len(updated.FundedChannels) != 0 && !updated.virtualChannelChallengeSubmitted {
+		// TODO: Refactor to seperate method
+		for virtualChannelId, virtualChannel := range updated.FundedChannels {
+			latestSupportedState, _ := virtualChannel.LatestSupportedSignedState()
+			signedPostFundState := virtualChannel.SignedPostFundState()
+
+			// Construct state with voucher only if this node has received the voucher
+			voucher, ok := updated.GetVoucherIfAmountPresent(virtualChannelId)
+			if ok && virtualChannel.Participants[virtualChannel.MyIndex] == voucher.ChannelPayee {
+
+				// Create type to encode voucher amount and signature
+				voucherAmountSigTy, _ := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+					{Name: "amount", Type: "uint256"},
+					{Name: "signature", Type: "tuple", Components: []abi.ArgumentMarshaling{
+						{Name: "v", Type: "uint8"},
+						{Name: "r", Type: "bytes32"},
+						{Name: "s", Type: "bytes32"},
+					}},
+				})
+
+				arguments := abi.Arguments{
+					{Type: voucherAmountSigTy},
+				}
+
+				voucherAmountSignatureData := protocols.VoucherAmountSignature{
+					Amount:    voucher.Paid(),
+					Signature: NitroAdjudicator.ConvertSignature(voucher.LargestVoucher.Signature),
+				}
+
+				// Use above created type and encode voucher amount and signature
+				dataEncoded, _ := arguments.Pack(voucherAmountSignatureData)
+
+				// Update allocation based on voucher
+				newOutcome := latestSupportedState.State().Outcome[0].Clone()
+				// Return the remaining voucher amounts to the node that created the virtual channel
+				newOutcome.Allocations[0].Amount = voucher.Remaining()
+				// Return the amounts received via the voucher to the node that joined the virtual channel
+				newOutcome.Allocations[1].Amount = voucher.Paid()
+
+				vp := state.VariablePart{Outcome: outcome.Exit{newOutcome}, TurnNum: latestSupportedState.State().TurnNum + 1, AppData: dataEncoded, IsFinal: false}
+				newState := state.StateFromFixedAndVariablePart(latestSupportedState.State().FixedPart(), vp)
+				latestSignedState, _ := virtualChannel.SignAndAddState(newState, secretKey)
+
+				// Bob calls challenge method on virtual channel
+				virtualChallengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSignedState.State(), *secretKey)
+				virtualChallengeTx := protocols.NewChallengeTransaction(virtualChannel.Id, latestSignedState, []state.SignedState{signedPostFundState}, virtualChallengerSig)
+				sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, virtualChallengeTx)
+			} else {
+				// Call challenge without proof if voucher doesn't exist
+				latestSupportedSignedState, _ := virtualChannel.LatestSupportedSignedState()
+				challengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSupportedSignedState.State(), *secretKey)
+				challengeTx := protocols.NewChallengeTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0), challengerSig)
+				sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
+			}
+		}
+		updated.virtualChannelChallengeSubmitted = true
+		return &updated, sideEffects, WaitingForChallenge, nil
+	}
+
+	// Alice checks if all virtual channels are challenged and calls challenge on ledger channel
+	if updated.IsChallenge && len(updated.FundedChannels) != 0 && updated.virtualChannelChallengeSubmitted {
+		// Alice check if all virtual channels are challenged
+		var isVirtualChannelsStillOpen bool
+		for _, virtualChannel := range updated.FundedChannels {
+			if virtualChannel.OnChain.ChannelMode == channel.Open {
+				isVirtualChannelsStillOpen = true
+				break
+			}
+		}
+		if isVirtualChannelsStillOpen {
+			return &updated, sideEffects, WaitingForChallenge, nil
+		}
+	}
+
 	// Initiate challenge transaction
 	if updated.IsChallenge && !updated.challengeTransactionSubmitted {
 		latestSupportedSignedState, err := updated.C.LatestSupportedSignedState()
@@ -281,11 +388,82 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
-	// Liquidate the assets
-	if updated.C.OnChain.ChannelMode == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.FullyWithdrawn() {
+	// Alice calls reclaim for each of the virtual channels after ledger channel and respective virtual channel is finalized
+	if updated.C.OnChain.ChannelMode == channel.Finalized && updated.IsChallenge && len(updated.FundedChannels) != 0 && !updated.reclaimTransactionSubmitted {
 		latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
-		transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
-		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
+
+		convertedLedgerFixedPart := NitroAdjudicator.ConvertFixedPart(latestSupportedSignedState.State().FixedPart())
+		convertedLedgerVariablePart := NitroAdjudicator.ConvertVariablePart(latestSupportedSignedState.State().VariablePart())
+		sourceOutcome := latestSupportedSignedState.State().Outcome
+		sourceOb, _ := sourceOutcome.Encode()
+
+		for _, virtualChannel := range updated.FundedChannels {
+			latestVirtualState, _ := virtualChannel.LatestSignedState()
+			virtualStateHash, _ := latestVirtualState.State().Hash()
+			targetOutcome := latestVirtualState.State().Outcome
+			targetOb, _ := targetOutcome.Encode()
+
+			reclaimArgs := NitroAdjudicator.IMultiAssetHolderReclaimArgs{
+				SourceChannelId:       updated.C.Id,
+				FixedPart:             convertedLedgerFixedPart,
+				VariablePart:          convertedLedgerVariablePart,
+				SourceOutcomeBytes:    sourceOb,
+				SourceAssetIndex:      common.Big0,
+				IndexOfTargetInSource: common.Big2,
+				TargetStateHash:       virtualStateHash,
+				TargetOutcomeBytes:    targetOb,
+				TargetAssetIndex:      common.Big0,
+			}
+
+			reclaimTx := protocols.NewReclaimTransaction(updated.C.Id, reclaimArgs)
+			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, reclaimTx)
+		}
+
+		updated.reclaimTransactionSubmitted = true
+		return &updated, sideEffects, WaitingForReclaim, nil
+	}
+
+	// TODO: Wait for all reclaim txs to complete
+	// Transfer assets
+	if updated.IsChallenge && updated.C.OnChain.ChannelMode == channel.Finalized && !updated.withdrawTransactionSubmitted && !updated.FullyWithdrawn() {
+
+		if len(updated.FundedChannels) == 0 {
+			latestSupportedSignedState, _ := updated.C.LatestSupportedSignedState()
+			transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
+			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
+		} else {
+			// Distribute assets based on virtual channel allocations
+
+			// Compute new state outcome allocations
+			latestLedgerState, _ := updated.C.LatestSupportedSignedState()
+			aliceAllocation := latestLedgerState.State().Outcome[0].Allocations[0]
+			bobAllocation := latestLedgerState.State().Outcome[0].Allocations[1]
+
+			// TODO: Test multiple virtual channels
+			for _, virtualChannel := range updated.FundedChannels {
+				latestVirtualState, _ := virtualChannel.LatestSignedState()
+				// Distribute allocations based on address
+				for i, allocation := range latestVirtualState.State().Outcome[0].Allocations {
+					if aliceAllocation.Destination == allocation.Destination {
+						aliceAllocation.Amount.Add(aliceAllocation.Amount, latestVirtualState.State().Outcome[0].Allocations[i].Amount)
+					}
+					if bobAllocation.Destination == allocation.Destination {
+						bobAllocation.Amount.Add(bobAllocation.Amount, latestVirtualState.State().Outcome[0].Allocations[i].Amount)
+					}
+				}
+			}
+
+			latestLedgerState, _ = updated.C.LatestSupportedSignedState()
+			latestState := latestLedgerState.State()
+
+			// Construct exit state with updated outcome allocations
+			latestState.Outcome[0].Allocations = outcome.Allocations{aliceAllocation, bobAllocation}
+
+			signedConstructedState := state.NewSignedState(latestState)
+			transferTx := protocols.NewTransferAllTransaction(updated.C.Id, signedConstructedState)
+			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
+		}
+
 		updated.withdrawTransactionSubmitted = true
 		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
@@ -300,6 +478,11 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 	if updated.C.OnChain.ChannelMode == channel.Open {
 		updated.Status = protocols.Completed
 		return &updated, sideEffects, WaitingForNothing, nil
+	}
+
+	// Bob waiting for channel to withdraw
+	if updated.C.OnChain.ChannelMode == channel.Finalized {
+		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
 
 	return &updated, sideEffects, WaitingForNothing, fmt.Errorf("objective %s in invalid state", string(updated.Id()))
@@ -362,7 +545,7 @@ func IsDirectDefundObjective(id protocols.ObjectiveId) bool {
 
 // CreateChannelFromConsensusChannel creates a Channel with (an appropriate latest supported state) from the supplied ConsensusChannel.
 func CreateChannelFromConsensusChannel(cc consensus_channel.ConsensusChannel) (*channel.Channel, error) {
-	c, err := channel.New(cc.ConsensusVars().AsState(cc.SupportedSignedState().State().FixedPart()), uint(cc.MyIndex))
+	c, err := channel.New(cc.ConsensusVars().AsState(cc.SupportedSignedState().State().FixedPart()), uint(cc.MyIndex), channel.Ledger)
 	if err != nil {
 		return &channel.Channel{}, err
 	}
@@ -392,6 +575,10 @@ func (o *Objective) clone() Objective {
 
 	clone.IsCheckpoint = o.IsCheckpoint
 	clone.checkpointTransactionSubmitted = o.checkpointTransactionSubmitted
+	clone.virtualChannelChallengeSubmitted = o.virtualChannelChallengeSubmitted
+	clone.reclaimTransactionSubmitted = o.reclaimTransactionSubmitted
+	clone.GetVoucherIfAmountPresent = o.GetVoucherIfAmountPresent
+	clone.FundedChannels = o.FundedChannels
 
 	return clone
 }

@@ -158,7 +158,12 @@ func NewChallengeClearedEvent(channelId types.Destination, block Block, txIndex 
 }
 
 type ReclaimedEvent struct {
+	// TODO: Check other fields of reclaimed event to store
 	commonEvent
+}
+
+func (re ReclaimedEvent) String() string {
+	return "Reclaim event for Channel " + re.channelID.String() + " at Block " + fmt.Sprint(re.block.BlockNum)
 }
 
 // ChainEventHandler describes an objective that can handle chain events

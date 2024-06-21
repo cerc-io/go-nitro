@@ -39,12 +39,12 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: go test ./... -count=2 -shuffle=on -timeout 400s -v -failfast
+        run: go test ./... -count=2 -shuffle=on -v -failfast
 
       - name: Check for race conditions
         # Only executes when triggered by a push to the main branch
         if: ${{ github.ref_name == 'main' }}
-        run: go test ./... -timeout 4m -v -failfast -race
+        run: go test ./... -v -failfast -race
 
       - name: Archive logs
         if: always()

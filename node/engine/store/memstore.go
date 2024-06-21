@@ -415,6 +415,7 @@ func (ms *MemStore) populateChannelData(obj protocols.Objective) error {
 
 		o.C = &ch
 
+		// Populate virtual channels if present
 		if len(o.FundedChannels) != 0 {
 			for virtualChannelId := range o.FundedChannels {
 				updatedVirtualChannel, _ := ms.GetChannelById(virtualChannelId)

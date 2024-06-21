@@ -53,7 +53,7 @@ type Objective struct {
 	// Whether a withdraw transaction has been declared as a side effect in a previous crank
 	withdrawTransactionSubmitted bool
 
-	IsChallenge                   	 bool
+	IsChallenge                      bool
 	challengeTransactionSubmitted    bool
 	virtualChannelChallengeSubmitted bool
 	reclaimTransactionSubmitted      bool
@@ -62,7 +62,7 @@ type Objective struct {
 	checkpointTransactionSubmitted bool
 
 	FundedChannels            map[types.Destination]*channel.Channel
-	GetVoucherIfAmountPresent func(channelId types.Destination) (*payments.VoucherInfo, bool)
+	GetVoucherIfAmountPresent func(channelId types.Destination) (*payments.VoucherInfo, bool) `json:"-"`
 }
 
 // isInConsensusOrFinalState returns true if the channel has a final state or latest state that is supported
@@ -90,11 +90,15 @@ type GetChannelByIdFunction func(id types.Destination) (channel *channel.Channel
 // GetConsensusChannel describes functions which return a ConsensusChannel ledger channel for a channel id.
 type GetConsensusChannel func(channelId types.Destination) (ledger *consensus_channel.ConsensusChannel, err error)
 
+type GetVoucherIfAmountPresent func(channelId types.Destination) (*payments.VoucherInfo, bool)
+
 // NewObjective initiates an Objective with the supplied channel
 func NewObjective(
 	request ObjectiveRequest,
 	preApprove bool,
 	getConsensusChannel GetConsensusChannel,
+	getChannelById GetChannelByIdFunction,
+	getVoucherIfAmountPresent GetVoucherIfAmountPresent,
 	isOnChainChallengeRegistered bool,
 ) (Objective, error) {
 	cc, err := getConsensusChannel(request.ChannelId)
@@ -105,16 +109,6 @@ func NewObjective(
 	c, err := CreateChannelFromConsensusChannel(*cc)
 	if err != nil {
 		return Objective{}, fmt.Errorf("could not create Channel from ConsensusChannel; %w", err)
-	}
-
-	if len(cc.FundingTargets()) != 0 {
-		if !request.IsChallenge {
-			if !isOnChainChallengeRegistered {
-				return Objective{}, ErrNotEmpty
-			}
-
-			// TODO: Check if isOnChainChallengeRegistered and its virtual channels of that ledger channels are in challenge mode
-		}
 	}
 
 	// We choose to disallow creating an objective if the channel has an in-progress update.
@@ -129,6 +123,25 @@ func NewObjective(
 	}
 
 	init := Objective{}
+
+	if len(cc.FundingTargets()) != 0 {
+		if !request.IsChallenge {
+			if !isOnChainChallengeRegistered {
+				return Objective{}, ErrNotEmpty
+			}
+		}
+
+		// Store the virtual channels
+		init.FundedChannels = make(map[types.Destination]*channel.Channel)
+		for _, virtulChannelId := range cc.FundingTargets() {
+			virtualChannel, ok := getChannelById(virtulChannelId)
+			if ok {
+				init.FundedChannels[virtulChannelId] = virtualChannel
+			}
+		}
+
+		init.GetVoucherIfAmountPresent = getVoucherIfAmountPresent
+	}
 
 	if preApprove {
 		init.Status = protocols.Approved
@@ -157,6 +170,8 @@ func ConstructObjectiveFromPayload(
 	p protocols.ObjectivePayload,
 	preapprove bool,
 	getConsensusChannel GetConsensusChannel,
+	getChannelById GetChannelByIdFunction,
+	getVoucherIfAmountPresent GetVoucherIfAmountPresent,
 ) (Objective, error) {
 	ss, err := getSignedStatePayload(p.PayloadData)
 	if err != nil {
@@ -178,7 +193,7 @@ func ConstructObjectiveFromPayload(
 
 	cId := s.ChannelId()
 	request := NewObjectiveRequest(cId, false)
-	return NewObjective(request, preapprove, getConsensusChannel, request.IsChallenge)
+	return NewObjective(request, preapprove, getConsensusChannel, getChannelById, getVoucherIfAmountPresent, request.IsChallenge)
 }
 
 // Public methods on the DirectDefundingObjective
@@ -269,6 +284,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
 	// Alice loops over funded targets and call challenge on each channel serially
 	if updated.IsChallenge && len(updated.FundedChannels) != 0 && !updated.virtualChannelChallengeSubmitted {
+		// TODO: Refactor to seperate method
 		for virtualChannelId, virtualChannel := range updated.FundedChannels {
 			latestSupportedState, _ := virtualChannel.LatestSupportedSignedState()
 			signedPostFundState := virtualChannel.SignedPostFundState()
@@ -320,7 +336,6 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 				challengerSig, _ := NitroAdjudicator.SignChallengeMessage(latestSupportedSignedState.State(), *secretKey)
 				challengeTx := protocols.NewChallengeTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0), challengerSig)
 				sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
-
 			}
 		}
 		updated.virtualChannelChallengeSubmitted = true
@@ -417,15 +432,16 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 			transferTx := protocols.NewTransferAllTransaction(updated.C.Id, latestSupportedSignedState)
 			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, transferTx)
 		} else {
+			// Distribute assets based on virtual channel allocations
 
 			// Compute new state outcome allocations
 			latestLedgerState, _ := updated.C.LatestSupportedSignedState()
 			aliceAllocation := latestLedgerState.State().Outcome[0].Allocations[0]
 			bobAllocation := latestLedgerState.State().Outcome[0].Allocations[1]
 
+			// TODO: Test multiple virtual channels
 			for _, virtualChannel := range updated.FundedChannels {
 				latestVirtualState, _ := virtualChannel.LatestSignedState()
-				// TODO: Discuss how funds are liquidated from mulitple virtual channles to ledger channel
 				// Distribute allocations based on address
 				for i, allocation := range latestVirtualState.State().Outcome[0].Allocations {
 					if aliceAllocation.Destination == allocation.Destination {

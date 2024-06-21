@@ -434,15 +434,6 @@ func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 			event := ReclaimedEvent{commonEvent: commonEvent{channelID: ce.ChannelId, block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex}}
 			ecs.out <- event
 
-		case reclaimedTopic:
-			ecs.logger.Debug("Processing Concluded event")
-			ce, err := ecs.na.ParseReclaimed(l)
-			if err != nil {
-				return fmt.Errorf("error in ParseReclaimed: %w", err)
-			}
-
-			event := ReclaimedEvent{commonEvent: commonEvent{channelID: ce.ChannelId, txIndex: l.TxIndex}}
-			ecs.out <- event
 		default:
 			ecs.logger.Info("Ignoring unknown chain event topic", "topic", l.Topics[0].String())
 

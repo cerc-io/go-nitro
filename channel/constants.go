@@ -15,6 +15,7 @@ const (
 	Finalized
 )
 
+// ChannelType defines a custom type to differentiate whether it's a ledger channel or a virtual channel
 type ChannelType int
 
 const (

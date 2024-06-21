@@ -444,7 +444,7 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 		_, isChallengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
 
 		if isChallengeRegistered {
-			ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById, true)
+			ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent, true)
 			if err != nil {
 				// Node should not panic if it is unable to find the required consensus channel before creating objective
 				if errors.Is(err, directdefund.ErrChannelNotExist) {
@@ -488,16 +488,17 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 		return e.attemptProgress(objective)
 	}
 
-	// Get ledger channel id from virtual channel id and find the objective associated with the ledher channel id and crank it
+	// When a challenge is registered on a virtual channel, identify the related ledger channel and its associated objective, and then process it.
 	// Challenge registered on virtual channels are handled only by the one who raised the challenge
-	// TODO: Get address of challenger node
-	add := common.HexToAddress("0xAAA6628Ec44A8a742987EF3A114dDFE2D4F7aDCE")
-	if c.Type == channel.Virtual && add == *e.store.GetAddress() {
+	_, isChallengeRegisteredEvent := chainEvent.(chainservice.ChallengeRegisteredEvent)
+	if isChallengeRegisteredEvent && c.Type == channel.Virtual && c.OnChain.IsChallengeInitiatedByMe {
+		myAddress := *e.store.GetAddress()
 		counterParty := common.Address{}
 
-		if add == c.Participants[0] {
+		// Find counterparty address to get consensus channel between us
+		if myAddress == c.Participants[0] {
 			counterParty = c.Participants[len(c.Participants)-1]
-		} else if add == c.Participants[len(c.Participants)-1] {
+		} else if myAddress == c.Participants[len(c.Participants)-1] {
 			counterParty = c.Participants[0]
 		}
 
@@ -571,38 +572,12 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 		return e.attemptProgress(&dfo)
 
 	case directdefund.ObjectiveRequest:
-		ddfo, err := directdefund.NewObjective(request, true, e.store.GetConsensusChannelById, false)
+		ddfo, err := directdefund.NewObjective(request, true, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent, false)
 		if err != nil {
 			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not create directdefund objective for %+v: %w", request, err)
 		}
 
-		// consensus channel is required when processing a challenge-registered event for a virtual channel to obtain the ledger channel ID
-		// If ddfo creation was successful, destroy the consensus channel to prevent it being used (a Channel will now take over governance)
-		// err = e.store.DestroyConsensusChannel(request.ChannelId)
-		// if err != nil {
-		// 	return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not destroy consensus channel for %+v: %w", request, err)
-		// }
-
-		consensusChannel, _ := e.store.GetConsensusChannelById(request.ChannelId)
-		if len(consensusChannel.FundingTargets()) != 0 {
-			// Store the virtual channels
-			ddfo.FundedChannels = make(map[types.Destination]*channel.Channel)
-			for _, virtulChannelId := range consensusChannel.FundingTargets() {
-				virtualChannel, _ := e.store.GetChannelById(virtulChannelId)
-				ddfo.FundedChannels[virtulChannelId] = virtualChannel
-			}
-
-			ddfo.GetVoucherIfAmountPresent = func(channelId types.Destination) (*payments.VoucherInfo, bool) {
-				if e.vm.ChannelRegistered(channelId) {
-					amountPaid, _ := e.vm.Paid(channelId)
-					if amountPaid.Cmp(big.NewInt(0)) != 0 {
-						voucherInfo, _ := e.vm.Store.GetVoucherInfo(channelId)
-						return voucherInfo, true
-					}
-				}
-				return nil, false
-			}
-		}
+		// Retaining the consensus channel since it's needed to process a challenge-registered event for a virtual channel and obtain the ledger channel ID.
 
 		return e.attemptProgress(&ddfo)
 
@@ -936,7 +911,7 @@ func (e *Engine) constructObjectiveFromMessage(id protocols.ObjectiveId, p proto
 		}
 		return &vdfo, nil
 	case directdefund.IsDirectDefundObjective(id):
-		ddfo, err := directdefund.ConstructObjectiveFromPayload(p, false, e.store.GetConsensusChannelById)
+		ddfo, err := directdefund.ConstructObjectiveFromPayload(p, false, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent)
 		if err != nil {
 			return &directdefund.Objective{}, fromMsgErr(id, err)
 		}
@@ -1027,7 +1002,7 @@ func (e *Engine) processStoreChannels(latestblock chainservice.Block) error {
 			dDfo, isDdfo := obj.(*directdefund.Objective)
 
 			if ok && isDdfo && dDfo.C.OnChain.IsChallengeInitiatedByMe {
-				_, err = e.attemptProgress(obj)
+				_, err = e.attemptProgress(dDfo)
 				if err != nil {
 					return err
 				}

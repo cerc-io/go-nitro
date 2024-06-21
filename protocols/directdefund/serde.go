@@ -15,7 +15,7 @@ type jsonObjective struct {
 	C                                types.Destination
 	FinalTurnNum                     uint64
 	TransactionSumbmitted            bool
-	IsChallenge         			       bool
+	IsChallenge                      bool
 	ChallengeTransactionSubmitted    bool
 	IsCheckpoint                     bool
 	CheckpointTransactionSubmitted   bool

@@ -22,11 +22,6 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
-type VoucherAmountSignature struct {
-	Amount    *big.Int
-	Signature NitroAdjudicator.INitroTypesSignature
-}
-
 func TestChallenge(t *testing.T) {
 	testCase := TestCase{
 		Description:       "Direct defund with Challenge",

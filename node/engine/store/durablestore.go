@@ -564,7 +564,14 @@ func (ds *DurableStore) populateChannelData(obj protocols.Objective) error {
 		}
 
 		o.C = &ch
-		// TODO: Populate virtuals channels if present
+
+		// Populate virtual channels if present
+		if len(o.FundedChannels) != 0 {
+			for virtualChannelId := range o.FundedChannels {
+				updatedVirtualChannel, _ := ds.GetChannelById(virtualChannelId)
+				o.FundedChannels[virtualChannelId] = updatedVirtualChannel
+			}
+		}
 
 		return nil
 	case *virtualfund.Objective:

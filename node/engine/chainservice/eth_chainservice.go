@@ -652,6 +652,8 @@ func (ecs *EthChainService) GetLastConfirmedBlockNum() uint64 {
 }
 
 func (ecs *EthChainService) GetLatestBlock() Block {
+	ecs.eventTracker.mu.Lock()
+	defer ecs.eventTracker.mu.Unlock()
 	return ecs.eventTracker.latestBlock
 }
 

@@ -1,7 +1,7 @@
 {
-  "name": "@cerc-nitro/nitro-auth",
+  "name": "@cerc-nitro/nitro-coupon",
   "version": "0.1.0",
-  "description": "nitro-based authentication server",
+  "description": "nitro-based coupon server",
   "bin": "dist/server.js",
   "main": "./src/index.js",
   "dependencies": {
@@ -13,6 +13,7 @@
     "fetch-h2": "^3.0.2",
     "json-bigint": "^1.0.0",
     "json-stable-stringify": "^1.0.2",
+    "jsonwebtoken": "^9.0.2",
     "lru-cache": "^10.0.1",
     "node-fetch": "2",
     "prom-client": "^14.2.0",

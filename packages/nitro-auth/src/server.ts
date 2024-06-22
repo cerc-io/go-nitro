@@ -13,6 +13,41 @@ const log = new Logger('cerc:nitro:auth');
 
 const metrics = new Metrics();
 
+class AccountStore {
+  private _accountByAddress = new Map<string, Account>();
+
+  public put(v: Account) {
+    this._accountByAddress.set(v.address, v);
+  }
+
+  public get(v: string) {
+    return this._accountByAddress.get(v);
+  }
+
+  public has(v: string) {
+    return this._accountByAddress.get(v);
+  }
+}
+
+class TokenStore {
+  // TODO: More than one token allowed per-address.
+  private _tokenByAddress = new Map<string, AuthToken>();
+  private _tokenByValue = new Map<string, AuthToken>();
+
+  public put(token: AuthToken) {
+    this._tokenByAddress.set(token.account.address, token);
+    this._tokenByValue.set(token.value, token);
+  }
+
+  public get(v: string) {
+    return this._tokenByValue.has(v)  ? this._tokenByValue.get(v) : this._tokenByAddress.get(v);
+  }
+
+  public has(v: string) {
+    return this._tokenByValue.has(v) || this._tokenByAddress.has(v);
+  }
+}
+
 const fastify: any = Fastify({
   logger: Config.FASTIFY_LOGGER
 });
@@ -40,14 +75,26 @@ const genToken = () => {
 };
 
 
+class Account {
+  public address: string;
+
+  constructor(address: string) {
+    this.address = address;
+  }
+
+  toString() {
+    return this.address;
+  }
+}
+
 class AuthToken {
-  private _channel: string;
+  public _account: Account;
   public _value: string;
   public _used: bigint;
   public _total: bigint;
 
-  constructor(channel: string, total = 0n, used = 0n, value?: string) {
-    this._channel = channel;
+  constructor(account: Account, total = 0n, used = 0n, value?: string) {
+    this._account = account;
     this._total = total;
     this._used = used;
     this._value = value ?? genToken();
@@ -82,8 +129,8 @@ class AuthToken {
     return this._value;
   }
 
-  get channel() {
-    return this._channel;
+  get account() {
+    return this._account;
   }
 
   toJSON() {
@@ -91,14 +138,17 @@ class AuthToken {
       token: this.value,
       total: this._total,
       used: this._used,
-      channel: this.channel
+      address: this._account.address,
     };
   }
 }
 
-const tokenByChannel = new Map<string, AuthToken>();
-const tokenByValue = new Map<string, AuthToken>();
 const nitro = await NitroRpcClient.CreateHttpNitroClient(`${Config.NITRO_RPC_HOST}:${Config.NITRO_RPC_PORT}/api/v1`, Config.NITRO_RPC_SECURE);
+
+// TODO: persistence
+const tokenStore = new TokenStore();
+const accountStore = new AccountStore();
+
 const authTokenSchema = {
   schema: {
     response: {
@@ -106,7 +156,7 @@ const authTokenSchema = {
         token: { type: 'string' },
         total: { type: 'number' },
         used: { type: 'number' },
-        channel: { type: 'string' },
+        address: { type: 'string' },
       }
     }
   },
@@ -115,9 +165,9 @@ const authTokenSchema = {
 
 fastify.get('/auth/:token', authTokenSchema, async (req: any, res: any) => {
   metrics.incCounter('get_auth');
-  const token = tokenByValue.get(req.params.token);
+  const token = tokenStore.get(req.params.token);
   if (token) {
-    metrics.incCounter(`get_auth_${token.channel}`);
+    metrics.incCounter(`get_auth_${token.account.address}`);
     if (token.use(1n)) {
       metrics.incCounter('get_auth_200');
       return token;
@@ -130,6 +180,34 @@ fastify.get('/auth/:token', authTokenSchema, async (req: any, res: any) => {
   res.code(401);
   metrics.incCounter('get_auth_401');
   return '401 Unauthorized';
+});
+
+fastify.post('/account/create', authTokenSchema, async (req: any, res: any) => {
+  metrics.incCounter('post_auth_account_create');
+
+  // TODO: Define schema object for request.
+  const accountRequest: any = req.body;
+
+  // TODO: This method needs to require a signed message corresponding to the address indicated,
+  // with a nonce or other challenge to avoid replay.
+
+  const address = accountRequest.address;
+
+  let account = accountStore.get(address);
+  if (!account) {
+    account = new Account(address);
+    accountStore.put(account);
+  }
+
+  let token = tokenStore.get(account.address);
+  if (!token) {
+    // Create a valid, but empty token.
+    token = new AuthToken(account, 0n, 0n);
+    tokenStore.put(token);
+  }
+
+  res.code(201);
+  return token;
 });
 
 fastify.get('/pay/address',
@@ -151,6 +229,7 @@ fastify.get('/pay/address',
   async (req: any, res: any) => {
     metrics.incCounter('get_pay_address');
     const address = await nitro.GetAddress();
+
     const peerId = await nitro.GetPeerId();
 
     return {
@@ -167,8 +246,39 @@ fastify.get('/pay/address',
   }
 );
 
-fastify.post('/pay/receive', authTokenSchema, async (req: any, res: any) => {
+fastify.post('/pay/coupon/:token', authTokenSchema, async (req: any, res: any) => {
+  metrics.incCounter('post_pay_coupon');
+
+  const token: AuthToken = tokenStore.get(req.params.token);
+  const body: any = req.body;
+
+  if (typeof body === 'string') {
+    // This _is_ the coupon.
+  } else {
+    // This is a request for us to get a coupon.
+    // Choose the coupon provider.
+    // Request a coupon from them.
+  }
+
+  // Check that the coupon was issued for this account address and for this provider.
+  // Redeem the coupon (in whole or part).
+  // Apply the increase to the token.
+  // If the coupon is not fully cashed, associate it with the token so we can keep redeeming it.
+
+  metrics.incCounter(`post_pay_coupon_${token.account.address}`);
+  return token;
+});
+
+fastify.post('/pay/receive/:token', authTokenSchema, async (req: any, res: any) => {
   metrics.incCounter('post_pay_receive');
+
+  const token = tokenStore.get(req.params.token);
+  if (!token) {
+    res.code(401);
+    metrics.incCounter('pay_receive_401');
+    return '401 Unauthorized';
+  }
+
   const voucher: Voucher = req.body;
   let result;
 
@@ -180,16 +290,9 @@ fastify.post('/pay/receive', authTokenSchema, async (req: any, res: any) => {
     return;
   }
 
-  let token = tokenByChannel.get(voucher.ChannelId);
-  if (!token) {
-    token = new AuthToken(voucher.ChannelId, result.Total);
-    tokenByChannel.set(voucher.ChannelId, token);
-    tokenByValue.set(token.value, token);
-  } else {
-    token.updateTotal(result.Total);
-  }
+  token.updateTotal(result.Total);
 
-  metrics.incCounter(`post_pay_receive_${token.channel}`);
+  metrics.incCounter(`post_pay_receive_${token.account.address}`);
   return token;
 });
 

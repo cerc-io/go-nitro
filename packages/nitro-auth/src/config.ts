@@ -6,7 +6,6 @@ export const Config = {
   NITRO_RPC_HOST: process.env.CERC_NITRO_AUTH_RPC_HOST || '127.0.0.1',
   NITRO_RPC_PORT: process.env.CERC_NITRO_AUTH_RPC_PORT || '4007',
   NITRO_RPC_SECURE: 'true' === (process.env.CERC_NITRO_RPC_SECURE || 'false'),
-  NITRO_PK: process.env.CERC_NITRO_PK,
   NITRO_WS_MSG_PUBLIC_IP: process.env.CERC_NITRO_MSG_PUBLIC_IP || '127.0.0.1',
   NITRO_WS_MSG_PUBLIC_PORT: process.env.CERC_NITRO_MSG_PUBLIC_PORT || '5005',
   NITRO_CONTRACT_CA_ADDRESS: process.env.CERC_CA_ADDRESS,

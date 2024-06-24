@@ -36,6 +36,7 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder {
         mirrorTransferAllAssets(mirrorChannelId, candidate.variablePart.outcome, bytes32(0));
     }
 
+    // TODO: Refactor common code
     function mirrorTransferAllAssets(
         bytes32 mirrorChannelId,
         Outcome.SingleAssetExit[] memory outcome,

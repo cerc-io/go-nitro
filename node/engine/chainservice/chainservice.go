@@ -111,7 +111,7 @@ func NewChallengeRegisteredEvent(
 
 type StatusUpdatedEvent struct {
 	commonEvent
-	newStatus types.Bytes32
+	StateHash types.Bytes32
 }
 
 // StateHash returns the statehash stored on chain at the time of the ChallengeRegistered Event firing.

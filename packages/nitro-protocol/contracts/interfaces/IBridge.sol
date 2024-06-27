@@ -7,5 +7,5 @@ interface IBridge {
 
   function getMirroredChannelStatus(bytes32 channelId) external view returns (bytes32);
 
-  event StatusUpdated(bytes32 indexed channelId, bytes32 newStatus);
+  event StatusUpdated(bytes32 indexed channelId, bytes32 stateHash);
 }

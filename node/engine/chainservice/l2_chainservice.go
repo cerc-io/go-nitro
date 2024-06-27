@@ -354,7 +354,7 @@ func (l2cs *L2ChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 				return fmt.Errorf("error in ParseStatusUpdated: %w", err)
 			}
 
-			event := StatusUpdatedEvent{newStatus: sue.NewStatus, commonEvent: commonEvent{channelID: sue.ChannelId, block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex}}
+			event := StatusUpdatedEvent{StateHash: sue.StateHash, commonEvent: commonEvent{channelID: sue.ChannelId, block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex}}
 			l2cs.out <- event
 		default:
 			l2cs.logger.Info("Ignoring unknown chain event topic", "topic", l.Topics[0].String())

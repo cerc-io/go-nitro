@@ -154,6 +154,7 @@ func (c *Channel) Clone() *Channel {
 	d.OnChain.Holdings = c.OnChain.Holdings
 	d.OnChain.FinalizesAt = c.OnChain.FinalizesAt
 	d.OnChain.ChannelMode = c.OnChain.ChannelMode
+	d.OnChain.StateHash = c.OnChain.StateHash
 	d.OnChain.IsChallengeInitiatedByMe = c.OnChain.IsChallengeInitiatedByMe
 	return d
 }
@@ -397,8 +398,10 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 	case chainservice.ReclaimedEvent:
 	// TODO: Handle ReclaimedEvent
 	case chainservice.StatusUpdatedEvent:
-		break
-		// TODO: Handle StatusUpdatedEvent by deserializing event data and storing in c.Onchain
+		statusUpdatedEvent, ok := event.(chainservice.StatusUpdatedEvent)
+		if ok {
+			c.OnChain.StateHash = statusUpdatedEvent.StateHash
+		}
 	default:
 		return &Channel{}, fmt.Errorf("channel %+v cannot handle event %+v", c, event)
 	}

@@ -21,7 +21,7 @@ const (
 	WaitingForCompletePrefund  protocols.WaitingFor = "WaitingForCompletePrefund"
 	WaitingForCompletePostFund protocols.WaitingFor = "WaitingForCompletePostFund"
 	WaitingForNothing          protocols.WaitingFor = "WaitingForNothing" // Finished
-	WaitingForStatusUpdate 	   protocols.WaitingFor = "WaitingForStatusUpdate"
+	WaitingForStatusUpdate     protocols.WaitingFor = "WaitingForStatusUpdate"
 )
 
 const (
@@ -36,9 +36,9 @@ func FundOnChainEffect(cId types.Destination, asset string, amount types.Funds) 
 
 // Objective is a cache of data computed by reading from the store. It stores (potentially) infinite data
 type Objective struct {
-	Status protocols.ObjectiveStatus
-	C      *channel.Channel
-	transactionSubmitted     bool        // whether a transition for the objective has been submitted or not
+	Status               protocols.ObjectiveStatus
+	C                    *channel.Channel
+	transactionSubmitted bool // whether a transition for the objective has been submitted or not
 }
 
 // GetChannelByIdFunction specifies a function that can be used to retrieve channels from a store.

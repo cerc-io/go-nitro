@@ -7,12 +7,11 @@ import (
 	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/engine"
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
-	"github.com/statechannels/go-nitro/node/engine/store"
-
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
+	"github.com/statechannels/go-nitro/node/engine/store"
 )
 
-func InitializeNode(chainOpts chainservice.ChainOpts, storeOpts store.StoreOpts, messageOpts p2pms.MessageOpts) (*node.Node, *store.Store, *p2pms.P2PMessageService, chainservice.ChainService, error) {
+func InitializeL2Node(l2ChainOpts chainservice.L2ChainOpts, storeOpts store.StoreOpts, messageOpts p2pms.MessageOpts) (*node.Node, *store.Store, *p2pms.P2PMessageService, chainservice.ChainService, error) {
 	ourStore, err := store.NewStore(storeOpts)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -28,12 +27,12 @@ func InitializeNode(chainOpts chainservice.ChainOpts, storeOpts store.StoreOpts,
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	if storeBlockNum > chainOpts.ChainStartBlockNum {
-		chainOpts.ChainStartBlockNum = storeBlockNum
+	if storeBlockNum > l2ChainOpts.ChainStartBlockNum {
+		l2ChainOpts.ChainStartBlockNum = storeBlockNum
 	}
 
-	slog.Info("Initializing chain service...")
-	ourChain, err := chainservice.NewEthChainService(chainOpts)
+	slog.Info("Initializing L2 chain service...")
+	ourChain, err := chainservice.NewL2ChainService(l2ChainOpts)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

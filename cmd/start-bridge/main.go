@@ -11,7 +11,6 @@ import (
 	"github.com/statechannels/go-nitro/cmd/utils"
 	"github.com/statechannels/go-nitro/internal/chain"
 	"github.com/statechannels/go-nitro/internal/logging"
-	"github.com/statechannels/go-nitro/internal/node"
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/node/engine/store"
@@ -23,6 +22,7 @@ func run() ([]*exec.Cmd, error) {
 	const CHAIN_PK = "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 	const STATE_CHANNEL_PK = "0279651921cd800ac560c21ceea27aab0107b67daf436cdd25ce84cad30159b4"
 
+	// TODO: Remove start chain and deploy contract code after implementing CLI
 	// start 2 anvil chains
 	anvilCmdL1, err := chain.StartAnvil("8545")
 	if err != nil {
@@ -67,14 +67,14 @@ func run() ([]*exec.Cmd, error) {
 
 	storeOptsL1 := store.StoreOpts{
 		PkBytes:            common.Hex2Bytes(STATE_CHANNEL_PK),
-		UseDurableStore:    false,
-		DurableStoreFolder: "",
+		UseDurableStore:    true,
+		DurableStoreFolder: "./data/l1-nitro-store",
 	}
 
 	storeOptsL2 := store.StoreOpts{
 		PkBytes:            common.Hex2Bytes(STATE_CHANNEL_PK),
-		UseDurableStore:    false,
-		DurableStoreFolder: "",
+		UseDurableStore:    true,
+		DurableStoreFolder: "./data/l2-nitro-store",
 	}
 
 	messageOptsL1 := p2pms.MessageOpts{
@@ -91,28 +91,33 @@ func run() ([]*exec.Cmd, error) {
 		PublicIp:  "127.0.0.1",
 	}
 
-	nodeL1, storeL1, _, _, err := node.InitializeNode(chainOptsL1, storeOptsL1, messageOptsL1)
-	if err != nil {
-		return runningCmd, err
-	}
-	nodeL2, storeL2, _, _, err := node.InitializeL2Node(chainOptsL2, storeOptsL2, messageOptsL2)
-	if err != nil {
-		return runningCmd, err
+	bridgeConfig := bridge.BridgeConfig{
+		ChainOptsL1:   chainOptsL1,
+		StoreOptsL1:   storeOptsL1,
+		MessageOptsL1: messageOptsL1,
+		StoreOptsL2:   storeOptsL2,
+		MessageOptsL2: messageOptsL2,
+		ChainOptsL2:   chainOptsL2,
 	}
 
 	logging.SetupDefaultLogger(os.Stdout, slog.LevelDebug)
+	bridge := bridge.New(bridgeConfig)
 
-	bridge := bridge.New(nodeL1, nodeL2, storeL1, storeL2)
+	err = bridge.Start()
+	if err != nil {
+		return runningCmd, err
+	}
+
 	defer bridge.Close()
-
 	utils.WaitForKillSignal()
-	utils.StopCommands(runningCmd...)
+
 	return nil, nil
 }
 
 func main() {
 	runningCmd, err := run()
-	if err != nil && runningCmd != nil {
+	if err != nil {
 		utils.StopCommands(runningCmd...)
+		panic(err)
 	}
 }

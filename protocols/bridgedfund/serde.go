@@ -11,10 +11,9 @@ import (
 // jsonObjective replaces the directfund.Objective's channel pointer with the
 // channel's ID, making jsonObjective suitable for serialization
 type jsonObjective struct {
-	Status protocols.ObjectiveStatus
-	C      types.Destination
-	TransactionSumbmitted    bool
-
+	Status                protocols.ObjectiveStatus
+	C                     types.Destination
+	TransactionSumbmitted bool
 }
 
 // MarshalJSON returns a JSON representation of the DirectFundObjective

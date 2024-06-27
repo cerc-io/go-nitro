@@ -33,8 +33,10 @@ type L2ChainService struct {
 	bridgeAddress common.Address
 }
 
-var bridgeAbi, _       = Bridge.BridgeMetaData.GetAbi()
-var statusUpdatedTopic = bridgeAbi.Events["StatusUpdated"].ID
+var (
+	bridgeAbi, _       = Bridge.BridgeMetaData.GetAbi()
+	statusUpdatedTopic = bridgeAbi.Events["StatusUpdated"].ID
+)
 
 // NewL2ChainService is a convenient wrapper around newL2ChainService, which provides a simpler API
 func NewL2ChainService(l2ChainOpts L2ChainOpts) (*L2ChainService, error) {
@@ -292,7 +294,6 @@ func (l2cs *L2ChainService) listenForNewBlocks(errorChan chan<- error, newBlockC
 		}
 	}
 }
-
 
 // updateEventTracker accepts a new block number and/or new event and dispatches a chain event if there are enough block confirmations
 func (l2cs *L2ChainService) updateEventTracker(errorChan chan<- error, block *Block, chainEvent *ethTypes.Log) {

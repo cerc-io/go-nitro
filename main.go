@@ -41,7 +41,7 @@ func main() {
 		RPC_PORT              = "rpcport"
 		GUI_PORT              = "guiport"
 		BOOT_PEERS            = "bootpeers"
-		IS_L2                 = "isl2"
+		L2                    = "l2"
 
 		// Keys
 		KEYS_CATEGORY = "Keys:"
@@ -61,7 +61,7 @@ func main() {
 	var pkString, chainUrl, chainAuthToken, naAddress, vpaAddress, caAddress, bridgeAddress, chainPk, durableStoreFolder, bootPeers, publicIp string
 	var msgPort, rpcPort, guiPort int
 	var chainStartBlock uint64
-	var useNats, useDurableStore, isL2 bool
+	var useNats, useDurableStore, l2 bool
 
 	var tlsCertFilepath, tlsKeyFilepath string
 
@@ -82,14 +82,14 @@ func main() {
 			Usage:       "Specifies whether to use NATS or http/ws for the rpc server.",
 			Value:       false,
 			Category:    CONNECTIVITY_CATEGORY,
-			Destination: &isL2,
+			Destination: &useNats,
 		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
-			Name:        IS_L2,
+			Name:        L2,
 			Usage:       "Specifies whether to initialize node on L2 or L1.",
 			Value:       false,
 			Category:    CONNECTIVITY_CATEGORY,
-			Destination: &isL2,
+			Destination: &l2,
 		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
 			Name:        USE_DURABLE_STORE,
@@ -226,7 +226,7 @@ func main() {
 		Before: altsrc.InitInputSourceWithContext(flags, altsrc.NewTomlSourceFromFlagFunc(CONFIG)),
 		Action: func(cCtx *cli.Context) error {
 			var chainOpts interface{}
-			if isL2 {
+			if l2 {
 				chainOpts = chainservice.L2ChainOpts{
 					ChainUrl:           chainUrl,
 					ChainStartBlockNum: chainStartBlock,
@@ -269,7 +269,7 @@ func main() {
 			var n *scNode.Node
 			var err error
 
-			if isL2 {
+			if l2 {
 				if opts, ok := chainOpts.(chainservice.L2ChainOpts); ok {
 					n, _, _, _, err = node.InitializeL2Node(opts, storeOpts, messageOpts)
 				} else {

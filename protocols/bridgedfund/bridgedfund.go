@@ -21,6 +21,7 @@ const (
 	WaitingForCompletePrefund  protocols.WaitingFor = "WaitingForCompletePrefund"
 	WaitingForCompletePostFund protocols.WaitingFor = "WaitingForCompletePostFund"
 	WaitingForNothing          protocols.WaitingFor = "WaitingForNothing" // Finished
+	WaitingForStatusUpdate     protocols.WaitingFor = "WaitingForStatusUpdate"
 )
 
 const (
@@ -35,8 +36,9 @@ func FundOnChainEffect(cId types.Destination, asset string, amount types.Funds) 
 
 // Objective is a cache of data computed by reading from the store. It stores (potentially) infinite data
 type Objective struct {
-	Status protocols.ObjectiveStatus
-	C      *channel.Channel
+	Status               protocols.ObjectiveStatus
+	C                    *channel.Channel
+	transactionSubmitted bool // whether a transition for the objective has been submitted or not
 }
 
 // GetChannelByIdFunction specifies a function that can be used to retrieve channels from a store.
@@ -310,8 +312,33 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForCompletePostFund, nil
 	}
 
+	// On completion, write mirrored ledger channel state to L2 chain if bridge channel was created by me
+	if updated.C.MyIndex == 0 && !updated.transactionSubmitted {
+		latestState, _ := updated.C.LatestSupportedState()
+		stateHash, err := latestState.Hash()
+		if err != nil {
+			return &updated, protocols.SideEffects{}, WaitingForCompletePostFund, fmt.Errorf("could get state hash %w", err)
+		}
+
+		latestStateOutcomeBytes, err := latestState.Outcome.Encode()
+		if err != nil {
+			return &updated, protocols.SideEffects{}, WaitingForCompletePostFund, fmt.Errorf("could get outcome bytes %w", err)
+		}
+
+		updateMirroredChannelStateTx := protocols.NewUpdateMirroredChannelStatusTransaction(latestState.ChannelId(), stateHash, latestStateOutcomeBytes)
+
+		updated.transactionSubmitted = true
+		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, updateMirroredChannelStateTx)
+	}
+
+	// Return with `waitingForStatusUpdate` until `StatusUpdated` event is received from chain and `updated.C.OnChain.StateHash` is populated
+	if types.IsZero(updated.C.OnChain.StateHash.Big()) {
+		return &updated, sideEffects, WaitingForStatusUpdate, nil
+	}
+
 	// Completion
 	updated.Status = protocols.Completed
+
 	return &updated, sideEffects, WaitingForNothing, nil
 }
 
@@ -325,6 +352,7 @@ func (o *Objective) Related() []protocols.Storable {
 func (o *Objective) clone() Objective {
 	clone := Objective{}
 	clone.Status = o.Status
+	clone.transactionSubmitted = o.transactionSubmitted
 
 	cClone := o.C.Clone()
 	clone.C = cClone

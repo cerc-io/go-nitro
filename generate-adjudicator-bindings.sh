@@ -21,6 +21,7 @@ parseJson "NitroAdjudicator"
 parseJson "ConsensusApp"
 parseJson "Token"
 parseJson "VirtualPaymentApp"
+parseJson "Bridge"
 
 echo "Using abigen from $GETH_DIR..."
 
@@ -30,10 +31,11 @@ runAbigen() {
     --abi=$ARTIFACTS_DIR/${1}.sol/${1}.abi \
     --bin=$ARTIFACTS_DIR/${1}.sol/${1}.bin \
     --pkg=${1} \
-    --out=$GONITRO_DIR/node/engine/chainservice/${2}/${1}.go 
+    --out=$GONITRO_DIR/node/engine/chainservice/${2}/${1}.go
 }
 
 runAbigen "NitroAdjudicator" "adjudicator"
 runAbigen "ConsensusApp" "consensusapp"
 runAbigen "Token" "erc20"
 runAbigen "VirtualPaymentApp" "virtualpaymentapp"
+runAbigen "Bridge" "bridge"

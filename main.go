@@ -11,8 +11,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/internal/logging"
-	"github.com/statechannels/go-nitro/internal/node"
+	nodeUtils "github.com/statechannels/go-nitro/internal/node"
 	"github.com/statechannels/go-nitro/internal/rpc"
+	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/node/engine/store"
@@ -33,11 +34,13 @@ func main() {
 		NA_ADDRESS            = "naaddress"
 		VPA_ADDRESS           = "vpaaddress"
 		CA_ADDRESS            = "caaddress"
+		BRIDGE_ADDRESS        = "bridgeaddress"
 		PUBLIC_IP             = "publicip"
 		MSG_PORT              = "msgport"
 		RPC_PORT              = "rpcport"
 		GUI_PORT              = "guiport"
 		BOOT_PEERS            = "bootpeers"
+		L2                    = "l2"
 
 		// Keys
 		KEYS_CATEGORY = "Keys:"
@@ -54,10 +57,10 @@ func main() {
 		TLS_CERT_FILEPATH = "tlscertfilepath"
 		TLS_KEY_FILEPATH  = "tlskeyfilepath"
 	)
-	var pkString, chainUrl, chainAuthToken, naAddress, vpaAddress, caAddress, chainPk, durableStoreFolder, bootPeers, publicIp string
+	var pkString, chainUrl, chainAuthToken, naAddress, vpaAddress, caAddress, bridgeAddress, chainPk, durableStoreFolder, bootPeers, publicIp string
 	var msgPort, rpcPort, guiPort int
 	var chainStartBlock uint64
-	var useNats, useDurableStore bool
+	var useNats, useDurableStore, l2 bool
 
 	var tlsCertFilepath, tlsKeyFilepath string
 
@@ -79,6 +82,13 @@ func main() {
 			Value:       false,
 			Category:    CONNECTIVITY_CATEGORY,
 			Destination: &useNats,
+		}),
+		altsrc.NewBoolFlag(&cli.BoolFlag{
+			Name:        L2,
+			Usage:       "Specifies whether to initialize node on L2 or L1.",
+			Value:       false,
+			Category:    CONNECTIVITY_CATEGORY,
+			Destination: &l2,
 		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
 			Name:        USE_DURABLE_STORE,
@@ -145,6 +155,12 @@ func main() {
 			Destination: &caAddress,
 		}),
 		altsrc.NewStringFlag(&cli.StringFlag{
+			Name:        BRIDGE_ADDRESS,
+			Usage:       "Specifies the address of the bridge contract.",
+			Category:    CONNECTIVITY_CATEGORY,
+			Destination: &bridgeAddress,
+		}),
+		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:        PUBLIC_IP,
 			Usage:       "Specifies the public ip used for the message service.",
 			Value:       "127.0.0.1",
@@ -208,16 +224,6 @@ func main() {
 		Flags:  flags,
 		Before: altsrc.InitInputSourceWithContext(flags, altsrc.NewTomlSourceFromFlagFunc(CONFIG)),
 		Action: func(cCtx *cli.Context) error {
-			chainOpts := chainservice.ChainOpts{
-				ChainUrl:           chainUrl,
-				ChainStartBlockNum: chainStartBlock,
-				ChainAuthToken:     chainAuthToken,
-				ChainPk:            chainPk,
-				NaAddress:          common.HexToAddress(naAddress),
-				VpaAddress:         common.HexToAddress(vpaAddress),
-				CaAddress:          common.HexToAddress(caAddress),
-			}
-
 			storeOpts := store.StoreOpts{
 				PkBytes:            common.Hex2Bytes(pkString),
 				UseDurableStore:    useDurableStore,
@@ -236,9 +242,34 @@ func main() {
 				PublicIp:  publicIp,
 			}
 
+			var node *node.Node
+			var err error
+			if l2 {
+				chainOpts := chainservice.L2ChainOpts{
+					ChainUrl:           chainUrl,
+					ChainStartBlockNum: chainStartBlock,
+					ChainAuthToken:     chainAuthToken,
+					ChainPk:            chainPk,
+					BridgeAddress:      common.HexToAddress(bridgeAddress),
+				}
+
+				node, _, _, _, err = nodeUtils.InitializeL2Node(chainOpts, storeOpts, messageOpts)
+			} else {
+				chainOpts := chainservice.ChainOpts{
+					ChainUrl:           chainUrl,
+					ChainStartBlockNum: chainStartBlock,
+					ChainAuthToken:     chainAuthToken,
+					ChainPk:            chainPk,
+					NaAddress:          common.HexToAddress(naAddress),
+					VpaAddress:         common.HexToAddress(vpaAddress),
+					CaAddress:          common.HexToAddress(caAddress),
+				}
+
+				node, _, _, _, err = nodeUtils.InitializeNode(chainOpts, storeOpts, messageOpts)
+			}
+
 			logging.SetupDefaultLogger(os.Stdout, slog.LevelDebug)
 
-			node, _, _, _, err := node.InitializeNode(chainOpts, storeOpts, messageOpts)
 			if err != nil {
 				return err
 			}

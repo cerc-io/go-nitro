@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	NitroAdjudicator "github.com/statechannels/go-nitro/node/engine/chainservice/adjudicator"
+	Bridge "github.com/statechannels/go-nitro/node/engine/chainservice/bridge"
 	ConsensusApp "github.com/statechannels/go-nitro/node/engine/chainservice/consensusapp"
 	VirtualPaymentApp "github.com/statechannels/go-nitro/node/engine/chainservice/virtualpaymentapp"
 	"github.com/statechannels/go-nitro/types"
@@ -84,8 +85,17 @@ func DeployContracts(ctx context.Context, ethClient *ethclient.Client, txSubmitt
 	}, nil
 }
 
+func DeployL2Contracts(ctx context.Context, ethClient *ethclient.Client, txSubmitter *bind.TransactOpts) (common.Address, error) {
+	ba, err := deployContract(ctx, "Bridge", ethClient, txSubmitter, Bridge.DeployBridge)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	return ba, nil
+}
+
 type contractBackend interface {
-	NitroAdjudicator.NitroAdjudicator | VirtualPaymentApp.VirtualPaymentApp | ConsensusApp.ConsensusApp
+	NitroAdjudicator.NitroAdjudicator | VirtualPaymentApp.VirtualPaymentApp | ConsensusApp.ConsensusApp | Bridge.Bridge
 }
 
 // deployFunc is a function that deploys a contract and returns the contract address, backend, and transaction.

@@ -49,6 +49,7 @@ var topicsToWatch = []common.Hash{
 	challengeRegisteredTopic,
 	challengeClearedTopic,
 	reclaimedTopic,
+	statusUpdatedTopic,
 }
 
 const (

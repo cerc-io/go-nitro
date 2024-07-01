@@ -136,6 +136,32 @@ func NewSetL2ToL1Transaction(
 	}
 }
 
+type UpdateMirroredChannelStatusTransaction struct {
+	ChainTransaction
+	StateHash    types.Bytes32
+	OutcomeBytes types.Bytes
+}
+
+func NewUpdateMirroredChannelStatusTransaction(
+	channelId types.Destination,
+	stateHash types.Bytes32,
+	outcomeBytes types.Bytes,
+) UpdateMirroredChannelStatusTransaction {
+	return UpdateMirroredChannelStatusTransaction{
+		ChainTransaction: ChainTransactionBase{channelId: channelId},
+		StateHash:        stateHash,
+		OutcomeBytes:     outcomeBytes,
+	}
+}
+
+func NewGetMirroredChannelStatusCall(
+	channelId types.Destination,
+) UpdateMirroredChannelStatusTransaction {
+	return UpdateMirroredChannelStatusTransaction{
+		ChainTransaction: ChainTransactionBase{channelId: channelId},
+	}
+}
+
 // SideEffects are effects to be executed by an imperative shell
 type SideEffects struct {
 	MessagesToSend       []Message

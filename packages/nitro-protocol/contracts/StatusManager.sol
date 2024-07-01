@@ -2,17 +2,18 @@
 pragma solidity 0.8.17;
 
 import {IStatusManager} from './interfaces/IStatusManager.sol';
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 
 /**
  * @dev The StatusManager is responsible for on-chain storage of the status of active channels
  */
-contract StatusManager is IStatusManager {
+contract StatusManager is IStatusManager, Ownable {
     mapping(bytes32 => bytes32) public statusOf;
     mapping(bytes32 => bytes32) public l2Tol1;
 
     // TODO: Add ownerOf check
     // Function to set map from l2ChannelId to l1ChannelId
-    function setL2ToL1(bytes32 l1ChannelId, bytes32 l2ChannelId) public {
+    function setL2ToL1(bytes32 l1ChannelId, bytes32 l2ChannelId) public onlyOwner {
         l2Tol1[l2ChannelId] = l1ChannelId;
     }
 
@@ -71,6 +72,19 @@ contract StatusManager is IStatusManager {
         bytes32 outcomeHash
     ) internal pure returns (uint160) {
         return uint160(uint256(keccak256(abi.encode(stateHash, outcomeHash))));
+    }
+
+    function _updateFingerprint(
+        bytes32 channelId,
+        bytes32 stateHash,
+        bytes32 outcomeHash
+    ) internal {
+        (uint48 turnNumRecord, uint48 finalizesAt, ) = _unpackStatus(channelId);
+
+        bytes32 newStatus = _generateStatus(
+            ChannelData(turnNumRecord, finalizesAt, stateHash, outcomeHash)
+        );
+        statusOf[channelId] = newStatus;
     }
 
     /**

@@ -624,13 +624,11 @@ func createL1L2Channels(t *testing.T, nodeA node.Node, nodeB node.Node, nodeAPri
 	l1ledgerChannelState := l1LedgerChannel.SupportedSignedState()
 	l1ledgerChannelStateClone := l1ledgerChannelState.Clone()
 
-	l1ledgerChannelStateClone.State().Outcome[0].Allocations[0].Destination = types.AddressToDestination(*nodeAPrime.Address)
-	l1ledgerChannelStateClone.State().Outcome[0].Allocations[1].Destination = types.AddressToDestination(*nodeBPrime.Address)
-
 	// Put NodeBPrime's allocation at index 0 as it creates mirrored ledger channel
-	tempAllocation := l1ledgerChannelStateClone.State().Outcome[0].Allocations[0].Destination
-	l1ledgerChannelStateClone.State().Outcome[0].Allocations[0].Destination = l1ledgerChannelStateClone.State().Outcome[0].Allocations[1].Destination
-	l1ledgerChannelStateClone.State().Outcome[0].Allocations[1].Destination = tempAllocation
+	// Swap the allocations to be set in mirrored ledger channel
+	tempAllocation := l1ledgerChannelStateClone.State().Outcome[0].Allocations[0]
+	l1ledgerChannelStateClone.State().Outcome[0].Allocations[0] = l1ledgerChannelStateClone.State().Outcome[0].Allocations[1]
+	l1ledgerChannelStateClone.State().Outcome[0].Allocations[1] = tempAllocation
 
 	// Create extended state outcome based on l1ChannelState
 	l2ChannelOutcome := l1ledgerChannelStateClone.State().Outcome

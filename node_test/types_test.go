@@ -32,7 +32,8 @@ type ChainType string
 const (
 	MockChain      ChainType = "MockChain"
 	SimulatedChain ChainType = "SimulatedChain"
-	AnvilChain     ChainType = "AnvilChain"
+	AnvilChainL1   ChainType = "AnvilChainL1"
+	AnvilChainL2   ChainType = "AnvilChainL2"
 )
 
 type TestParticipant struct {
@@ -59,6 +60,7 @@ type TestCase struct {
 	NumOfHops         uint
 	ChallengeDuration uint
 	Participants      []TestParticipant
+	deployerIndex     uint
 	ChainPort         string
 }
 

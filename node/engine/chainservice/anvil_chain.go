@@ -36,7 +36,7 @@ type AnvilChain struct {
 	ContractAddresses chainutils.ContractAddresses
 }
 
-func NewAnvilChain(chainPort string) (*AnvilChain, error) {
+func NewAnvilChain(chainPort string, l2 bool, ethAccountIndex uint) (*AnvilChain, error) {
 	if chainPort == "" {
 		chainPort = DEFAULT_CHAIN_PORT
 	}
@@ -50,14 +50,23 @@ func NewAnvilChain(chainPort string) (*AnvilChain, error) {
 		context.Background(),
 		anvilChain.ChainUrl,
 		anvilChain.ChainAuthToken,
-		common.Hex2Bytes(ChainPks[0]),
+		common.Hex2Bytes(ChainPks[ethAccountIndex]),
 	)
 	if err != nil {
 		return nil, err
 	}
 	anvilChain.ethClient = ethClient
-	contractAddresses, _ := chainutils.DeployContracts(context.Background(), ethClient, txSubmitter)
-	anvilChain.ContractAddresses = contractAddresses
+
+	if l2 {
+		anvilChain.ContractAddresses.BridgeAddress, err = chainutils.DeployL2Contract(context.Background(), ethClient, txSubmitter)
+	} else {
+		anvilChain.ContractAddresses, err = chainutils.DeployContracts(context.Background(), ethClient, txSubmitter)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &anvilChain, nil
 }
 

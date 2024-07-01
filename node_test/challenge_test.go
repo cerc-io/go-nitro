@@ -25,7 +25,7 @@ import (
 func TestChallenge(t *testing.T) {
 	testCase := TestCase{
 		Description:       "Direct defund with Challenge",
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL1,
 		MessageService:    TestMessageService,
 		ChallengeDuration: 5,
 		MessageDelay:      0,
@@ -94,7 +94,7 @@ func TestCheckpoint(t *testing.T) {
 
 	testCase := TestCase{
 		Description:       "Check point test",
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL1,
 		MessageService:    TestMessageService,
 		ChallengeDuration: 10,
 		MessageDelay:      0,
@@ -202,7 +202,7 @@ func TestCounterChallenge(t *testing.T) {
 
 	testCase := TestCase{
 		Description:       "Counter challenge test",
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL1,
 		MessageService:    TestMessageService,
 		ChallengeDuration: 10,
 		MessageDelay:      0,
@@ -291,7 +291,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 
 	tc := TestCase{
 		Description:       "Virtual channel test",
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL1,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Virtual_channel_test",
@@ -525,7 +525,7 @@ func listenForLedgerUpdates(ledgerUpdatesChan <-chan query.LedgerChannelInfo, li
 func TestVirtualPaymentChannelWithObjective(t *testing.T) {
 	testCase := TestCase{
 		Description:       "Virtual channel test with objective",
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL1,
 		MessageService:    TestMessageService,
 		ChallengeDuration: 10,
 		MessageDelay:      0,

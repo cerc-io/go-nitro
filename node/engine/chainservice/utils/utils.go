@@ -19,9 +19,10 @@ import (
 )
 
 type ContractAddresses struct {
-	NaAddress  common.Address
-	VpaAddress common.Address
-	CaAddress  common.Address
+	NaAddress     common.Address
+	VpaAddress    common.Address
+	CaAddress     common.Address
+	BridgeAddress common.Address
 }
 
 // ConnectToChain connects to the chain at the given url and returns a client and a transactor.
@@ -85,7 +86,7 @@ func DeployContracts(ctx context.Context, ethClient *ethclient.Client, txSubmitt
 	}, nil
 }
 
-func DeployL2Contracts(ctx context.Context, ethClient *ethclient.Client, txSubmitter *bind.TransactOpts) (common.Address, error) {
+func DeployL2Contract(ctx context.Context, ethClient *ethclient.Client, txSubmitter *bind.TransactOpts) (common.Address, error) {
 	ba, err := deployContract(ctx, "Bridge", ethClient, txSubmitter, Bridge.DeployBridge)
 	if err != nil {
 		return common.Address{}, err

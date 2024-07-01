@@ -23,7 +23,7 @@ import (
 
 func TestExitL2WithLedgerChannelState(t *testing.T) {
 	tcL1 := TestCase{
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL1,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -35,7 +35,7 @@ func TestExitL2WithLedgerChannelState(t *testing.T) {
 	}
 
 	tcL2 := TestCase{
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL2,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -133,7 +133,7 @@ func TestExitL2WithPayments(t *testing.T) {
 	const payAmount = 2000
 
 	tcL1 := TestCase{
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL1,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -142,10 +142,11 @@ func TestExitL2WithPayments(t *testing.T) {
 			{StoreType: MemStore, Actor: testactors.Alice},
 			{StoreType: MemStore, Actor: testactors.Bob},
 		},
+		deployerIndex: 1,
 	}
 
 	tcL2 := TestCase{
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL2,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -154,7 +155,8 @@ func TestExitL2WithPayments(t *testing.T) {
 			{StoreType: MemStore, Actor: testactors.Bob},
 			{StoreType: MemStore, Actor: testactors.Alice},
 		},
-		ChainPort: "8546",
+		deployerIndex: 0,
+		ChainPort:     "8546",
 	}
 
 	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
@@ -257,7 +259,7 @@ func TestExitL2WithLedgerChannelStateUnilaterally(t *testing.T) {
 	const payAmount = 2000
 
 	tcL1 := TestCase{
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL1,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -269,7 +271,7 @@ func TestExitL2WithLedgerChannelStateUnilaterally(t *testing.T) {
 	}
 
 	tcL2 := TestCase{
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL2,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -373,7 +375,7 @@ func TestExitL2WithVirtualChannelStateUnilaterally(t *testing.T) {
 	const payAmount = 2000
 
 	tcL1 := TestCase{
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL1,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -385,7 +387,7 @@ func TestExitL2WithVirtualChannelStateUnilaterally(t *testing.T) {
 	}
 
 	tcL2 := TestCase{
-		Chain:             AnvilChain,
+		Chain:             AnvilChainL2,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",

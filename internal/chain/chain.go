@@ -32,5 +32,5 @@ func DeployL2Contract(ctx context.Context, chainUrl, chainAuthToken, chainPk str
 	if err != nil {
 		return common.Address{}, err
 	}
-	return chainutils.DeployL2Contracts(ctx, ethClient, txSubmitter)
+	return chainutils.DeployL2Contract(ctx, ethClient, txSubmitter)
 }

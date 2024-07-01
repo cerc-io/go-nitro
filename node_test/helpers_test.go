@@ -95,7 +95,7 @@ func setupChainService(tc TestCase, tp TestParticipant, si sharedTestInfrastruct
 			panic(err)
 		}
 		return cs
-	case AnvilChain:
+	case AnvilChainL1:
 		ethAccountIndex := tp.Port - testactors.START_PORT
 		cs, err := chainservice.NewEthChainService(chainservice.ChainOpts{
 			ChainUrl:           si.anvilChain.ChainUrl,
@@ -104,6 +104,19 @@ func setupChainService(tc TestCase, tp TestParticipant, si sharedTestInfrastruct
 			NaAddress:          si.anvilChain.ContractAddresses.NaAddress,
 			VpaAddress:         si.anvilChain.ContractAddresses.VpaAddress,
 			CaAddress:          si.anvilChain.ContractAddresses.CaAddress,
+			ChainPk:            si.anvilChain.ChainPks[ethAccountIndex],
+		})
+		if err != nil {
+			panic(err)
+		}
+		return cs
+	case AnvilChainL2:
+		ethAccountIndex := tp.Port - testactors.START_PORT
+		cs, err := chainservice.NewL2ChainService(chainservice.L2ChainOpts{
+			ChainUrl:           si.anvilChain.ChainUrl,
+			ChainStartBlockNum: 0,
+			ChainAuthToken:     si.anvilChain.ChainAuthToken,
+			BridgeAddress:      si.anvilChain.ContractAddresses.BridgeAddress,
 			ChainPk:            si.anvilChain.ChainPks[ethAccountIndex],
 		})
 		if err != nil {
@@ -245,8 +258,16 @@ func setupSharedInfra(tc TestCase) sharedTestInfrastructure {
 		infra.simulatedChain = sim
 		infra.bindings = &bindings
 		infra.ethAccounts = ethAccounts
-	case AnvilChain:
-		chain, err := chainservice.NewAnvilChain(tc.ChainPort)
+	case AnvilChainL1:
+		ethAccountIndex := tc.Participants[tc.deployerIndex].Port - testactors.START_PORT
+		chain, err := chainservice.NewAnvilChain(tc.ChainPort, false, ethAccountIndex)
+		if err != nil {
+			panic(err)
+		}
+		infra.anvilChain = chain
+	case AnvilChainL2:
+		ethAccountIndex := tc.Participants[tc.deployerIndex].Port - testactors.START_PORT
+		chain, err := chainservice.NewAnvilChain(tc.ChainPort, true, ethAccountIndex)
 		if err != nil {
 			panic(err)
 		}

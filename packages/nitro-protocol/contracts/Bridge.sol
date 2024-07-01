@@ -9,9 +9,4 @@ contract Bridge is StatusManager, IBridge {
     _updateFingerprint(channelId, stateHash, keccak256(outcomeBytes));
     emit StatusUpdated(channelId, stateHash);
   }
-
-  // Public getter function to get ledger channel state
-  function getMirroredChannelStatus(bytes32 channelId) public view returns (bytes32) {
-    return statusOf[channelId];
-  }
 }

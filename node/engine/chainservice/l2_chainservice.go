@@ -107,9 +107,6 @@ func (l2cs *L2ChainService) SendTransaction(tx protocols.ChainTransaction) error
 	case protocols.UpdateMirroredChannelStatusTransaction:
 		_, err := l2cs.bridge.UpdateMirroredChannelStatus(l2cs.defaultTxOpts(), tx.ChannelId(), tx.StateHash, tx.OutcomeBytes)
 		return err
-	case protocols.GetMirroredChannelStatusCall:
-		_, err := l2cs.bridge.GetMirroredChannelStatus(&bind.CallOpts{}, tx.ChannelId())
-		return err
 	default:
 		return fmt.Errorf("unexpected transaction type %T", tx)
 	}

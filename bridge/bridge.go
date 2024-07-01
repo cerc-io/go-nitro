@@ -30,32 +30,32 @@ type MirrorChannelDetails struct {
 }
 
 type Bridge struct {
-	config  BridgeConfig
 	nodeL1  *node.Node
 	storeL1 store.Store
 
 	nodeL2  *node.Node
 	storeL2 store.Store
 
+	config           BridgeConfig
 	cancel           context.CancelFunc
 	mirrorChannelMap map[types.Destination]MirrorChannelDetails
 }
 
 type BridgeConfig struct {
-	L1ChainUrl         string
-	L2ChainUrl         string
-	L1ChainStartBlock  uint64
-	L2ChainStartBlock  uint64
-	ChainPK            string
-	StateChannelPK     string
-	NaAddress          string
-	VpaAddress         string
-	CaAddress          string
-	BridgeAddress      string
-	DurableStoreFolder string
-	BridgePublicIp     string
-	NodeL1MsgPort      int
-	NodeL2MsgPort      int
+	L1ChainUrl        string
+	L2ChainUrl        string
+	L1ChainStartBlock uint64
+	L2ChainStartBlock uint64
+	ChainPK           string
+	StateChannelPK    string
+	NaAddress         string
+	VpaAddress        string
+	CaAddress         string
+	BridgeAddress     string
+	DurableStoreDir   string
+	BridgePublicIp    string
+	NodeL1MsgPort     int
+	NodeL2MsgPort     int
 }
 
 func New(configOpts BridgeConfig) *Bridge {
@@ -71,7 +71,6 @@ func (b *Bridge) Start() error {
 	chainOptsL1 := chainservice.ChainOpts{
 		ChainUrl:           b.config.L1ChainUrl,
 		ChainStartBlockNum: b.config.L1ChainStartBlock,
-		ChainAuthToken:     "",
 		ChainPk:            b.config.ChainPK,
 		NaAddress:          common.HexToAddress(b.config.NaAddress),
 		VpaAddress:         common.HexToAddress(b.config.VpaAddress),
@@ -81,7 +80,6 @@ func (b *Bridge) Start() error {
 	chainOptsL2 := chainservice.L2ChainOpts{
 		ChainUrl:           b.config.L2ChainUrl,
 		ChainStartBlockNum: b.config.L2ChainStartBlock,
-		ChainAuthToken:     "",
 		ChainPk:            b.config.ChainPK,
 		BridgeAddress:      common.HexToAddress(b.config.BridgeAddress),
 	}
@@ -89,13 +87,13 @@ func (b *Bridge) Start() error {
 	storeOptsL1 := store.StoreOpts{
 		PkBytes:            common.Hex2Bytes(b.config.StateChannelPK),
 		UseDurableStore:    true,
-		DurableStoreFolder: filepath.Join(b.config.DurableStoreFolder, L1_DURABLE_STORE_SUB_DIR),
+		DurableStoreFolder: filepath.Join(b.config.DurableStoreDir, L1_DURABLE_STORE_SUB_DIR),
 	}
 
 	storeOptsL2 := store.StoreOpts{
 		PkBytes:            common.Hex2Bytes(b.config.StateChannelPK),
 		UseDurableStore:    true,
-		DurableStoreFolder: filepath.Join(b.config.DurableStoreFolder, L2_DURABLE_STORE_SUB_DIR),
+		DurableStoreFolder: filepath.Join(b.config.DurableStoreDir, L2_DURABLE_STORE_SUB_DIR),
 	}
 
 	messageOptsL1 := p2pms.MessageOpts{

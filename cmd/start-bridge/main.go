@@ -43,20 +43,20 @@ func main() {
 	}
 
 	bridgeConfig := bridge.BridgeConfig{
-		L1ChainUrl:         L1_CHAIN_URL,
-		L2ChainUrl:         L2_CHAIN_URL,
-		L1ChainStartBlock:  L1_CHAIN_START_BLOCK,
-		L2ChainStartBlock:  L2_CHAIN_START_BLOCK,
-		ChainPK:            CHAIN_PK,
-		StateChannelPK:     STATE_CHANNEL_PK,
-		NaAddress:          contractAddresses.NaAddress.String(),
-		VpaAddress:         contractAddresses.VpaAddress.String(),
-		CaAddress:          contractAddresses.CaAddress.String(),
-		BridgeAddress:      bridgeAddress.String(),
-		DurableStoreFolder: DURABLE_STORE_FOLDER,
-		BridgePublicIp:     BRIDGE_PUBLIC_IP,
-		NodeL1MsgPort:      NODEL1_MSG_PORT,
-		NodeL2MsgPort:      NODEL2_MSG_PORT,
+		L1ChainUrl:        L1_CHAIN_URL,
+		L2ChainUrl:        L2_CHAIN_URL,
+		L1ChainStartBlock: L1_CHAIN_START_BLOCK,
+		L2ChainStartBlock: L2_CHAIN_START_BLOCK,
+		ChainPK:           CHAIN_PK,
+		StateChannelPK:    STATE_CHANNEL_PK,
+		NaAddress:         contractAddresses.NaAddress.String(),
+		VpaAddress:        contractAddresses.VpaAddress.String(),
+		CaAddress:         contractAddresses.CaAddress.String(),
+		BridgeAddress:     bridgeAddress.String(),
+		DurableStoreDir:   DURABLE_STORE_FOLDER,
+		BridgePublicIp:    BRIDGE_PUBLIC_IP,
+		NodeL1MsgPort:     NODEL1_MSG_PORT,
+		NodeL2MsgPort:     NODEL2_MSG_PORT,
 	}
 
 	logging.SetupDefaultLogger(os.Stdout, slog.LevelDebug)

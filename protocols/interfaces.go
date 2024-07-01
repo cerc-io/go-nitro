@@ -154,10 +154,6 @@ func NewUpdateMirroredChannelStatusTransaction(
 	}
 }
 
-type GetMirroredChannelStatusCall struct {
-	ChainTransaction
-}
-
 func NewGetMirroredChannelStatusCall(
 	channelId types.Destination,
 ) UpdateMirroredChannelStatusTransaction {

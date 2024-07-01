@@ -24,7 +24,7 @@ const (
 	L2_DURABLE_STORE_SUB_DIR = "l2-nitro-store"
 )
 
-type MirrorChannelMapValue struct {
+type MirrorChannelDetails struct {
 	l1ChannelId types.Destination
 	isCreated   bool
 }
@@ -38,7 +38,7 @@ type Bridge struct {
 	storeL2 store.Store
 
 	cancel           context.CancelFunc
-	mirrorChannelMap map[types.Destination]MirrorChannelMapValue
+	mirrorChannelMap map[types.Destination]MirrorChannelDetails
 }
 
 type BridgeConfig struct {
@@ -46,8 +46,6 @@ type BridgeConfig struct {
 	L2ChainUrl         string
 	L1ChainStartBlock  uint64
 	L2ChainStartBlock  uint64
-	L1ChainAuthToken   string
-	L2ChainAuthToken   string
 	ChainPK            string
 	StateChannelPK     string
 	NaAddress          string
@@ -63,7 +61,7 @@ type BridgeConfig struct {
 func New(configOpts BridgeConfig) *Bridge {
 	bridge := Bridge{
 		config:           configOpts,
-		mirrorChannelMap: make(map[types.Destination]MirrorChannelMapValue),
+		mirrorChannelMap: make(map[types.Destination]MirrorChannelDetails),
 	}
 
 	return &bridge
@@ -73,7 +71,7 @@ func (b *Bridge) Start() error {
 	chainOptsL1 := chainservice.ChainOpts{
 		ChainUrl:           b.config.L1ChainUrl,
 		ChainStartBlockNum: b.config.L1ChainStartBlock,
-		ChainAuthToken:     b.config.L1ChainAuthToken,
+		ChainAuthToken:     "",
 		ChainPk:            b.config.ChainPK,
 		NaAddress:          common.HexToAddress(b.config.NaAddress),
 		VpaAddress:         common.HexToAddress(b.config.VpaAddress),
@@ -83,7 +81,7 @@ func (b *Bridge) Start() error {
 	chainOptsL2 := chainservice.L2ChainOpts{
 		ChainUrl:           b.config.L2ChainUrl,
 		ChainStartBlockNum: b.config.L2ChainStartBlock,
-		ChainAuthToken:     b.config.L2ChainAuthToken,
+		ChainAuthToken:     "",
 		ChainPk:            b.config.ChainPK,
 		BridgeAddress:      common.HexToAddress(b.config.BridgeAddress),
 	}
@@ -193,7 +191,7 @@ func (b *Bridge) processCompletedObjectivesFromL1(objId protocols.ObjectiveId) e
 			return err
 		}
 
-		b.mirrorChannelMap[l2LedgerChannelResponse.ChannelId] = MirrorChannelMapValue{l1ChannelId: l1LedgerChannel.Id}
+		b.mirrorChannelMap[l2LedgerChannelResponse.ChannelId] = MirrorChannelDetails{l1ChannelId: l1LedgerChannel.Id}
 		slog.Debug("Started creating mirror ledger channel in L2", "channelId", l2LedgerChannelResponse.ChannelId)
 	}
 

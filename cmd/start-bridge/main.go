@@ -20,8 +20,6 @@ const (
 	L2_CHAIN_URL         = "ws://127.0.0.1:8546"
 	L1_CHAIN_START_BLOCK = 0
 	L2_CHAIN_START_BLOCK = 0
-	L1_CHAIN_AUTH_TOKEN  = ""
-	L2_CHAIN_AUTH_TOKEN  = ""
 	NA_ADDRESS           = "NA_ADDRESS"
 	VPA_ADDRESS          = "VPA_ADDRESS"
 	CA_ADDRESS           = "CA_ADDRESS"
@@ -34,12 +32,12 @@ const (
 
 func main() {
 	// TODO: Deploy contracts from outside and get contract addresses using CLI
-	contractAddresses, err := chain.DeployContracts(context.Background(), L1_CHAIN_URL, L1_CHAIN_AUTH_TOKEN, CHAIN_PK)
+	contractAddresses, err := chain.DeployContracts(context.Background(), L1_CHAIN_URL, "", CHAIN_PK)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	bridgeAddress, err := chain.DeployL2Contracts(context.Background(), L2_CHAIN_URL, L2_CHAIN_AUTH_TOKEN, CHAIN_PK)
+	bridgeAddress, err := chain.DeployL2Contracts(context.Background(), L2_CHAIN_URL, "", CHAIN_PK)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,8 +47,6 @@ func main() {
 		L2ChainUrl:         L2_CHAIN_URL,
 		L1ChainStartBlock:  L1_CHAIN_START_BLOCK,
 		L2ChainStartBlock:  L2_CHAIN_START_BLOCK,
-		L1ChainAuthToken:   L1_CHAIN_AUTH_TOKEN,
-		L2ChainAuthToken:   L2_CHAIN_AUTH_TOKEN,
 		ChainPK:            CHAIN_PK,
 		StateChannelPK:     STATE_CHANNEL_PK,
 		NaAddress:          contractAddresses.NaAddress.String(),

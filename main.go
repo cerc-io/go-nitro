@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -12,9 +11,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/internal/logging"
-	"github.com/statechannels/go-nitro/internal/node"
+	nodeUtils "github.com/statechannels/go-nitro/internal/node"
 	"github.com/statechannels/go-nitro/internal/rpc"
-	scNode "github.com/statechannels/go-nitro/node"
+	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/node/engine/store"
@@ -225,27 +224,6 @@ func main() {
 		Flags:  flags,
 		Before: altsrc.InitInputSourceWithContext(flags, altsrc.NewTomlSourceFromFlagFunc(CONFIG)),
 		Action: func(cCtx *cli.Context) error {
-			var chainOpts interface{}
-			if l2 {
-				chainOpts = chainservice.L2ChainOpts{
-					ChainUrl:           chainUrl,
-					ChainStartBlockNum: chainStartBlock,
-					ChainAuthToken:     chainAuthToken,
-					ChainPk:            chainPk,
-					BridgeAddress:      common.HexToAddress(bridgeAddress),
-				}
-			} else {
-				chainOpts = chainservice.ChainOpts{
-					ChainUrl:           chainUrl,
-					ChainStartBlockNum: chainStartBlock,
-					ChainAuthToken:     chainAuthToken,
-					ChainPk:            chainPk,
-					NaAddress:          common.HexToAddress(naAddress),
-					VpaAddress:         common.HexToAddress(vpaAddress),
-					CaAddress:          common.HexToAddress(caAddress),
-				}
-			}
-
 			storeOpts := store.StoreOpts{
 				PkBytes:            common.Hex2Bytes(pkString),
 				UseDurableStore:    useDurableStore,
@@ -264,24 +242,33 @@ func main() {
 				PublicIp:  publicIp,
 			}
 
-			logging.SetupDefaultLogger(os.Stdout, slog.LevelDebug)
-
-			var n *scNode.Node
+			var node *node.Node
 			var err error
-
 			if l2 {
-				if opts, ok := chainOpts.(chainservice.L2ChainOpts); ok {
-					n, _, _, _, err = node.InitializeL2Node(opts, storeOpts, messageOpts)
-				} else {
-					return fmt.Errorf("failed to cast chainOpts to ChainOptsL2")
+				chainOpts := chainservice.L2ChainOpts{
+					ChainUrl:           chainUrl,
+					ChainStartBlockNum: chainStartBlock,
+					ChainAuthToken:     chainAuthToken,
+					ChainPk:            chainPk,
+					BridgeAddress:      common.HexToAddress(bridgeAddress),
 				}
+
+				node, _, _, _, err = nodeUtils.InitializeL2Node(chainOpts, storeOpts, messageOpts)
 			} else {
-				if opts, ok := chainOpts.(chainservice.ChainOpts); ok {
-					n, _, _, _, err = node.InitializeNode(opts, storeOpts, messageOpts)
-				} else {
-					return fmt.Errorf("failed to cast chainOpts to ChainOpts")
+				chainOpts := chainservice.ChainOpts{
+					ChainUrl:           chainUrl,
+					ChainStartBlockNum: chainStartBlock,
+					ChainAuthToken:     chainAuthToken,
+					ChainPk:            chainPk,
+					NaAddress:          common.HexToAddress(naAddress),
+					VpaAddress:         common.HexToAddress(vpaAddress),
+					CaAddress:          common.HexToAddress(caAddress),
 				}
+
+				node, _, _, _, err = nodeUtils.InitializeNode(chainOpts, storeOpts, messageOpts)
 			}
+
+			logging.SetupDefaultLogger(os.Stdout, slog.LevelDebug)
 
 			if err != nil {
 				return err
@@ -295,7 +282,7 @@ func main() {
 				}
 			}
 
-			rpcServer, err := rpc.InitializeRpcServer(n, rpcPort, useNats, &cert)
+			rpcServer, err := rpc.InitializeRpcServer(node, rpcPort, useNats, &cert)
 			if err != nil {
 				return err
 			}

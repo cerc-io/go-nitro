@@ -588,3 +588,73 @@ func TestVirtualPaymentChannelWithObjective(t *testing.T) {
 	testhelpers.Assert(t, balanceNodeA.Cmp(big.NewInt(int64(ledgerChannelDeposit+paymentAmount))) == 0, "Balance of Alice (%v) should be equal to ledgerChannelDeposit (%v)", balanceNodeA, ledgerChannelDeposit+paymentAmount)
 	testhelpers.Assert(t, balanceNodeB.Cmp(big.NewInt(int64(ledgerChannelDeposit-paymentAmount))) == 0, "Balance of Bob (%v) should be equal to ledgerChannelDeposit (%v)", balanceNodeB, ledgerChannelDeposit-paymentAmount)
 }
+
+func TestVirtualPaymentChannelWithAliceExit(t *testing.T) {
+	testCase := TestCase{
+		Description:       "Virtual channel test with alice exit",
+		Chain:             AnvilChain,
+		MessageService:    TestMessageService,
+		ChallengeDuration: 10,
+		MessageDelay:      0,
+		LogName:           "Virtual_channel_test_with_alice_exit",
+		Participants: []TestParticipant{
+			{StoreType: MemStore, Actor: testactors.Alice},
+			{StoreType: MemStore, Actor: testactors.Bob},
+		},
+	}
+
+	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	defer cleanup()
+
+	infra := setupSharedInfra(testCase)
+	defer infra.Close(t)
+
+	// Create go-nitro nodes
+	nodeA, _, _, _, _ := setupIntegrationNode(testCase, testCase.Participants[0], infra, []string{}, dataFolder)
+	defer nodeA.Close()
+	nodeB, _, _, _, _ := setupIntegrationNode(testCase, testCase.Participants[1], infra, []string{}, dataFolder)
+
+	// Create ledger channel and virtual fund
+	ledgerChannel := openLedgerChannel(t, nodeA, nodeB, types.Address{}, uint32(testCase.ChallengeDuration))
+	// Check balance of node
+	balanceNodeA, _ := infra.anvilChain.GetAccountBalance(testCase.Participants[0].Address())
+	balanceNodeB, _ := infra.anvilChain.GetAccountBalance(testCase.Participants[1].Address())
+	t.Log("Balance of Alice", balanceNodeA, "\nBalance of Bob", balanceNodeB)
+	testhelpers.Assert(t, balanceNodeA.Int64() == 0, "Balance of Alice should be zero")
+	testhelpers.Assert(t, balanceNodeB.Int64() == 0, "Balance of Bob should be zero")
+
+	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, common.BigToAddress(common.Big0))
+	response, err := nodeA.CreatePaymentChannel([]common.Address{}, *nodeB.Address, uint32(testCase.ChallengeDuration), virtualOutcome)
+	if err != nil {
+		t.Error(err)
+	}
+	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{response.Id})
+
+	paymentAmount := 2000
+	nodeA.Pay(response.ChannelId, big.NewInt(int64(paymentAmount)))
+	nodeBVoucher := <-nodeB.ReceivedVouchers()
+	t.Log("vocuher recieved for channel", nodeBVoucher.ChannelId)
+
+	nodeB.Close()
+	// As Bob's node is closed, Alice needs to exit unilaterally with latest state that is unanimously signed
+	// The state cannot be constructed to include voucher amount as voucher needs to be signed by the node that received it hence Alice needs to use the state that was unanimously signed (As no state changes are made while making payments, the latest state that Alice will have is a signed postfund state)
+
+	// Alice initiates the challenge transaction
+	ledgerResponse, err := nodeA.CloseLedgerChannel(ledgerChannel, true)
+	if err != nil {
+		t.Log(err)
+	}
+
+	// Wait for objective to complete
+	chA := nodeA.ObjectiveCompleteChan(ledgerResponse)
+	<-chA
+
+	// Check assets are liquidated
+	balanceNodeA, _ = infra.anvilChain.GetAccountBalance(testCase.Participants[0].Address())
+	balanceNodeB, _ = infra.anvilChain.GetAccountBalance(testCase.Participants[1].Address())
+	t.Log("Balance of Alice", balanceNodeA, "\nBalance of Bob", balanceNodeB)
+
+	// As Bob's node closed and voucher sent by Alice was not verified, the virtual channel state will remain unchanged hence after balance after exiting should be equal to initial ledgerChannelDeposit
+	testhelpers.Assert(t, balanceNodeA.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "Balance of Alice (%v) should be equal to (%v)", balanceNodeA, ledgerChannelDeposit)
+	testhelpers.Assert(t, balanceNodeB.Cmp(big.NewInt(ledgerChannelDeposit)) == 0, "Balance of Bob (%v) should be equal to (%v)", balanceNodeB, ledgerChannelDeposit)
+}

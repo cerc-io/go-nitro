@@ -26,7 +26,8 @@ func DeployContracts(ctx context.Context, chainUrl, chainAuthToken, chainPk stri
 	return chainutils.DeployContracts(ctx, ethClient, txSubmitter)
 }
 
-func DeployL2Contracts(ctx context.Context, chainUrl, chainAuthToken, chainPk string) (common.Address, error) {
+// DeployL2Contract deploys bridge contract.
+func DeployL2Contract(ctx context.Context, chainUrl, chainAuthToken, chainPk string) (common.Address, error) {
 	ethClient, txSubmitter, err := chainutils.ConnectToChain(context.Background(), chainUrl, chainAuthToken, common.Hex2Bytes(chainPk))
 	if err != nil {
 		return common.Address{}, err

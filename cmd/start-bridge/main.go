@@ -37,7 +37,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	bridgeAddress, err := chain.DeployL2Contracts(context.Background(), L2_CHAIN_URL, "", CHAIN_PK)
+	bridgeAddress, err := chain.DeployL2Contract(context.Background(), L2_CHAIN_URL, "", CHAIN_PK)
 	if err != nil {
 		log.Fatal(err)
 	}

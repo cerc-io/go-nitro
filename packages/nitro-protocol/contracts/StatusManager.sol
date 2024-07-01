@@ -74,6 +74,19 @@ contract StatusManager is IStatusManager, Ownable {
         return uint160(uint256(keccak256(abi.encode(stateHash, outcomeHash))));
     }
 
+    function _updateFingerprint(
+        bytes32 channelId,
+        bytes32 stateHash,
+        bytes32 outcomeHash
+    ) internal {
+        (uint48 turnNumRecord, uint48 finalizesAt, ) = _unpackStatus(channelId);
+
+        bytes32 newStatus = _generateStatus(
+            ChannelData(turnNumRecord, finalizesAt, stateHash, outcomeHash)
+        );
+        statusOf[channelId] = newStatus;
+    }
+
     /**
      * @notice Unpacks turnNumRecord, finalizesAt and fingerprint from the status of a particular channel.
      * @dev Unpacks turnNumRecord, finalizesAt and fingerprint from the status of a particular channel.

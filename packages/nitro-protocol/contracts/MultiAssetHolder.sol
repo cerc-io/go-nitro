@@ -489,19 +489,6 @@ contract MultiAssetHolder is IMultiAssetHolder, StatusManager {
         require(_mode(channelId) == ChannelMode.Finalized, 'Channel not finalized.');
     }
 
-    function _updateFingerprint(
-        bytes32 channelId,
-        bytes32 stateHash,
-        bytes32 outcomeHash
-    ) internal {
-        (uint48 turnNumRecord, uint48 finalizesAt, ) = _unpackStatus(channelId);
-
-        bytes32 newStatus = _generateStatus(
-            ChannelData(turnNumRecord, finalizesAt, stateHash, outcomeHash)
-        );
-        statusOf[channelId] = newStatus;
-    }
-
     /**
      * @notice Checks that the supplied indices are strictly increasing.
      * @dev Checks that the supplied indices are strictly increasing. This allows us allows us to write a more efficient claim function.

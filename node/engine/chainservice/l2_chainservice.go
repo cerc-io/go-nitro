@@ -25,6 +25,10 @@ type L2ChainOpts struct {
 	ChainAuthToken     string
 	ChainPk            string
 	BridgeAddress      common.Address
+
+	// Virtual payment and consensus app addresses are needed to be set in app definition of L2 state (required in L1 during challenge)
+	VpaAddress common.Address
+	CaAddress  common.Address
 }
 
 type L2ChainService struct {
@@ -59,13 +63,13 @@ func NewL2ChainService(l2ChainOpts L2ChainOpts) (*L2ChainService, error) {
 		panic(err)
 	}
 
-	return newL2ChainService(ethClient, l2ChainOpts.ChainStartBlockNum, bridge, l2ChainOpts.BridgeAddress, txSigner)
+	return newL2ChainService(ethClient, l2ChainOpts.ChainStartBlockNum, bridge, l2ChainOpts.BridgeAddress, l2ChainOpts.CaAddress, l2ChainOpts.VpaAddress, txSigner)
 }
 
 // newL2ChainService constructs a chain service that submits transactions to a Bridge contract
 // and listens to events from an eventSource
 func newL2ChainService(chain ethChain, startBlockNum uint64, bridge *Bridge.Bridge,
-	bridgeAddress common.Address, txSigner *bind.TransactOpts,
+	bridgeAddress, caAddress, vpaAddress common.Address, txSigner *bind.TransactOpts,
 ) (*L2ChainService, error) {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
@@ -83,7 +87,7 @@ func newL2ChainService(chain ethChain, startBlockNum uint64, bridge *Bridge.Brid
 	tracker := NewEventTracker(startBlock)
 
 	// Use a buffered channel so we don't have to worry about blocking on writing to the channel.
-	ecs := EthChainService{chain, nil, common.Address{}, common.Address{}, common.Address{}, txSigner, make(chan Event, 10), logger, ctx, cancelCtx, &sync.WaitGroup{}, tracker, nil, nil}
+	ecs := EthChainService{chain, nil, common.Address{}, caAddress, vpaAddress, txSigner, make(chan Event, 10), logger, ctx, cancelCtx, &sync.WaitGroup{}, tracker, nil, nil}
 	l2cs := L2ChainService{&ecs, bridge, bridgeAddress}
 	errChan, newBlockChan, eventChan, eventQuery, err := l2cs.subscribeForLogs()
 	if err != nil {

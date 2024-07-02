@@ -117,6 +117,8 @@ func setupChainService(tc TestCase, tp TestParticipant, si sharedTestInfrastruct
 			ChainStartBlockNum: 0,
 			ChainAuthToken:     si.anvilChain.ChainAuthToken,
 			BridgeAddress:      si.anvilChain.ContractAddresses.BridgeAddress,
+			CaAddress:          si.anvilChain.ContractAddresses.CaAddress,
+			VpaAddress:         si.anvilChain.ContractAddresses.VpaAddress,
 			ChainPk:            si.anvilChain.ChainPks[ethAccountIndex],
 		})
 		if err != nil {

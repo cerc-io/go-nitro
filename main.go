@@ -251,6 +251,8 @@ func main() {
 					ChainAuthToken:     chainAuthToken,
 					ChainPk:            chainPk,
 					BridgeAddress:      common.HexToAddress(bridgeAddress),
+					VpaAddress:         common.HexToAddress(vpaAddress),
+					CaAddress:          common.HexToAddress(caAddress),
 				}
 
 				node, _, _, _, err = nodeUtils.InitializeL2Node(chainOpts, storeOpts, messageOpts)

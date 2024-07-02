@@ -82,6 +82,8 @@ func (b *Bridge) Start() error {
 		ChainStartBlockNum: b.config.L2ChainStartBlock,
 		ChainPk:            b.config.ChainPK,
 		BridgeAddress:      common.HexToAddress(b.config.BridgeAddress),
+		VpaAddress:         common.HexToAddress(b.config.VpaAddress),
+		CaAddress:          common.HexToAddress(b.config.CaAddress),
 	}
 
 	storeOptsL1 := store.StoreOpts{

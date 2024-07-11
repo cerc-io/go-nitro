@@ -25,7 +25,7 @@ const (
 	TEST_CHAIN_ID       = 1337
 	TEST_TOKEN_NAME     = "TestToken"
 	TEST_TOKEN_SYMBOL   = "TEST"
-	TEST_INITIAL_SUPPLY = 1000000
+	TEST_INITIAL_SUPPLY = 100_000_000
 )
 
 var ErrUnableToAssignBigInt = errors.New("simulated_backend_chainservice: unable to assign BigInt")

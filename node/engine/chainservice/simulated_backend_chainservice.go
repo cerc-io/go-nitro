@@ -21,7 +21,12 @@ import (
 )
 
 // This is the chain id used by the simulated backend as well as hardhat
-const TEST_CHAIN_ID = 1337
+const (
+	TEST_CHAIN_ID       = 1337
+	TEST_TOKEN_NAME     = "TestToken"
+	TEST_TOKEN_SYMBOL   = "TEST"
+	TEST_INITIAL_SUPPLY = 1000000
+)
 
 var ErrUnableToAssignBigInt = errors.New("simulated_backend_chainservice: unable to assign BigInt")
 
@@ -138,7 +143,7 @@ func SetupSimulatedBackend(numAccounts uint64) (SimulatedChain, Bindings, []*bin
 	}
 
 	// Deploy a test ERC20 Token Contract
-	tokenAddress, _, tokenBinding, err := Token.DeployToken(accounts[0], sim, accounts[0].From)
+	tokenAddress, _, tokenBinding, err := Token.DeployToken(accounts[0], sim, TEST_TOKEN_NAME, TEST_TOKEN_SYMBOL, accounts[0].From, big.NewInt(TEST_INITIAL_SUPPLY))
 	if err != nil {
 		return nil, contractBindings, accounts, err
 	}

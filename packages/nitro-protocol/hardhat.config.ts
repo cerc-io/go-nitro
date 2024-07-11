@@ -76,14 +76,14 @@ const config: HardhatUserConfig & {watcher: any} = {
       chainId: 1337,
     },
     geth: {
-      chainId: gethChainId,
       url: gethURL ?? '',
       accounts: gethDeployerPK ? [gethDeployerPK] : [],
+      chainId: gethChainId,
     },
     optimism: {
-      chainId: optimismChainId,
       url: optimismURL ?? '',
       accounts: optimismDeployerPK ? [optimismDeployerPK] : [],
+      chainId: optimismChainId,
     },
     goerli: {
       url: infuraToken ? 'https://goerli.infura.io/v3/' + infuraToken : '',

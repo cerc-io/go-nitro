@@ -19,6 +19,7 @@ import trivialAppArtifact from '../artifacts/contracts/TrivialApp.sol/TrivialApp
 import consensusAppArtifact from '../artifacts/contracts/ConsensusApp.sol/ConsensusApp.json';
 import virtualPaymentAppArtifact from '../artifacts/contracts/VirtualPaymentApp.sol/VirtualPaymentApp.json';
 import interestBearingAppArtifact from '../artifacts/contracts/InterestBearingApp.sol/InterestBearingApp.json';
+import {INITIAL_TOKEN_SUPPLY, TOKEN_NAME, TOKEN_SYMBOL} from '../src/constants';
 const rpcEndPoint = 'http://localhost:' + process.env.GANACHE_PORT;
 const provider = new providers.JsonRpcProvider(rpcEndPoint);
 
@@ -82,7 +83,12 @@ export async function deploy(): Promise<Record<string, string>> {
   const TEST_CONSENSUS_ADDRESS = (await testConsensusFactory.deploy()).address;
 
   const TEST_TOKEN_ADDRESS = (
-    await tokenFactory.deploy(new Wallet(TEST_ACCOUNTS[0].privateKey).address)
+    await tokenFactory.deploy(
+      TOKEN_NAME,
+      TOKEN_SYMBOL,
+      new Wallet(TEST_ACCOUNTS[0].privateKey).address,
+      INITIAL_TOKEN_SUPPLY
+    )
   ).address;
 
   const BAD_TOKEN_ADDRESS = (

@@ -12,7 +12,11 @@ import batchOperatorArtifact from '../artifacts/contracts/auxiliary/BatchOperato
 import tokenArtifact from '../artifacts/contracts/Token.sol/Token.json';
 import consensusAppArtifact from '../artifacts/contracts/ConsensusApp.sol/ConsensusApp.json';
 import virtualPaymentAppArtifact from '../artifacts/contracts/VirtualPaymentApp.sol/VirtualPaymentApp.json';
-import {INITIAL_TOKEN_SUPPLY, TOKEN_NAME, TOKEN_SYMBOL} from '../src/constants';
+import {
+  DEFAULT_INITIAL_TOKEN_SUPPLY,
+  DEFAULT_TOKEN_NAME,
+  DEFAULT_TOKEN_SYMBOL,
+} from '../src/constants';
 
 export let nitroAdjudicator: NitroAdjudicator & Contract;
 export let batchOperator: BatchOperator & Contract;
@@ -69,9 +73,9 @@ export async function deployContracts() {
     Contract;
 
   token = (await tokenFactory.deploy(
-    TOKEN_NAME,
-    TOKEN_SYMBOL,
+    DEFAULT_TOKEN_NAME,
+    DEFAULT_TOKEN_SYMBOL,
     provider.getSigner(0).getAddress(),
-    INITIAL_TOKEN_SUPPLY
+    DEFAULT_INITIAL_TOKEN_SUPPLY
   )) as Token & Contract;
 }

@@ -87,7 +87,11 @@ export function generateRequest<
   } as T; // TODO: We shouldn't have to cast here
 }
 
-export function getLocalRPCUrl(port: number, host: string): string {
+export function getLocalRPCUrl(port: number): string {
+  return `127.0.0.1:${port}/${RPC_PATH}`;
+}
+
+export function getRPCUrl(port: number, host: string): string {
   return `${host}:${port}/${RPC_PATH}`;
 }
 

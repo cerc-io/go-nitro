@@ -104,7 +104,8 @@ const REQUIRED_BLOCK_CONFIRMATIONS = 2
 // This is a restriction enforced by the rpc provider
 const MAX_EPOCHS = 60480
 
-const EVENT_BLOCK_INTERVAL = 16
+// BLOCKS_WITHOUT_EVENT_THRESHOLD is the maximum number of blocks the node will wait for `Approval` event to be received before exiting
+const BLOCKS_WITHOUT_EVENT_THRESHOLD = 16
 
 // NewEthChainService is a convenient wrapper around newEthChainService, which provides a simpler API
 func NewEthChainService(chainOpts ChainOpts) (ChainService, error) {
@@ -281,7 +282,6 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				if err != nil {
 					return err
 				}
-				fmt.Println("Approve transaction hash: ", a.Hash().String())
 
 				// Get current block
 				currentBLock := <-ecs.newBlockChan
@@ -299,8 +299,8 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					case err := <-approvalSubscription.Err():
 						return err
 					case newBlock := <-ecs.newBlockChan:
-						if (newBlock.Number.Int64() - currentBLock.Number.Int64()) > EVENT_BLOCK_INTERVAL {
-							slog.Error("could listen for Approval event")
+						if (newBlock.Number.Int64() - currentBLock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
+							slog.Error("event Approval was not emitted", "Aprrove Transaction Hash", a.Hash().String())
 							isApproveTxMined = false
 							break approvalEventListenerLoop
 						}

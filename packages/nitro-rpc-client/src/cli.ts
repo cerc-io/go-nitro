@@ -20,6 +20,7 @@ yargs(hideBin(process.argv))
       type: "boolean",
       description: "Whether channel notifications are printed to the console",
     },
+    h: { alias: "host", default: "localhost:", type: "string" },
   })
   .command(
     "version",

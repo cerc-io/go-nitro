@@ -81,6 +81,7 @@ type EthChainService struct {
 	eventTracker             *eventTracker
 	eventSub                 ethereum.Subscription
 	newBlockSub              ethereum.Subscription
+	newBlockChan             chan *ethTypes.Header
 }
 
 // MAX_QUERY_BLOCK_RANGE is the maximum range of blocks we query for events at once.
@@ -102,6 +103,8 @@ const REQUIRED_BLOCK_CONFIRMATIONS = 2
 // MAX_EPOCHS is the maximum range of old epochs we can query with a single "FilterLogs" request
 // This is a restriction enforced by the rpc provider
 const MAX_EPOCHS = 60480
+
+const EVENT_BLOCK_INTERVAL = 16
 
 // NewEthChainService is a convenient wrapper around newEthChainService, which provides a simpler API
 func NewEthChainService(chainOpts ChainOpts) (ChainService, error) {
@@ -151,11 +154,13 @@ func newEthChainService(chain ethChain, startBlockNum uint64, na *NitroAdjudicat
 	tracker := NewEventTracker(startBlock)
 
 	// Use a buffered channel so we don't have to worry about blocking on writing to the channel.
-	ecs := EthChainService{chain, na, naAddress, caAddress, vpaAddress, txSigner, make(chan Event, 10), logger, ctx, cancelCtx, &sync.WaitGroup{}, tracker, nil, nil}
+	ecs := EthChainService{chain, na, naAddress, caAddress, vpaAddress, txSigner, make(chan Event, 10), logger, ctx, cancelCtx, &sync.WaitGroup{}, tracker, nil, nil, nil}
 	errChan, newBlockChan, eventChan, eventQuery, err := ecs.subscribeForLogs()
 	if err != nil {
 		return nil, err
 	}
+
+	ecs.newBlockChan = newBlockChan
 
 	// Prevent go routines from processing events before checkForMissedEvents completes
 	ecs.eventTracker.mu.Lock()
@@ -254,6 +259,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 	switch tx := tx.(type) {
 	case protocols.DepositTransaction:
 		for tokenAddress, amount := range tx.Deposit {
+			isApproveTxMined := false
 			txOpts := ecs.defaultTxOpts()
 			ethTokenAddress := common.Address{}
 			if tokenAddress == ethTokenAddress {
@@ -271,10 +277,14 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					return err
 				}
 
-				_, err = token.Approve(ecs.defaultTxOpts(), ecs.naAddress, amount)
+				a, err := token.Approve(ecs.defaultTxOpts(), ecs.naAddress, amount)
 				if err != nil {
 					return err
 				}
+				fmt.Println("Approve transaction hash: ", a.Hash().String())
+
+				// Get current block
+				currentBLock := <-ecs.newBlockChan
 
 				// Wait for the Approve tx to be mined before continuing
 			approvalEventListenerLoop:
@@ -283,24 +293,34 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					case log := <-approvalLogsChan:
 						if log.Owner == ecs.txSigner.From {
 							approvalSubscription.Unsubscribe()
+							isApproveTxMined = true
 							break approvalEventListenerLoop
 						}
 					case err := <-approvalSubscription.Err():
 						return err
+					case newBlock := <-ecs.newBlockChan:
+						if (newBlock.Number.Int64() - currentBLock.Number.Int64()) > EVENT_BLOCK_INTERVAL {
+							slog.Error("could listen for Approval event")
+							isApproveTxMined = false
+							break approvalEventListenerLoop
+						}
 					}
 				}
 			}
 
-			holdings, err := ecs.na.Holdings(&bind.CallOpts{}, tokenAddress, tx.ChannelId())
-			ecs.logger.Debug("existing holdings", "holdings", holdings)
+			if isApproveTxMined {
 
-			if err != nil {
-				return err
-			}
+				holdings, err := ecs.na.Holdings(&bind.CallOpts{}, tokenAddress, tx.ChannelId())
+				ecs.logger.Debug("existing holdings", "holdings", holdings)
 
-			_, err = ecs.na.Deposit(txOpts, tokenAddress, tx.ChannelId(), holdings, amount)
-			if err != nil {
-				return err
+				if err != nil {
+					return err
+				}
+
+				_, err = ecs.na.Deposit(txOpts, tokenAddress, tx.ChannelId(), holdings, amount)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		return nil

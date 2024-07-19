@@ -104,7 +104,7 @@ const REQUIRED_BLOCK_CONFIRMATIONS = 2
 // This is a restriction enforced by the rpc provider
 const MAX_EPOCHS = 60480
 
-// BLOCKS_WITHOUT_EVENT_THRESHOLD is the maximum number of blocks the node will wait for `Approval` event to be received before exiting
+// BLOCKS_WITHOUT_EVENT_THRESHOLD is the maximum number of blocks the node will wait for an event to confirm transaction to be mined
 const BLOCKS_WITHOUT_EVENT_THRESHOLD = 16
 
 // NewEthChainService is a convenient wrapper around newEthChainService, which provides a simpler API
@@ -260,7 +260,6 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 	switch tx := tx.(type) {
 	case protocols.DepositTransaction:
 		for tokenAddress, amount := range tx.Deposit {
-			isApproveTxMined := false
 			txOpts := ecs.defaultTxOpts()
 			ethTokenAddress := common.Address{}
 			if tokenAddress == ethTokenAddress {
@@ -278,7 +277,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					return err
 				}
 
-				a, err := token.Approve(ecs.defaultTxOpts(), ecs.naAddress, amount)
+				approveTx, err := token.Approve(ecs.defaultTxOpts(), ecs.naAddress, amount)
 				if err != nil {
 					return err
 				}
@@ -293,34 +292,29 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					case log := <-approvalLogsChan:
 						if log.Owner == ecs.txSigner.From {
 							approvalSubscription.Unsubscribe()
-							isApproveTxMined = true
 							break approvalEventListenerLoop
 						}
 					case err := <-approvalSubscription.Err():
 						return err
 					case newBlock := <-ecs.newBlockChan:
 						if (newBlock.Number.Int64() - currentBLock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
-							slog.Error("event Approval was not emitted", "Aprrove Transaction Hash", a.Hash().String())
-							isApproveTxMined = false
-							break approvalEventListenerLoop
+							slog.Error("event Approval was not emitted", "approveTxHash", approveTx.Hash().String())
+							return nil
 						}
 					}
 				}
 			}
 
-			if isApproveTxMined {
+			holdings, err := ecs.na.Holdings(&bind.CallOpts{}, tokenAddress, tx.ChannelId())
+			ecs.logger.Debug("existing holdings", "holdings", holdings)
 
-				holdings, err := ecs.na.Holdings(&bind.CallOpts{}, tokenAddress, tx.ChannelId())
-				ecs.logger.Debug("existing holdings", "holdings", holdings)
+			if err != nil {
+				return err
+			}
 
-				if err != nil {
-					return err
-				}
-
-				_, err = ecs.na.Deposit(txOpts, tokenAddress, tx.ChannelId(), holdings, amount)
-				if err != nil {
-					return err
-				}
+			_, err = ecs.na.Deposit(txOpts, tokenAddress, tx.ChannelId(), holdings, amount)
+			if err != nil {
+				return err
 			}
 		}
 		return nil

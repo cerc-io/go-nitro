@@ -107,6 +107,12 @@ const MAX_EPOCHS = 60480
 // BLOCKS_WITHOUT_EVENT_THRESHOLD is the maximum number of blocks the node will wait for an event to confirm transaction to be mined
 const BLOCKS_WITHOUT_EVENT_THRESHOLD = 16
 
+// GAS_LIMIT_MULTIPLIER is the multiplier for updating gas limit
+const GAS_LIMIT_MULTIPLIER = 1.5
+
+// MAX_TX_RETRIES is the maximum number of times the node will retry submitting transaction before exiting
+const MAX_TX_RETRIES = 1
+
 // NewEthChainService is a convenient wrapper around newEthChainService, which provides a simpler API
 func NewEthChainService(chainOpts ChainOpts) (ChainService, error) {
 	if chainOpts.ChainPk == "" {
@@ -270,6 +276,8 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					return err
 				}
 
+				approveTxOpts := txOpts
+
 				approvalLogsChan := make(chan *Token.TokenApproval)
 
 				approvalSubscription, err := token.WatchApproval(&bind.WatchOpts{Context: ecs.ctx}, approvalLogsChan, []common.Address{ecs.txSigner.From}, []common.Address{ecs.naAddress})
@@ -285,7 +293,10 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				// Get current block
 				currentBLock := <-ecs.newBlockChan
 
-				// Wait for the Approve tx to be mined before continuing
+				// Turn number of Approve transaction retrials
+				approveTxTurnNumber := 0
+
+				// Wait for the Approve transaction to be mined before continuing
 			approvalEventListenerLoop:
 				for {
 					select {
@@ -298,8 +309,23 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 						return err
 					case newBlock := <-ecs.newBlockChan:
 						if (newBlock.Number.Int64() - currentBLock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
-							slog.Error("event Approval was not emitted", "approveTxHash", approveTx.Hash().String())
-							return nil
+							if approveTxTurnNumber >= MAX_TX_RETRIES {
+								slog.Error("reached max retry limit for sending Approve transaction", "txTurnNumber", approveTxTurnNumber)
+								return nil
+							}
+
+							slog.Error("event Approval was not emitted, retrying with higher gas limit", "approveTxHash", approveTx.Hash().String())
+
+							approveTxOpts.GasLimit = uint64(float64(approveTx.Gas()) * GAS_LIMIT_MULTIPLIER)
+							reApproveTx, err := token.Approve(approveTxOpts, ecs.naAddress, amount)
+							if err != nil {
+								return err
+							}
+
+							approveTxTurnNumber++
+							currentBLock = newBlock
+
+							slog.Info("Resubmitted transaction with higher gas limit", "gasLimit", approveTxOpts.GasLimit, "approveTxHash", reApproveTx.Hash().String())
 						}
 					}
 				}

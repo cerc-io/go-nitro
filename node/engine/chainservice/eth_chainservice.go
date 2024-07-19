@@ -3,12 +3,15 @@ package chainservice
 import (
 	"context"
 	"fmt"
+	"log"
 	"log/slog"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -109,9 +112,6 @@ const BLOCKS_WITHOUT_EVENT_THRESHOLD = 16
 
 // GAS_LIMIT_MULTIPLIER is the multiplier for updating gas limit
 const GAS_LIMIT_MULTIPLIER = 1.5
-
-// MAX_TX_RETRIES is the maximum number of times the node will retry submitting transaction before exiting
-const MAX_TX_RETRIES = 1
 
 // NewEthChainService is a convenient wrapper around newEthChainService, which provides a simpler API
 func NewEthChainService(chainOpts ChainOpts) (ChainService, error) {
@@ -294,7 +294,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				currentBLock := <-ecs.newBlockChan
 
 				// Turn number of Approve transaction retrials
-				approveTxTurnNumber := 0
+				isApproveTxRetried := false
 
 				// Wait for the Approve transaction to be mined before continuing
 			approvalEventListenerLoop:
@@ -309,22 +309,46 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 						return err
 					case newBlock := <-ecs.newBlockChan:
 						if (newBlock.Number.Int64() - currentBLock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
-							if approveTxTurnNumber >= MAX_TX_RETRIES {
-								slog.Error("reached max retry limit for sending Approve transaction", "txTurnNumber", approveTxTurnNumber)
+							if isApproveTxRetried {
+								slog.Error("reached max retry limit for sending Approve transaction", "txTurnNumber", isApproveTxRetried)
 								return nil
 							}
 
 							slog.Error("event Approval was not emitted, retrying with higher gas limit", "approveTxHash", approveTx.Hash().String())
 
-							approveTxOpts.GasLimit = uint64(float64(approveTx.Gas()) * GAS_LIMIT_MULTIPLIER)
+							// Estimate gas for new Approve transaction
+							parsedABI, err := abi.JSON(strings.NewReader(Token.TokenABI))
+							if err != nil {
+								log.Fatalf("Failed to parse ABI: %v", err)
+							}
+
+							data, err := parsedABI.Pack("approve", ecs.naAddress, amount)
+							if err != nil {
+								log.Fatalf("Failed to encode function call: %v", err)
+							}
+
+							callMsg := ethereum.CallMsg{
+								From:     ecs.txSigner.From,
+								To:       &tokenAddress,
+								GasPrice: nil,
+								Gas:      0,
+								Value:    big.NewInt(0),
+								Data:     data,
+							}
+
+							estimatedGasLimit, err := ecs.chain.EstimateGas(context.Background(), callMsg)
+							if err != nil {
+								log.Fatalf("Failed to estimate gas: %v", err)
+							}
+
+							// Multiply estimated gas limit with set multiplier
+							approveTxOpts.GasLimit = uint64(float64(estimatedGasLimit) * GAS_LIMIT_MULTIPLIER)
 							reApproveTx, err := token.Approve(approveTxOpts, ecs.naAddress, amount)
 							if err != nil {
 								return err
 							}
 
-							approveTxTurnNumber++
-							currentBLock = newBlock
-
+							isApproveTxRetried = true
 							slog.Info("Resubmitted transaction with higher gas limit", "gasLimit", approveTxOpts.GasLimit, "approveTxHash", reApproveTx.Hash().String())
 						}
 					}

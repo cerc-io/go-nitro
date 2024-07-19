@@ -88,7 +88,7 @@ export function generateRequest<
 }
 
 export function getLocalRPCUrl(port: number): string {
-  return getRPCUrl('127.0.0.1', port);
+  return getRPCUrl("127.0.0.1", port);
 }
 
 export function getRPCUrl(host: string, port: number): string {

@@ -31,7 +31,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       const version = await rpcClient.GetVersion();
       console.log(version);
@@ -48,7 +48,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       const address = await rpcClient.GetAddress();
       console.log(address);
@@ -65,7 +65,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       const ledgers = await rpcClient.GetAllLedgerChannels();
       for (const ledger of ledgers) {
@@ -84,7 +84,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       const ledgers = await rpcClient.GetAllL2Channels();
       for (const ledger of ledgers) {
@@ -110,7 +110,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       const paymentChans = await rpcClient.GetPaymentChannelsByLedger(
         yargs.ledgerId
@@ -154,7 +154,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
@@ -194,7 +194,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
@@ -234,7 +234,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
@@ -276,7 +276,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
 
       if (yargs.n) logOutChannelUpdates(rpcClient);
@@ -305,7 +305,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
 
       const ledgerInfo = await rpcClient.GetLedgerChannel(yargs.channelId);
@@ -329,7 +329,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       const paymentChannelInfo = await rpcClient.GetPaymentChannel(
         yargs.channelId
@@ -360,7 +360,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
@@ -395,7 +395,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
@@ -437,7 +437,7 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcPort, rpcHost)
+        getRPCUrl(rpcHost, rpcPort)
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 

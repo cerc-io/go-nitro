@@ -310,11 +310,11 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					case newBlock := <-ecs.newBlockChan:
 						if (newBlock.Number.Int64() - currentBLock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
 							if isApproveTxRetried {
-								slog.Error("reached max retry limit for sending Approve transaction", "txTurnNumber", isApproveTxRetried)
+								slog.Error("event Approval was not emitted after retrying")
 								return nil
 							}
 
-							slog.Error("event Approval was not emitted, retrying with higher gas limit", "approveTxHash", approveTx.Hash().String())
+							slog.Error("event Approval was not emitted", "approveTxHash", approveTx.Hash().String())
 
 							// Estimate gas for new Approve transaction
 							parsedABI, err := abi.JSON(strings.NewReader(Token.TokenABI))
@@ -349,6 +349,8 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 							}
 
 							isApproveTxRetried = true
+							currentBLock = newBlock
+
 							slog.Info("Resubmitted transaction with higher gas limit", "gasLimit", approveTxOpts.GasLimit, "approveTxHash", reApproveTx.Hash().String())
 						}
 					}

@@ -3,7 +3,6 @@ package chainservice
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"math/big"
 	"strings"
@@ -317,28 +316,9 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 							slog.Error("event Approval was not emitted", "approveTxHash", approveTx.Hash().String())
 
 							// Estimate gas for new Approve transaction
-							parsedABI, err := abi.JSON(strings.NewReader(Token.TokenABI))
+							estimatedGasLimit, err := ecs.estimateGasForApproveTx(tokenAddress, amount)
 							if err != nil {
-								log.Fatalf("Failed to parse ABI: %v", err)
-							}
-
-							data, err := parsedABI.Pack("approve", ecs.naAddress, amount)
-							if err != nil {
-								log.Fatalf("Failed to encode function call: %v", err)
-							}
-
-							callMsg := ethereum.CallMsg{
-								From:     ecs.txSigner.From,
-								To:       &tokenAddress,
-								GasPrice: nil,
-								Gas:      0,
-								Value:    big.NewInt(0),
-								Data:     data,
-							}
-
-							estimatedGasLimit, err := ecs.chain.EstimateGas(context.Background(), callMsg)
-							if err != nil {
-								log.Fatalf("Failed to estimate gas: %v", err)
+								return err
 							}
 
 							// Multiply estimated gas limit with set multiplier
@@ -804,4 +784,32 @@ func (ecs *EthChainService) Close() error {
 	ecs.cancel()
 	ecs.wg.Wait()
 	return nil
+}
+
+func (ecs *EthChainService) estimateGasForApproveTx(tokenAddress common.Address, amount *big.Int) (uint64, error) {
+	parsedABI, err := abi.JSON(strings.NewReader(Token.TokenABI))
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse ABI: %w", err)
+	}
+
+	data, err := parsedABI.Pack("approve", ecs.naAddress, amount)
+	if err != nil {
+		return 0, fmt.Errorf("failed to encode function call: %w", err)
+	}
+
+	callMsg := ethereum.CallMsg{
+		From:     ecs.txSigner.From,
+		To:       &tokenAddress,
+		GasPrice: nil,
+		Gas:      0,
+		Value:    big.NewInt(0),
+		Data:     data,
+	}
+
+	estimatedGasLimit, err := ecs.chain.EstimateGas(context.Background(), callMsg)
+	if err != nil {
+		return 0, fmt.Errorf("failed to estimate gas: %w", err)
+	}
+
+	return estimatedGasLimit, nil
 }

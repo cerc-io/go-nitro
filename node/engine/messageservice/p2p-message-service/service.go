@@ -43,11 +43,12 @@ const (
 )
 
 type MessageOpts struct {
-	PkBytes   []byte
-	Port      int
-	BootPeers []string
-	PublicIp  string
-	SCAddr    types.Address
+	PkBytes      []byte
+	Port         int
+	BootPeers    []string
+	PublicIp     string
+	SCAddr       types.Address
+	ExtMultiAddr string
 }
 
 // P2PMessageService is a rudimentary message service that uses TCP to send and receive messages.
@@ -85,6 +86,16 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 			return addrs
 		}
 		addrs = append(addrs, extMultiAddr)
+
+		if opts.ExtMultiAddr != "" {
+			extMultiAddr2, err := multiaddr.NewMultiaddr(opts.ExtMultiAddr)
+			if err != nil {
+				ms.logger.Error("failed to create external multiaddress", "err", err)
+				return addrs
+			}
+			addrs = append(addrs, extMultiAddr2)
+		}
+
 		return addrs
 	}
 

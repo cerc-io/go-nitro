@@ -42,6 +42,7 @@ func main() {
 		GUI_PORT              = "guiport"
 		BOOT_PEERS            = "bootpeers"
 		L2                    = "l2"
+		EXT_MULTIADDR         = "extMultiAddr"
 
 		// Keys
 		KEYS_CATEGORY = "Keys:"
@@ -58,7 +59,7 @@ func main() {
 		TLS_CERT_FILEPATH = "tlscertfilepath"
 		TLS_KEY_FILEPATH  = "tlskeyfilepath"
 	)
-	var pkString, chainUrl, chainAuthToken, naAddress, vpaAddress, caAddress, bridgeAddress, chainPk, durableStoreFolder, bootPeers, publicIp string
+	var pkString, chainUrl, chainAuthToken, naAddress, vpaAddress, caAddress, bridgeAddress, chainPk, durableStoreFolder, bootPeers, publicIp, extMultiAddr string
 	var msgPort, rpcPort, guiPort int
 	var chainStartBlock uint64
 	var useNats, useDurableStore, l2 bool
@@ -169,6 +170,13 @@ func main() {
 			Destination: &publicIp,
 			EnvVars:     []string{"NITRO_PUBLIC_IP"},
 		}),
+		altsrc.NewStringFlag(&cli.StringFlag{
+			Name:        EXT_MULTIADDR,
+			Usage:       "External multiaddr to advertise",
+			Value:       "",
+			Category:    CONNECTIVITY_CATEGORY,
+			Destination: &extMultiAddr,
+		}),
 		altsrc.NewIntFlag(&cli.IntFlag{
 			Name:        MSG_PORT,
 			Usage:       "Specifies the tcp port for the message service.",
@@ -240,10 +248,11 @@ func main() {
 			}
 
 			messageOpts := p2pms.MessageOpts{
-				PkBytes:   common.Hex2Bytes(pkString),
-				Port:      msgPort,
-				BootPeers: peerSlice,
-				PublicIp:  publicIp,
+				PkBytes:      common.Hex2Bytes(pkString),
+				Port:         msgPort,
+				BootPeers:    peerSlice,
+				PublicIp:     publicIp,
+				ExtMultiAddr: extMultiAddr,
 			}
 
 			var node *node.Node

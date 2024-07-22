@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -14,6 +15,7 @@ import (
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/protocols/bridgedfund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
+	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/tidwall/buntdb"
 
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
@@ -43,8 +45,9 @@ type Bridge struct {
 	storeL1        store.Store
 	chainServiceL1 chainservice.ChainService
 
-	nodeL2  *node.Node
-	storeL2 store.Store
+	nodeL2         *node.Node
+	storeL2        store.Store
+	chainServiceL2 chainservice.ChainService
 
 	cancel                  context.CancelFunc
 	L1ToL2AssetAddressMap   map[common.Address]common.Address
@@ -135,7 +138,7 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1MultiAddress string, node
 		return nodeL1MultiAddress, nodeL2MultiAddress, err
 	}
 
-	nodeL2, storeL2, msgServiceL2, _, err := nodeutils.InitializeL2Node(chainOptsL2, storeOptsL2, messageOptsL2)
+	nodeL2, storeL2, msgServiceL2, chainServiceL2, err := nodeutils.InitializeL2Node(chainOptsL2, storeOptsL2, messageOptsL2)
 	if err != nil {
 		return nodeL1MultiAddress, nodeL2MultiAddress, err
 	}
@@ -150,6 +153,7 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1MultiAddress string, node
 	b.chainServiceL1 = chainServiceL1
 	b.nodeL2 = nodeL2
 	b.storeL2 = *storeL2
+	b.chainServiceL2 = chainServiceL2
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	b.cancel = cancelFunc
@@ -174,11 +178,17 @@ func (b *Bridge) run(ctx context.Context) {
 		var err error
 		select {
 		case objId := <-completedObjectivesInNodeL1:
-			err = b.processCompletedObjectivesFromL1(objId)
-			b.checkError(err)
+			if objId != "" {
+				err = b.processCompletedObjectivesFromL1(objId)
+				b.checkError(err)
+			}
+
 		case objId := <-completedObjectivesInNodeL2:
-			err = b.processCompletedObjectivesFromL2(objId)
-			b.checkError(err)
+			if objId != "" {
+				err = b.processCompletedObjectivesFromL2(objId)
+				b.checkError(err)
+			}
+
 		case <-ctx.Done():
 			return
 		}
@@ -254,9 +264,11 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 		return fmt.Errorf("error in getting objective %w", err)
 	}
 
-	bFo, isBfo := obj.(*bridgedfund.Objective)
-	if isBfo {
-		l2channelId := bFo.OwnsChannel()
+	switch objective := obj.(type) {
+
+	case *bridgedfund.Objective:
+		l2channelId := objective.OwnsChannel()
+
 		mirrorChannelDetails, err := b.bridgeStore.GetMirrorChannelDetails(l2channelId)
 		if err != nil {
 			return err
@@ -279,8 +291,60 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 		case b.completedMirrorChannels <- l2channelId:
 		default:
 		}
-	}
 
+	case *virtualdefund.Objective:
+		leftConsensusChannel := objective.ToMyLeft
+		leftLedgerOutcome := leftConsensusChannel.ConsensusVars().Outcome
+		leftOutcome := leftLedgerOutcome.AsOutcome()
+		leftOutcomeByte, err := leftOutcome.Encode()
+		if err != nil {
+			return err
+		}
+
+		leftState := leftConsensusChannel.ConsensusVars().AsState(leftConsensusChannel.FixedPart())
+		leftStateHash, err := leftState.Hash()
+		if err != nil {
+			return err
+		}
+
+		leftAsset := leftOutcome[0].Asset
+		leftHoldingAmount := new(big.Int)
+		for _, allocation := range leftOutcome[0].Allocations {
+			leftHoldingAmount.Add(leftHoldingAmount, allocation.Amount)
+		}
+
+		updateMirroredChannelStateTx := protocols.NewUpdateMirroredChannelStatesTransaction(leftConsensusChannel.Id, leftStateHash, leftOutcomeByte, leftAsset, leftHoldingAmount)
+		err = b.chainServiceL2.SendTransaction(updateMirroredChannelStateTx)
+		if err != nil {
+			return fmt.Errorf("error in send transaction %w", err)
+		}
+
+		rightConsensusChannel := objective.ToMyRight
+		rightLedgerOutcome := rightConsensusChannel.ConsensusVars().Outcome
+		rightOutcome := rightLedgerOutcome.AsOutcome()
+		rightOutcomeByte, err := rightOutcome.Encode()
+		if err != nil {
+			return err
+		}
+
+		rightState := rightConsensusChannel.ConsensusVars().AsState(rightConsensusChannel.FixedPart())
+		rightStateHash, err := rightState.Hash()
+		if err != nil {
+			return err
+		}
+
+		rightAsset := rightOutcome[0].Asset
+		rightHoldingAmount := new(big.Int)
+		for _, allocation := range rightOutcome[0].Allocations {
+			rightHoldingAmount.Add(rightHoldingAmount, allocation.Amount)
+		}
+
+		updateMirroredChannelStateTx = protocols.NewUpdateMirroredChannelStatesTransaction(rightConsensusChannel.Id, rightStateHash, rightOutcomeByte, rightAsset, rightHoldingAmount)
+		err = b.chainServiceL2.SendTransaction(updateMirroredChannelStateTx)
+		if err != nil {
+			return fmt.Errorf("error in send transaction %w", err)
+		}
+	}
 	return nil
 }
 

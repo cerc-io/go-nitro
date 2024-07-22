@@ -114,6 +114,10 @@ type StatusUpdatedEvent struct {
 	StateHash types.Bytes32
 }
 
+func (sue StatusUpdatedEvent) String() string {
+	return "Status updated event for Channel " + sue.channelID.String() + " concluded at Block " + fmt.Sprint(sue.block.BlockNum)
+}
+
 // StateHash returns the statehash stored on chain at the time of the ChallengeRegistered Event firing.
 func (cr ChallengeRegisteredEvent) StateHash(fp state.FixedPart) (common.Hash, error) {
 	return state.StateFromFixedAndVariablePart(fp, cr.candidate).Hash()

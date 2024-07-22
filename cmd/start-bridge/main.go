@@ -48,6 +48,11 @@ const (
 	TLS_KEY_FILEPATH  = "tlskeyfilepath"
 )
 
+const (
+	NODEL1_RPC_PORT = 3998
+	NODEL2_RPC_PORT = 3999
+)
+
 func main() {
 	var l1chainurl, l2chainurl, chainpk, statechannelpk, naaddress, vpaaddress, caaddress, bridgeaddress, durableStoreDir, bridgepublicip string
 	var nodel1msgport, nodel2msgport, rpcport int
@@ -225,7 +230,7 @@ func main() {
 			logging.SetupDefaultLogger(os.Stdout, slog.LevelDebug)
 			bridge := bridge.New()
 
-			bridgeNodeL1Multiaddress, bridgeNodeL2Multiaddress, err := bridge.Start(bridgeConfig)
+			nodeL1, nodeL2, bridgeNodeL1Multiaddress, bridgeNodeL2Multiaddress, err := bridge.Start(bridgeConfig)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -244,8 +249,29 @@ func main() {
 				return err
 			}
 
+			// RPC servers for individual nodes used only for debugging
+			nodeL1RpcServer, err := rpc.InitializeNodeRpcServer(nodeL1, NODEL1_RPC_PORT, false, &cert)
+			if err != nil {
+				return err
+			}
+
+			nodeL2RpcServer, err := rpc.InitializeNodeRpcServer(nodeL2, NODEL2_RPC_PORT, false, &cert)
+			if err != nil {
+				return err
+			}
+
 			slog.Info("Bridge nodes multiaddresses", "l1 node multiaddress", bridgeNodeL1Multiaddress, "l2 node multiaddress", bridgeNodeL2Multiaddress)
 			utils.WaitForKillSignal()
+
+			err = nodeL1RpcServer.BaseRpcServer.Close()
+			if err != nil {
+				return err
+			}
+
+			err = nodeL2RpcServer.BaseRpcServer.Close()
+			if err != nil {
+				return err
+			}
 
 			err = rpcServer.Close()
 			if err != nil {

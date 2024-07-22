@@ -80,7 +80,7 @@ func New() *Bridge {
 	return &bridge
 }
 
-func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1MultiAddress string, nodeL2MultiAddress string, err error) {
+func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node.Node, nodeL1MultiAddress string, nodeL2MultiAddress string, err error) {
 	chainOptsL1 := chainservice.ChainOpts{
 		ChainUrl:           configOpts.L1ChainUrl,
 		ChainStartBlockNum: configOpts.L1ChainStartBlock,
@@ -128,12 +128,12 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1MultiAddress string, node
 	// Initialize nodes
 	nodeL1, storeL1, msgServiceL1, chainServiceL1, err := nodeutils.InitializeNode(chainOptsL1, storeOptsL1, messageOptsL1)
 	if err != nil {
-		return nodeL1MultiAddress, nodeL2MultiAddress, err
+		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
 	}
 
 	nodeL2, storeL2, msgServiceL2, _, err := nodeutils.InitializeL2Node(chainOptsL2, storeOptsL2, messageOptsL2)
 	if err != nil {
-		return nodeL1MultiAddress, nodeL2MultiAddress, err
+		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
 	}
 
 	// Process Assets array to convert it to map of L1 asset address to L2 asset address
@@ -152,14 +152,14 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1MultiAddress string, node
 
 	ds, err := NewDurableStore(configOpts.DurableStoreDir, buntdb.Config{})
 	if err != nil {
-		return nodeL1MultiAddress, nodeL2MultiAddress, err
+		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
 	}
 
 	b.bridgeStore = ds
 
 	go b.run(ctx)
 
-	return msgServiceL1.MultiAddr, msgServiceL2.MultiAddr, nil
+	return nodeL1, nodeL2, msgServiceL1.MultiAddr, msgServiceL2.MultiAddr, nil
 }
 
 func (b *Bridge) run(ctx context.Context) {

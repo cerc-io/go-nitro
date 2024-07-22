@@ -1,8 +1,0 @@
-{
-    "geth-ConsensusApp": "CA_ADDRESS",
-    "geth-NitroAdjudicator": "NA_ADDRESS",
-    "geth-Token": "L1_ASSET_ADDRESS",
-    "geth-VirtualPaymentApp": "VPA_ADDRESS",
-    "optimism-Bridge": "BRIDGE_ADDRESS",
-    "optimism-Token": "L2_ASSET_ADDRESS"
-  }

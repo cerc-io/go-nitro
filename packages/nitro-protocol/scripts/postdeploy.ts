@@ -1,8 +1,11 @@
 import {writeFileSync} from 'fs';
-import path from 'path';
 
-const OUTPUT_CONTRACT_ADDRESS_JSON_PATH = './addresses.json';
-const OUTPUT_ENV_FILE_PATH = `./.contracts.env`;
+const CONTRACT_ENV_MAP: {[key: string]: string} = {
+  ConsensusApp: 'CA_ADDRESS',
+  NitroAdjudicator: 'NA_ADDRESS',
+  VirtualPaymentApp: 'VPA_ADDRESS',
+  Bridge: 'BRIDGE_ADDRESS',
+};
 
 function deepDelete(object: any, keyToDelete: string) {
   Object.keys(object).forEach(key => {
@@ -11,66 +14,41 @@ function deepDelete(object: any, keyToDelete: string) {
   });
 }
 
-const transformData = (data: any) => {
-  const result: {[key: string]: string} = {};
-
-  Object.keys(data).forEach(chainId => {
-    const networks = data[chainId];
-    networks.forEach((network: any) => {
-      const networkName = network.name;
-      const contracts = network.contracts;
-      Object.keys(contracts).forEach(contractName => {
-        const contractAddress = contracts[contractName].address;
-        result[`${networkName}-${contractName}`] = contractAddress;
-      });
-    });
-  });
-
-  return result;
-};
-
-function Main() {
-  const keyToDelete = 'abi';
-
-  const args = process.argv;
-  const renameEnvVariablesJsonPath = args[2];
-
-  let renameEnvVariablesJson: {[key: string]: string} = {};
-  let isRenameEnvVariablesJsonPresent = false;
-
-  const outputContractAddressJsonPathAbs = path.resolve(OUTPUT_CONTRACT_ADDRESS_JSON_PATH);
-  const outputEnvFilePathAbs = path.resolve(OUTPUT_ENV_FILE_PATH);
-
-  if (renameEnvVariablesJsonPath) {
-    const envVariablesJsonPathAbs = path.resolve(renameEnvVariablesJsonPath);
-    renameEnvVariablesJson = require(envVariablesJsonPathAbs);
-    isRenameEnvVariablesJsonPresent = true;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const contractAddresses = require(outputContractAddressJsonPathAbs);
-
-  deepDelete(contractAddresses, keyToDelete);
-  writeFileSync(outputContractAddressJsonPathAbs, JSON.stringify(contractAddresses, null, 2));
-  console.log('Contract informations written to', outputContractAddressJsonPathAbs);
-
-  const contractAddresssObj = transformData(contractAddresses);
-
-  let outputEnvString = '';
-  Object.keys(contractAddresssObj).forEach(contractName => {
-    const contractAddress = contractAddresssObj[contractName];
-
-    if (isRenameEnvVariablesJsonPresent && renameEnvVariablesJson.hasOwnProperty(contractName)) {
-      const envValue = renameEnvVariablesJson[contractName];
-      outputEnvString = `${outputEnvString}export ${envValue}=${contractAddress}\n`;
-    } else {
-      const envValue = contractName.toUpperCase().replace('-', '_');
-      outputEnvString = `${outputEnvString}export ${envValue}=${contractAddress}\n`;
+function deepSearch(object: any, keyToSearch: string): string | null {
+  for (const key in object) {
+    if (object.hasOwnProperty(key)) {
+      if (key === keyToSearch) {
+        return object[key].address;
+      } else if (typeof object[key] === 'object') {
+        const result = deepSearch(object[key], keyToSearch);
+        if (result !== null) {
+          return result;
+        }
+      }
     }
-  });
-
-  writeFileSync(outputEnvFilePathAbs, outputEnvString);
-  console.log('Contract address as environment variables written to', outputEnvFilePathAbs);
+  }
+  return null;
 }
 
-Main();
+function CreateEnvForContractAddresses(contractAddresses: any): string {
+  let outputEnvString = '';
+
+  Object.entries(CONTRACT_ENV_MAP).forEach(([contractAddress, envKey]) => {
+    const envValue = deepSearch(contractAddresses, contractAddress);
+    outputEnvString += `export ${envKey}=${envValue}\n`;
+  });
+
+  return outputEnvString;
+}
+
+const jsonPath = __dirname + '/../addresses.json';
+const contractEnvPath = __dirname + '/../.contracts.env';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const addresses = require(jsonPath);
+
+const keyToDelete = 'abi';
+deepDelete(addresses, keyToDelete);
+writeFileSync(jsonPath, JSON.stringify(addresses, null, 2));
+const envData = CreateEnvForContractAddresses(addresses);
+writeFileSync(contractEnvPath, envData);

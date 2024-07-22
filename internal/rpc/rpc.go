@@ -24,7 +24,7 @@ func InitializeNodeRpcServer(node *node.Node, rpcPort int, useNats bool, cert *t
 		return nil, err
 	}
 
-	slog.Info("Completed RPC server initialization", "rpc port", rpcPort)
+	slog.Info("Completed RPC server initialization", "url", rpcServer.Url())
 	return rpcServer, nil
 }
 
@@ -39,7 +39,7 @@ func InitializeBridgeRpcServer(bridge *bridge.Bridge, rpcPort int, useNats bool,
 		return nil, err
 	}
 
-	slog.Info("Completed RPC server initialization", "rpc port", rpcPort)
+	slog.Info("Completed RPC server initialization", "url", rpcServer.Url())
 	return rpcServer, nil
 }
 

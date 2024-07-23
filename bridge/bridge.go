@@ -53,21 +53,23 @@ type Bridge struct {
 }
 
 type BridgeConfig struct {
-	L1ChainUrl        string
-	L2ChainUrl        string
-	L1ChainStartBlock uint64
-	L2ChainStartBlock uint64
-	ChainPK           string
-	StateChannelPK    string
-	NaAddress         string
-	VpaAddress        string
-	CaAddress         string
-	BridgeAddress     string
-	Assets            []Asset
-	DurableStoreDir   string
-	BridgePublicIp    string
-	NodeL1MsgPort     int
-	NodeL2MsgPort     int
+	L1ChainUrl         string
+	L2ChainUrl         string
+	L1ChainStartBlock  uint64
+	L2ChainStartBlock  uint64
+	ChainPK            string
+	StateChannelPK     string
+	NaAddress          string
+	VpaAddress         string
+	CaAddress          string
+	BridgeAddress      string
+	Assets             []Asset
+	DurableStoreDir    string
+	BridgePublicIp     string
+	NodeL1ExtMultiAddr string
+	NodeL2ExtMultiAddr string
+	NodeL1MsgPort      int
+	NodeL2MsgPort      int
 }
 
 func New() *Bridge {
@@ -112,17 +114,19 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1MultiAddress string, node
 	}
 
 	messageOptsL1 := p2pms.MessageOpts{
-		PkBytes:   common.Hex2Bytes(configOpts.StateChannelPK),
-		Port:      configOpts.NodeL1MsgPort,
-		BootPeers: nil,
-		PublicIp:  configOpts.BridgePublicIp,
+		PkBytes:      common.Hex2Bytes(configOpts.StateChannelPK),
+		Port:         configOpts.NodeL1MsgPort,
+		BootPeers:    nil,
+		PublicIp:     configOpts.BridgePublicIp,
+		ExtMultiAddr: configOpts.NodeL1ExtMultiAddr,
 	}
 
 	messageOptsL2 := p2pms.MessageOpts{
-		PkBytes:   common.Hex2Bytes(configOpts.StateChannelPK),
-		Port:      configOpts.NodeL2MsgPort,
-		BootPeers: nil,
-		PublicIp:  configOpts.BridgePublicIp,
+		PkBytes:      common.Hex2Bytes(configOpts.StateChannelPK),
+		Port:         configOpts.NodeL2MsgPort,
+		BootPeers:    nil,
+		PublicIp:     configOpts.BridgePublicIp,
+		ExtMultiAddr: configOpts.NodeL1ExtMultiAddr,
 	}
 
 	// Initialize nodes

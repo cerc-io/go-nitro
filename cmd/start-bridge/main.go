@@ -37,7 +37,9 @@ const (
 	DURABLE_STORE_DIR           = "nodel1durablestorefolder"
 	NODEL2_DURABLE_STORE_FOLDER = "nodel2durablestorefolder"
 
-	BRIDGE_PUBLIC_IP = "bridgepublicip"
+	BRIDGE_PUBLIC_IP     = "bridgepublicip"
+	NODEL1_EXT_MULTIADDR = "nodel1ExtMultiAddr"
+	NODEL2_EXT_MULTIADDR = "nodel2ExtMultiAddr"
 
 	NODEL1_MSG_PORT = "nodel1msgport"
 	NODEL2_MSG_PORT = "nodel2msgport"
@@ -49,7 +51,7 @@ const (
 )
 
 func main() {
-	var l1chainurl, l2chainurl, chainpk, statechannelpk, naaddress, vpaaddress, caaddress, bridgeaddress, durableStoreDir, bridgepublicip string
+	var l1chainurl, l2chainurl, chainpk, statechannelpk, naaddress, vpaaddress, caaddress, bridgeaddress, durableStoreDir, bridgepublicip, nodel1ExtMultiAddr, nodel2ExtMultiAddr string
 	var nodel1msgport, nodel2msgport, rpcport int
 	var l1chainstartblock, l2chainstartblock uint64
 
@@ -129,6 +131,18 @@ func main() {
 			Destination: &bridgepublicip,
 			Value:       "127.0.0.1",
 		}),
+		altsrc.NewStringFlag(&cli.StringFlag{
+			Name:        NODEL1_EXT_MULTIADDR,
+			Usage:       "Additional external multiaddr to advertise for node L1",
+			Value:       "",
+			Destination: &nodel1ExtMultiAddr,
+		}),
+		altsrc.NewStringFlag(&cli.StringFlag{
+			Name:        NODEL2_EXT_MULTIADDR,
+			Usage:       "Additional external multiaddr to advertise for node L2",
+			Value:       "",
+			Destination: &nodel2ExtMultiAddr,
+		}),
 		altsrc.NewIntFlag(&cli.IntFlag{
 			Name:        NODEL1_MSG_PORT,
 			Usage:       "Specifies the message port of nodeL1 for the message service.",
@@ -205,21 +219,23 @@ func main() {
 			}
 
 			bridgeConfig := bridge.BridgeConfig{
-				L1ChainUrl:        l1chainurl,
-				L2ChainUrl:        l2chainurl,
-				L1ChainStartBlock: l1chainstartblock,
-				L2ChainStartBlock: l2chainstartblock,
-				ChainPK:           chainpk,
-				StateChannelPK:    statechannelpk,
-				NaAddress:         naaddress,
-				VpaAddress:        vpaaddress,
-				CaAddress:         caaddress,
-				BridgeAddress:     bridgeaddress,
-				DurableStoreDir:   durableStoreDir,
-				BridgePublicIp:    bridgepublicip,
-				NodeL1MsgPort:     nodel1msgport,
-				NodeL2MsgPort:     nodel2msgport,
-				Assets:            assets.Assets,
+				L1ChainUrl:         l1chainurl,
+				L2ChainUrl:         l2chainurl,
+				L1ChainStartBlock:  l1chainstartblock,
+				L2ChainStartBlock:  l2chainstartblock,
+				ChainPK:            chainpk,
+				StateChannelPK:     statechannelpk,
+				NaAddress:          naaddress,
+				VpaAddress:         vpaaddress,
+				CaAddress:          caaddress,
+				BridgeAddress:      bridgeaddress,
+				DurableStoreDir:    durableStoreDir,
+				BridgePublicIp:     bridgepublicip,
+				NodeL1ExtMultiAddr: nodel1ExtMultiAddr,
+				NodeL2ExtMultiAddr: nodel2ExtMultiAddr,
+				NodeL1MsgPort:      nodel1msgport,
+				NodeL2MsgPort:      nodel2msgport,
+				Assets:             assets.Assets,
 			}
 
 			logging.SetupDefaultLogger(os.Stdout, slog.LevelDebug)

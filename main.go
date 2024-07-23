@@ -172,7 +172,7 @@ func main() {
 		}),
 		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:        EXT_MULTIADDR,
-			Usage:       "External multiaddr to advertise",
+			Usage:       "Additional external multiaddr to advertise",
 			Value:       "",
 			Category:    CONNECTIVITY_CATEGORY,
 			Destination: &extMultiAddr,

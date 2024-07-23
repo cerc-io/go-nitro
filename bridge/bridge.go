@@ -126,7 +126,7 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1MultiAddress string, node
 		Port:         configOpts.NodeL2MsgPort,
 		BootPeers:    nil,
 		PublicIp:     configOpts.BridgePublicIp,
-		ExtMultiAddr: configOpts.NodeL1ExtMultiAddr,
+		ExtMultiAddr: configOpts.NodeL2ExtMultiAddr,
 	}
 
 	// Initialize nodes

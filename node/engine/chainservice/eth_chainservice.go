@@ -292,8 +292,10 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				// Get current block
 				currentBlock := <-ecs.newBlockChan
 
-				// Turn number of Approve transaction retrials
 				isApproveTxRetried := false
+
+				// Transaction hash of retried Approve transaction
+				var retryApproveTxHash common.Hash
 
 				// Wait for the Approve transaction to be mined before continuing
 			approvalEventListenerLoop:
@@ -309,7 +311,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					case newBlock := <-ecs.newBlockChan:
 						if (newBlock.Number.Int64() - currentBlock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
 							if isApproveTxRetried {
-								return fmt.Errorf("approve transaction was retried with higher gas and event Approval was not emitted till block %s", currentBlock.Number.String())
+								return fmt.Errorf("approve transaction with hash %s was retried with higher gas and event Approval was not emitted till block %s", retryApproveTxHash, newBlock.Number.String())
 							}
 
 							slog.Error("event Approval was not emitted", "approveTxHash", approveTx.Hash().String())
@@ -329,6 +331,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 
 							isApproveTxRetried = true
 							currentBlock = newBlock
+							retryApproveTxHash = reApproveTx.Hash()
 
 							slog.Info("Resubmitted transaction with higher gas limit", "gasLimit", approveTxOpts.GasLimit, "approveTxHash", reApproveTx.Hash().String())
 						}

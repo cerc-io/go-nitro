@@ -31,7 +31,7 @@ function deepSearch(object, keyToSearch) {
     }
     return null;
 }
-function CreateEnvForContractAddresses(contractAddresses) {
+function createEnvForContractAddresses(contractAddresses) {
     var outputEnvString = '';
     Object.entries(CONTRACT_ENV_MAP).forEach(function (_a) {
         var contractAddress = _a[0], envKey = _a[1];
@@ -47,5 +47,5 @@ var addresses = require(jsonPath);
 var keyToDelete = 'abi';
 deepDelete(addresses, keyToDelete);
 (0, fs_1.writeFileSync)(jsonPath, JSON.stringify(addresses, null, 2));
-var envData = CreateEnvForContractAddresses(addresses);
+var envData = createEnvForContractAddresses(addresses);
 (0, fs_1.writeFileSync)(contractEnvPath, envData);

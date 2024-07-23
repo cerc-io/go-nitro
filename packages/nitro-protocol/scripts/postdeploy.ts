@@ -27,10 +27,11 @@ function deepSearch(object: any, keyToSearch: string): string | null {
       }
     }
   }
+
   return null;
 }
 
-function CreateEnvForContractAddresses(contractAddresses: any): string {
+function createEnvForContractAddresses(contractAddresses: any): string {
   let outputEnvString = '';
 
   Object.entries(CONTRACT_ENV_MAP).forEach(([contractAddress, envKey]) => {
@@ -50,5 +51,5 @@ const addresses = require(jsonPath);
 const keyToDelete = 'abi';
 deepDelete(addresses, keyToDelete);
 writeFileSync(jsonPath, JSON.stringify(addresses, null, 2));
-const envData = CreateEnvForContractAddresses(addresses);
+const envData = createEnvForContractAddresses(addresses);
 writeFileSync(contractEnvPath, envData);

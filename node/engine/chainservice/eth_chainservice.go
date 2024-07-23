@@ -275,8 +275,6 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					return err
 				}
 
-				approveTxOpts := txOpts
-
 				approvalLogsChan := make(chan *Token.TokenApproval)
 
 				approvalSubscription, err := token.WatchApproval(&bind.WatchOpts{Context: ecs.ctx}, approvalLogsChan, []common.Address{ecs.txSigner.From}, []common.Address{ecs.naAddress})
@@ -321,6 +319,8 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 							if err != nil {
 								return err
 							}
+
+							approveTxOpts := ecs.defaultTxOpts()
 
 							// Multiply estimated gas limit with set multiplier
 							approveTxOpts.GasLimit = uint64(float64(estimatedGasLimit) * GAS_LIMIT_MULTIPLIER)

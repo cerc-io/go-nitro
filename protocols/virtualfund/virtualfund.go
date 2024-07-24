@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"strings"
 
@@ -28,6 +29,8 @@ const (
 const (
 	SignedStatePayload protocols.PayloadType = "SignedStatePayload"
 )
+
+var ErrUpdatingLedgerFunding = errors.New("error updating ledger funding")
 
 const ObjectivePrefix = "VirtualFund-"
 
@@ -433,7 +436,8 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 
 		ledgerSideEffects, err := updated.updateLedgerWithGuarantee(*updated.ToMyLeft, secretKey)
 		if err != nil {
-			return o, protocols.SideEffects{}, WaitingForNothing, fmt.Errorf("error updating ledger funding: %w", err)
+			slog.Error("error updating ledger funding", "error", err)
+			return o, protocols.SideEffects{}, WaitingForNothing, ErrUpdatingLedgerFunding
 		}
 		sideEffects.Merge(ledgerSideEffects)
 	}
@@ -441,7 +445,8 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	if !updated.isBob() && !updated.ToMyRight.IsFundingTheTarget() {
 		ledgerSideEffects, err := updated.updateLedgerWithGuarantee(*updated.ToMyRight, secretKey)
 		if err != nil {
-			return o, protocols.SideEffects{}, WaitingForNothing, fmt.Errorf("error updating ledger funding: %w", err)
+			slog.Error("error updating ledger funding", "error", err)
+			return o, protocols.SideEffects{}, WaitingForNothing, ErrUpdatingLedgerFunding
 		}
 		sideEffects.Merge(ledgerSideEffects)
 	}

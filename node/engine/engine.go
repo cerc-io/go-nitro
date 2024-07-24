@@ -57,6 +57,7 @@ var nonFatalErrors = []error{
 	&ErrGetObjective{},
 	store.ErrLoadVouchers,
 	directfund.ErrLedgerChannelExists,
+	virtualfund.ErrUpdatingLedgerFunding,
 }
 
 // Engine is the imperative part of the core business logic of a go-nitro Node

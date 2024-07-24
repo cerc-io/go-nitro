@@ -657,16 +657,18 @@ func (e *Engine) handleCounterChallengeRequest(request types.CounterChallengeReq
 
 // sendMessages sends out the messages and records the metrics.
 func (e *Engine) sendMessages(msgs []protocols.Message) {
+	defer e.wg.Done()
 	for _, message := range msgs {
 		message.From = *e.store.GetAddress()
 		err := e.msg.Send(message)
 		if err != nil {
+			e.logger.Error("could not send message", "message", message.Summarize())
 			e.logger.Error(err.Error())
-			panic(err)
+
+			return
 		}
 		e.logMessage(message, Outgoing)
 	}
-	e.wg.Done()
 }
 
 // executeSideEffects executes the SideEffects declared by cranking an Objective or handling a payment request.

@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"math/big"
 
@@ -142,6 +143,16 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 				if err := serde.ValidatePaymentRequest(req); err != nil {
 					return serde.PaymentRequest{}, err
 				}
+
+				paymentChannel, err := nrs.node.GetPaymentChannel(req.Channel)
+				if err != nil {
+					return serde.PaymentRequest{}, err
+				}
+
+				if types.Gt(big.NewInt(int64(req.Amount)), (*big.Int)(paymentChannel.Balance.RemainingFunds)) {
+					return serde.PaymentRequest{}, fmt.Errorf("Error making payment: unable to pay amount: insufficient funds")
+				}
+
 				nrs.node.Pay(req.Channel, big.NewInt(int64(req.Amount)))
 				return req, nil
 			})

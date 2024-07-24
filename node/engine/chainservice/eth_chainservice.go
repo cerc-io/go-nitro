@@ -309,7 +309,8 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					case newBlock := <-ecs.newBlockChan:
 						if (newBlock.Number.Int64() - currentBlock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
 							if isApproveTxRetried {
-								return fmt.Errorf("approve transaction with hash %s was retried with higher gas and event Approval was not emitted till block %s", retryApproveTxHash, newBlock.Number.String())
+								slog.Error("approve transaction was retried with higher gas and event Approval was not emitted till latest block", "txHash", retryApproveTxHash, "latestBlock", newBlock.Number.String())
+								return nil
 							}
 
 							slog.Error("event Approval was not emitted", "approveTxHash", approveTx.Hash().String())

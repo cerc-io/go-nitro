@@ -138,7 +138,11 @@ func TestCheckpoint(t *testing.T) {
 	}
 	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{response.Id})
 	// Alice pays Bob
-	nodeA.Pay(response.ChannelId, big.NewInt(payAmount))
+	err = nodeA.Pay(response.ChannelId, big.NewInt(payAmount))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	nodeBVoucher := <-nodeB.ReceivedVouchers()
 	t.Logf("Voucher recieved %+v", nodeBVoucher)
 	virtualDefundResponse, err := nodeA.ClosePaymentChannel(response.ChannelId)
@@ -244,7 +248,11 @@ func TestCounterChallenge(t *testing.T) {
 	}
 	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{response.Id})
 	// Alice pays Bob
-	nodeA.Pay(response.ChannelId, big.NewInt(payAmount))
+	err = nodeA.Pay(response.ChannelId, big.NewInt(payAmount))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	nodeBVoucher := <-nodeB.ReceivedVouchers()
 	t.Logf("Voucher recieved %+v", nodeBVoucher)
 	virtualDefundResponse, err := nodeA.ClosePaymentChannel(response.ChannelId)
@@ -323,7 +331,10 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeA, nodeB)
 
 	// Alice pays Bob
-	nodeA.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
+	err := nodeA.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Close Alice's node
 	closeNode(t, &nodeA)
@@ -559,7 +570,11 @@ func TestVirtualPaymentChannelWithObjective(t *testing.T) {
 	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{response.Id})
 
 	paymentAmount := 2000
-	nodeB.Pay(response.ChannelId, big.NewInt(int64(paymentAmount)))
+	err = nodeB.Pay(response.ChannelId, big.NewInt(int64(paymentAmount)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	nodeAVoucher := <-nodeA.ReceivedVouchers()
 	t.Log("voucher recieved  for channel", nodeAVoucher.ChannelId)
 

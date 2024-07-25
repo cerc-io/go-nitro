@@ -162,7 +162,10 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 		// Send payments
 		for i := 0; i < len(virtualIds); i++ {
 			for j := 0; j < int(tc.NumOfPayments); j++ {
-				clientA.Pay(virtualIds[i], big.NewInt(int64(1)))
+				err = clientA.Pay(virtualIds[i], big.NewInt(int64(1)))
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
 

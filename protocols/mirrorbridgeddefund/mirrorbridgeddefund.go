@@ -36,8 +36,8 @@ const (
 type Objective struct {
 	Status                     protocols.ObjectiveStatus
 	C                          *channel.Channel
-	l2SignedState              state.SignedState
-	mirrorTransactionSubmitted bool
+	L2SignedState              state.SignedState
+	MirrorTransactionSubmitted bool
 }
 
 // GetConsensusChannel describes functions which return a ConsensusChannel ledger channel for a channel id.
@@ -48,6 +48,7 @@ func NewObjective(
 	request ObjectiveRequest,
 	preApprove bool,
 	getConsensusChannel GetConsensusChannel,
+	isObjectiveInitiator bool,
 ) (Objective, error) {
 	cc, err := getConsensusChannel(request.l1ChannelId)
 	if err != nil {
@@ -68,7 +69,7 @@ func NewObjective(
 	}
 	init.C = c.Clone()
 
-	init.l2SignedState = request.l2SignedState
+	init.L2SignedState = request.l2SignedState
 
 	return init, nil
 }
@@ -102,27 +103,57 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
 	}
 
-	if len(updated.l2SignedState.Signatures()) != 0 && !updated.mirrorTransactionSubmitted {
-		// Send message (l1 signed state) to Alice
-		ss, err := updated.C.LatestSupportedSignedState()
+	if len(updated.L2SignedState.Signatures()) != 0 && !updated.MirrorTransactionSubmitted {
+		// Alice sends updated signed state (created using L2SignedState's variable part and L1SignedState' fixed part) to couterparty
+
+		l1State, err := updated.C.LatestSupportedState()
 		if err != nil {
 			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not retrieve latest signed state %w", err)
 		}
 
-		messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), ss, SignedStatePayload, updated.otherParticipants()...)
+		// Create new state from l1 state's fixed part and l2 state's variable part
+		updatedL1State := state.StateFromFixedAndVariablePart(l1State.FixedPart(), updated.L2SignedState.State().VariablePart())
+
+		updatedL1SignedState, err := updated.C.SignAndAddState(updatedL1State, secretKey)
+		if err != nil {
+			return &updated, protocols.SideEffects{}, WaitingForFinalization, err
+		}
+
+		messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), updatedL1SignedState, SignedStatePayload, updated.otherParticipants()...)
 		if err != nil {
 			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not create payload message %w", err)
 		}
 		sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, messages...)
 
-		// Send MirrorWithdrawAll transaction
-		mirrorWithdrawAllTx := protocols.NewMirrorWithdrawAllTransaction(updated.OwnsChannel(), updated.l2SignedState)
-		updated.mirrorTransactionSubmitted = true
+		// Alice sends MirrorWithdrawAll transaction
+		mirrorWithdrawAllTx := protocols.NewMirrorWithdrawAllTransaction(updated.OwnsChannel(), updated.L2SignedState)
+		updated.MirrorTransactionSubmitted = true
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, mirrorWithdrawAllTx)
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
+	if len(updated.L2SignedState.Signatures()) == 0 {
+		// Bob signs the received signed state and sends it back
+		latestSignedState, err := updated.C.LatestSignedState()
+		if err != nil {
+			return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")
+		}
+
+		ss, err := updated.C.SignAndAddState(latestSignedState.State(), secretKey)
+		if err != nil {
+			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not sign final state %w", err)
+		}
+
+		messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), ss, SignedStatePayload, o.otherParticipants()...)
+		if err != nil {
+			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not create payload message %w", err)
+		}
+		sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, messages...)
+		return &updated, sideEffects, WaitingForWithdraw, nil
+	}
+
 	if !updated.FullyWithdrawn() {
+		// Wait until the channel no longer holds any assets on the chain
 		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
 
@@ -169,8 +200,8 @@ func (o *Objective) clone() Objective {
 	clone.Status = o.Status
 
 	clone.C = o.C.Clone()
-	clone.l2SignedState = o.l2SignedState.Clone()
-	clone.mirrorTransactionSubmitted = o.mirrorTransactionSubmitted
+	clone.L2SignedState = o.L2SignedState
+	clone.MirrorTransactionSubmitted = o.MirrorTransactionSubmitted
 
 	return clone
 }
@@ -202,6 +233,13 @@ func ConstructObjectiveFromPayload(
 	}
 	s := ss.State()
 
+	// Implicit in the wire protocol is that the message signalling
+	// closure of a channel includes an isFinal state (in the 0 slot of the message)
+	//
+	if !s.IsFinal {
+		return Objective{}, ErrNoFinalState
+	}
+
 	err = s.FixedPart().Validate()
 	if err != nil {
 		return Objective{}, err
@@ -209,7 +247,7 @@ func ConstructObjectiveFromPayload(
 
 	cId := s.ChannelId()
 	request := NewObjectiveRequest(cId, state.SignedState{})
-	return NewObjective(request, preapprove, getConsensusChannel)
+	return NewObjective(request, preapprove, getConsensusChannel, false)
 }
 
 // IsMirrorBridgedDefundObjective inspects a objective id and returns true if the objective id is for a bridged defund objective.

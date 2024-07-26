@@ -605,7 +605,7 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 
 		return e.attemptProgress(&bdfo)
 	case mirrorbridgeddefund.ObjectiveRequest:
-		mbdfo, err := mirrorbridgeddefund.NewObjective(request, true, e.store.GetConsensusChannelById)
+		mbdfo, err := mirrorbridgeddefund.NewObjective(request, true, e.store.GetConsensusChannelById, true)
 		if err != nil {
 			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not create mirrorbridgeddefund objective for %+v: %w", request, err)
 		}

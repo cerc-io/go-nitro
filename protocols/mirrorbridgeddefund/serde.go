@@ -15,7 +15,7 @@ type jsonObjective struct {
 	Status                     protocols.ObjectiveStatus
 	C                          types.Destination
 	MirrorTransactionSubmitted bool
-	l2SignedState              state.SignedState
+	L2SignedState              state.SignedState
 }
 
 // MarshalJSON returns a JSON representation of the MirrorBridgedDefundObjective
@@ -25,8 +25,8 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 	jsonDDFO := jsonObjective{
 		o.Status,
 		o.C.Id,
-		o.mirrorTransactionSubmitted,
-		o.l2SignedState,
+		o.MirrorTransactionSubmitted,
+		o.L2SignedState,
 	}
 
 	return json.Marshal(jsonDDFO)
@@ -51,8 +51,8 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 
 	o.Status = jsonDDFO.Status
 	o.C.Id = jsonDDFO.C
-	o.mirrorTransactionSubmitted = jsonDDFO.MirrorTransactionSubmitted
-	o.l2SignedState = jsonDDFO.l2SignedState
+	o.MirrorTransactionSubmitted = jsonDDFO.MirrorTransactionSubmitted
+	o.L2SignedState = jsonDDFO.L2SignedState
 
 	return nil
 }

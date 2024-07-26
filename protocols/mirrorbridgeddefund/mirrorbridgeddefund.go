@@ -19,6 +19,7 @@ const ObjectivePrefix = "mirrorbridgeddefunding-"
 const (
 	WaitingForFinalization protocols.WaitingFor = "WaitingForFinalization"
 	WaitingForNothing      protocols.WaitingFor = "WaitingForNothing" // Finished
+	WaitingForWithdraw     protocols.WaitingFor = "WaitingForWithdraw"
 )
 
 const (
@@ -121,6 +122,10 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
+	if !updated.FullyWithdrawn() {
+		return &updated, sideEffects, WaitingForWithdraw, nil
+	}
+
 	return &updated, sideEffects, WaitingForNothing, nil
 }
 
@@ -178,6 +183,11 @@ func (o *Objective) otherParticipants() []types.Address {
 		}
 	}
 	return others
+}
+
+// FullyWithdrawn returns true if the channel contains no assets on chain
+func (o *Objective) FullyWithdrawn() bool {
+	return !o.C.OnChain.Holdings.IsNonZero()
 }
 
 // ConstructObjectiveFromPayload takes in a state and constructs an objective from it.

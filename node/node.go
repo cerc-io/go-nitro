@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/safesync"
 	"github.com/statechannels/go-nitro/node/engine"
@@ -22,6 +23,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/bridgedfund"
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
+	"github.com/statechannels/go-nitro/protocols/mirrorbridgeddefund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
 	"github.com/statechannels/go-nitro/rand"
@@ -295,6 +297,15 @@ func (n *Node) CloseLedgerChannel(channelId types.Destination, isChallenge bool)
 
 func (n *Node) CloseBridgeChannel(channelId types.Destination) (protocols.ObjectiveId, error) {
 	objectiveRequest := bridgeddefund.NewObjectiveRequest(channelId)
+
+	// Send the event to the engine
+	n.engine.ObjectiveRequestsFromAPI <- objectiveRequest
+	objectiveRequest.WaitForObjectiveToStart()
+	return objectiveRequest.Id(*n.Address, n.chainId), nil
+}
+
+func (n *Node) MirrorBridgedDefund(l1ChannelId types.Destination, l2SignedState state.SignedState) (protocols.ObjectiveId, error) {
+	objectiveRequest := mirrorbridgeddefund.NewObjectiveRequest(l1ChannelId, l2SignedState)
 
 	// Send the event to the engine
 	n.engine.ObjectiveRequestsFromAPI <- objectiveRequest

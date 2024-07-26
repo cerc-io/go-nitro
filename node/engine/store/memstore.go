@@ -16,6 +16,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/bridgedfund"
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
+	"github.com/statechannels/go-nitro/protocols/mirrorbridgeddefund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
 	"github.com/statechannels/go-nitro/types"
@@ -504,6 +505,16 @@ func (ms *MemStore) populateChannelData(obj protocols.Objective) error {
 
 		return nil
 
+	case *mirrorbridgeddefund.Objective:
+		ch, err := ms.getChannelById(o.C.Id)
+		if err != nil {
+			return fmt.Errorf("error retrieving channel data for objective %s: %w", id, err)
+		}
+
+		o.C = &ch
+
+		return nil
+
 	default:
 		return fmt.Errorf("objective %s did not correctly represent a known Objective type", id)
 	}
@@ -542,6 +553,10 @@ func decodeObjective(id protocols.ObjectiveId, data []byte) (protocols.Objective
 		bdfo := bridgeddefund.Objective{}
 		err := bdfo.UnmarshalJSON(data)
 		return &bdfo, err
+	case mirrorbridgeddefund.IsMirrorBridgedDefundObjective(id):
+		mbdfo := mirrorbridgeddefund.Objective{}
+		err := mbdfo.UnmarshalJSON(data)
+		return &mbdfo, err
 	default:
 		return nil, fmt.Errorf("objective id %s does not correspond to a known Objective type", id)
 

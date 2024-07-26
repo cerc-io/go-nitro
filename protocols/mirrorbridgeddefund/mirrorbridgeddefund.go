@@ -29,9 +29,10 @@ const (
 
 // Objective is a cache of data computed by reading from the store. It stores (potentially) infinite data
 type Objective struct {
-	Status        protocols.ObjectiveStatus
-	C             *channel.Channel
-	l2SignedState state.SignedState
+	Status                     protocols.ObjectiveStatus
+	C                          *channel.Channel
+	l2SignedState              state.SignedState
+	mirrorTransactionSubmitted bool
 }
 
 // GetConsensusChannel describes functions which return a ConsensusChannel ledger channel for a channel id.
@@ -95,8 +96,14 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
 	}
 
-	// TODO: Send NewMirrorWithdrawAllTransaction
-	// TODO: Send message to Alice (Discuss payload for message l1signedstate / l2signedstate)
+	// TODO: Send message (l1 signed state) to Alice
+
+	if !updated.mirrorTransactionSubmitted {
+		mirrorWithdrawAllTx := protocols.NewMirrorWithdrawAllTransaction(updated.OwnsChannel(), updated.l2SignedState)
+		updated.mirrorTransactionSubmitted = true
+		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, mirrorWithdrawAllTx)
+		return &updated, sideEffects, WaitingForFinalization, nil
+	}
 
 	return &updated, sideEffects, WaitingForNothing, nil
 }
@@ -142,6 +149,7 @@ func (o *Objective) clone() Objective {
 
 	clone.C = o.C.Clone()
 	clone.l2SignedState = o.l2SignedState.Clone()
+	clone.mirrorTransactionSubmitted = o.mirrorTransactionSubmitted
 
 	return clone
 }

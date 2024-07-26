@@ -987,6 +987,13 @@ func (e *Engine) constructObjectiveFromMessage(id protocols.ObjectiveId, p proto
 		}
 		return &bdfo, nil
 
+	case mirrorbridgeddefund.IsMirrorBridgedDefundObjective(id):
+		mbdfo, err := mirrorbridgeddefund.ConstructObjectiveFromPayload(p, false, e.store.GetConsensusChannelById)
+		if err != nil {
+			return &mirrorbridgeddefund.Objective{}, fromMsgErr(id, err)
+		}
+		return &mbdfo, nil
+
 	default:
 		return &directfund.Objective{}, errors.New("cannot handle unimplemented objective type")
 	}

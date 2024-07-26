@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/statechannels/go-nitro/channel"
+	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/protocols"
 	"github.com/statechannels/go-nitro/types"
 )
@@ -14,6 +15,7 @@ type jsonObjective struct {
 	Status                     protocols.ObjectiveStatus
 	C                          types.Destination
 	MirrorTransactionSubmitted bool
+	l2SignedState              state.SignedState
 }
 
 // MarshalJSON returns a JSON representation of the MirrorBridgedDefundObjective
@@ -24,6 +26,7 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.Status,
 		o.C.Id,
 		o.mirrorTransactionSubmitted,
+		o.l2SignedState,
 	}
 
 	return json.Marshal(jsonDDFO)
@@ -49,6 +52,7 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.Status = jsonDDFO.Status
 	o.C.Id = jsonDDFO.C
 	o.mirrorTransactionSubmitted = jsonDDFO.MirrorTransactionSubmitted
+	o.l2SignedState = jsonDDFO.l2SignedState
 
 	return nil
 }

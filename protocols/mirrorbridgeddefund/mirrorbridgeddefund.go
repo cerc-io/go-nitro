@@ -21,6 +21,10 @@ const (
 	WaitingForNothing      protocols.WaitingFor = "WaitingForNothing" // Finished
 )
 
+const (
+	SignedStatePayload protocols.PayloadType = "SignedStatePayload"
+)
+
 var ErrChannelNotExist error = errors.New("could not find channel")
 
 const (
@@ -62,7 +66,8 @@ func NewObjective(
 		init.Status = protocols.Unapproved
 	}
 	init.C = c.Clone()
-	init.l2SignedState = request.l2SignedState.Clone()
+
+	init.l2SignedState = request.l2SignedState
 
 	return init, nil
 }
@@ -96,9 +101,20 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
 	}
 
-	// TODO: Send message (l1 signed state) to Alice
+	if len(updated.l2SignedState.Signatures()) != 0 && !updated.mirrorTransactionSubmitted {
+		// Send message (l1 signed state) to Alice
+		ss, err := updated.C.LatestSupportedSignedState()
+		if err != nil {
+			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not retrieve latest signed state %w", err)
+		}
 
-	if !updated.mirrorTransactionSubmitted {
+		messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), ss, SignedStatePayload, updated.otherParticipants()...)
+		if err != nil {
+			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not create payload message %w", err)
+		}
+		sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, messages...)
+
+		// Send MirrorWithdrawAll transaction
 		mirrorWithdrawAllTx := protocols.NewMirrorWithdrawAllTransaction(updated.OwnsChannel(), updated.l2SignedState)
 		updated.mirrorTransactionSubmitted = true
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, mirrorWithdrawAllTx)
@@ -152,6 +168,38 @@ func (o *Objective) clone() Objective {
 	clone.mirrorTransactionSubmitted = o.mirrorTransactionSubmitted
 
 	return clone
+}
+
+func (o *Objective) otherParticipants() []types.Address {
+	others := make([]types.Address, 0)
+	for i, p := range o.C.Participants {
+		if i != int(o.C.MyIndex) {
+			others = append(others, p)
+		}
+	}
+	return others
+}
+
+// ConstructObjectiveFromPayload takes in a state and constructs an objective from it.
+func ConstructObjectiveFromPayload(
+	p protocols.ObjectivePayload,
+	preapprove bool,
+	getConsensusChannel GetConsensusChannel,
+) (Objective, error) {
+	ss, err := getSignedStatePayload(p.PayloadData)
+	if err != nil {
+		return Objective{}, fmt.Errorf("could not get signed state payload: %w", err)
+	}
+	s := ss.State()
+
+	err = s.FixedPart().Validate()
+	if err != nil {
+		return Objective{}, err
+	}
+
+	cId := s.ChannelId()
+	request := NewObjectiveRequest(cId, state.SignedState{})
+	return NewObjective(request, preapprove, getConsensusChannel)
 }
 
 // IsMirrorBridgedDefundObjective inspects a objective id and returns true if the objective id is for a bridged defund objective.

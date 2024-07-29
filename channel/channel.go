@@ -266,6 +266,16 @@ func (c Channel) LatestSignedState() (state.SignedState, error) {
 	return c.OffChain.SignedStateForTurnNum[latestTurn], nil
 }
 
+// LatestSignedStateSignedByMe returns true if the calling client has signed the latest signed state, which is the state with the highest turn number signed by at least one participant
+func (c Channel) LatestSignedStateSignedByMe() bool {
+	latestSignedState, err := c.LatestSignedState()
+	if err != nil {
+		return false
+	}
+
+	return latestSignedState.HasSignatureForParticipant(c.MyIndex)
+}
+
 // Total() returns the total allocated of each asset allocated by the pre fund setup state of the Channel.
 func (c Channel) Total() types.Funds {
 	return c.PreFundState().Outcome.TotalAllocated()

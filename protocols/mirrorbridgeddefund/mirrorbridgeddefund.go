@@ -104,36 +104,34 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	}
 
 	if len(updated.L2SignedState.Signatures()) != 0 && !updated.MirrorTransactionSubmitted {
-		// Alice sends updated signed state (created using L2SignedState's variable part and L1SignedState' fixed part) to couterparty
-
-		l1State, err := updated.C.LatestSupportedState()
+		// Create updated L1 state based on the variable part of the L2 state
+		updatedL1State, err := o.CreateL1StateBasedOnL2()
 		if err != nil {
-			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not retrieve latest signed state %w", err)
+			return &updated, protocols.SideEffects{}, WaitingForFinalization, err
 		}
 
-		// Create new state from l1 state's fixed part and l2 state's variable part
-		updatedL1State := state.StateFromFixedAndVariablePart(l1State.FixedPart(), updated.L2SignedState.State().VariablePart())
-
+		// Sign the updated L1 state
 		updatedL1SignedState, err := updated.C.SignAndAddState(updatedL1State, secretKey)
 		if err != nil {
 			return &updated, protocols.SideEffects{}, WaitingForFinalization, err
 		}
 
+		// Send updated L1 signed state to couterparty
 		messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), updatedL1SignedState, SignedStatePayload, updated.otherParticipants()...)
 		if err != nil {
 			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not create payload message %w", err)
 		}
 		sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, messages...)
 
-		// Alice sends MirrorWithdrawAll transaction
+		// Send MirrorWithdrawAll transaction
 		mirrorWithdrawAllTx := protocols.NewMirrorWithdrawAllTransaction(updated.OwnsChannel(), updated.L2SignedState)
 		updated.MirrorTransactionSubmitted = true
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, mirrorWithdrawAllTx)
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
-	if len(updated.L2SignedState.Signatures()) == 0 {
-		// Bob signs the received signed state and sends it back
+	if len(updated.L2SignedState.Signatures()) == 0 && !updated.C.LatestSignedStateSignedByMe() {
+		// Sign received signed state and send it back
 		latestSignedState, err := updated.C.LatestSignedState()
 		if err != nil {
 			return &updated, sideEffects, WaitingForNothing, errors.New("the channel must contain at least one signed state to crank the defund objective")
@@ -214,6 +212,26 @@ func (o *Objective) otherParticipants() []types.Address {
 		}
 	}
 	return others
+}
+
+// Create updated L1 state based on the variable part of the L2 state
+func (o *Objective) CreateL1StateBasedOnL2() (state.State, error) {
+	// Get the latest L1 supported state
+	l1State, err := o.C.LatestSupportedState()
+	if err != nil {
+		return state.State{}, fmt.Errorf("could not retrieve latest signed state %w", err)
+	}
+
+	l1VariablePartBasedOnL2 := o.L2SignedState.State().VariablePart()
+
+	// Swap the L2 outcome: since Alice creates a ledger channel in L1, the 0th position in L1's state allocations corresponds to Alice. Similarly, since Bridge Prime creates a ledger channel in L2, the 0th position in L2's state allocations corresponds to Bridge Prime.
+	l1OutcomeBasedOnL2 := l1VariablePartBasedOnL2.Outcome.Clone()
+	tempAllocation := l1OutcomeBasedOnL2[0].Allocations[0]
+	l1OutcomeBasedOnL2[0].Allocations[0] = l1OutcomeBasedOnL2[0].Allocations[1]
+	l1OutcomeBasedOnL2[0].Allocations[1] = tempAllocation
+	l1VariablePartBasedOnL2.Outcome = l1OutcomeBasedOnL2
+
+	return state.StateFromFixedAndVariablePart(l1State.FixedPart(), l1VariablePartBasedOnL2), nil
 }
 
 // FullyWithdrawn returns true if the channel contains no assets on chain

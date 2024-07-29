@@ -152,7 +152,7 @@ func setupIntegrationNode(tc TestCase, tp TestParticipant, si sharedTestInfrastr
 	return n, messageService, multiAddr, store, cs
 }
 
-func initialLedgerOutcome(alpha, beta types.Address, ledgerDepositAlpha, ledgerDepositBeta uint64, asset types.Address) outcome.Exit {
+func ledgerOutcome(alpha, beta types.Address, ledgerDepositAlpha, ledgerDepositBeta uint64, asset types.Address) outcome.Exit {
 	return testdata.Outcomes.Create(alpha, beta, ledgerDepositAlpha, ledgerDepositBeta, asset)
 }
 
@@ -189,7 +189,7 @@ func finalPaymentOutcome(alpha, beta, asset types.Address, numPayments, paymentA
 
 func openLedgerChannel(t *testing.T, alpha node.Node, beta node.Node, asset common.Address, challengeDuration uint32) types.Destination {
 	// Set up an outcome that requires both participants to deposit
-	outcome := initialLedgerOutcome(*alpha.Address, *beta.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset)
+	outcome := ledgerOutcome(*alpha.Address, *beta.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset)
 
 	response, err := alpha.CreateLedgerChannel(*beta.Address, challengeDuration, outcome)
 	if err != nil {

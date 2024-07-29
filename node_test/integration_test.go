@@ -119,10 +119,10 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 		for i, clientI := range intermediaries {
 			// Setup and check the ledger channel between Alice and the intermediary
 			aliceLedgers[i] = openLedgerChannel(t, clientA, clientI, asset, 0)
-			checkLedgerChannel(t, aliceLedgers[i], initialLedgerOutcome(*clientA.Address, *clientI.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset), query.Open, clientA)
+			checkLedgerChannel(t, aliceLedgers[i], ledgerOutcome(*clientA.Address, *clientI.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset), query.Open, clientA)
 			// Setup and check the ledger channel between Bob and the intermediary
 			bobLedgers[i] = openLedgerChannel(t, clientI, clientB, asset, 0)
-			checkLedgerChannel(t, bobLedgers[i], initialLedgerOutcome(*clientI.Address, *clientB.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset), query.Open, clientB)
+			checkLedgerChannel(t, bobLedgers[i], ledgerOutcome(*clientI.Address, *clientB.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset), query.Open, clientB)
 
 		}
 

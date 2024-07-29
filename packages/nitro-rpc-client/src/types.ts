@@ -143,6 +143,10 @@ export type DirectDefundRequest = JsonRpcRequest<
   "close_ledger_channel",
   DirectDefundObjectiveRequest
 >;
+export type BridgedDefundRequest = JsonRpcRequest<
+  "close_bridge_channel",
+  DefundObjectiveRequest
+>;
 export type VirtualDefundRequest = JsonRpcRequest<
   "close_payment_channel",
   DefundObjectiveRequest
@@ -168,6 +172,7 @@ export type VersionResponse = JsonRpcResponse<string>;
 export type GetAddressResponse = JsonRpcResponse<string>;
 export type DirectFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type DirectDefundResponse = JsonRpcResponse<string>;
+export type BridgedDefundResponse = JsonRpcResponse<string>;
 export type VirtualDefundResponse = JsonRpcResponse<string>;
 export type GetAllLedgerChannelsResponse = JsonRpcResponse<LedgerChannelInfo[]>;
 export type GetPaymentChannelsByLedgerResponse = JsonRpcResponse<
@@ -183,6 +188,7 @@ export type RPCRequestAndResponses = {
   get_auth_token: [GetAuthTokenRequest, GetAuthTokenResponse];
   create_ledger_channel: [DirectFundRequest, DirectFundResponse];
   close_ledger_channel: [DirectDefundRequest, DirectDefundResponse];
+  close_bridge_channel: [BridgedDefundRequest, BridgedDefundResponse];
   version: [VersionRequest, VersionResponse];
   create_payment_channel: [VirtualFundRequest, VirtualFundResponse];
   get_address: [GetAddressRequest, GetAddressResponse];

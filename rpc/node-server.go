@@ -11,6 +11,7 @@ import (
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
+	"github.com/statechannels/go-nitro/protocols/bridgeddefund"
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
@@ -128,6 +129,10 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 		case serde.CloseLedgerChannelRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req directdefund.ObjectiveRequest) (protocols.ObjectiveId, error) {
 				return nrs.node.CloseLedgerChannel(req.ChannelId, req.IsChallenge)
+			})
+		case serde.CloseBridgeChannelRequestMethod:
+			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req bridgeddefund.ObjectiveRequest) (protocols.ObjectiveId, error) {
+				return nrs.node.CloseBridgeChannel(req.ChannelId)
 			})
 		case serde.CreatePaymentChannelRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req virtualfund.ObjectiveRequest) (virtualfund.ObjectiveResponse, error) {

@@ -179,6 +179,7 @@ export function getAndValidateResult<T extends RequestMethod>(
       );
     case "get_auth_token":
     case "close_ledger_channel":
+    case "close_bridge_channel":
     case "version":
     case "get_address":
     case "close_payment_channel":

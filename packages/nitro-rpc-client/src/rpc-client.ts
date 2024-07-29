@@ -204,6 +204,13 @@ export class NitroRpcClient implements RpcClientApi {
     return this.sendRequest("close_ledger_channel", payload);
   }
 
+  public async CloseBridgeChannel(channelId: string): Promise<string> {
+    const payload: DefundObjectiveRequest = {
+      ChannelId: channelId,
+    };
+    return this.sendRequest("close_bridge_channel", payload);
+  }
+
   public async CounterChallenge(
     channelId: string,
     action: CounterChallengeAction

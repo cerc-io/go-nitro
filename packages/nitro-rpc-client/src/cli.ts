@@ -213,6 +213,35 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "bridged-defund <channelId>",
+    "Defunds a mirror ledger channel",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("channelId", {
+        describe: "The id of mirror ledger channel to defund",
+        type: "string",
+        demandOption: true,
+      });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort)
+      );
+      if (yargs.n) logOutChannelUpdates(rpcClient);
+
+      const id = await rpcClient.CloseBridgeChannel(yargs.channelId);
+      console.log(`Objective started ${id}`);
+      await rpcClient.WaitForObjectiveToComplete(
+        `bridgeddefunding-${yargs.channelId}`
+      );
+      console.log(`Objective Complete ${yargs.channelId}`);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "virtual-fund <counterparty> [intermediaries...]",
     "Creates a virtually funded payment channel",
     (yargsBuilder) => {

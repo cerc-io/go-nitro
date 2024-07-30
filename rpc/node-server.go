@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"math/big"
 
@@ -20,6 +21,8 @@ import (
 	"github.com/statechannels/go-nitro/rpc/transport"
 	"github.com/statechannels/go-nitro/types"
 )
+
+const DISABLE_BRIDGE_DEFUND = true
 
 type NodeRpcServer struct {
 	*BaseRpcServer
@@ -132,6 +135,9 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 			})
 		case serde.CloseBridgeChannelRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req bridgeddefund.ObjectiveRequest) (protocols.ObjectiveId, error) {
+				if DISABLE_BRIDGE_DEFUND {
+					return protocols.ObjectiveId(bridgeddefund.ObjectivePrefix + req.ChannelId.String()), fmt.Errorf("brided defund is currently disabled")
+				}
 				return nrs.node.CloseBridgeChannel(req.ChannelId)
 			})
 		case serde.CreatePaymentChannelRequestMethod:

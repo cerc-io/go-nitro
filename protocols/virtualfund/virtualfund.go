@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math/big"
 	"strings"
 
@@ -436,7 +435,6 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 
 		ledgerSideEffects, err := updated.updateLedgerWithGuarantee(*updated.ToMyLeft, secretKey)
 		if err != nil {
-			slog.Error("error updating ledger funding", "error", err)
 			return o, protocols.SideEffects{}, WaitingForNothing, fmt.Errorf("%w: %w", ErrUpdatingLedgerFunding, err)
 		}
 		sideEffects.Merge(ledgerSideEffects)
@@ -445,7 +443,6 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	if !updated.isBob() && !updated.ToMyRight.IsFundingTheTarget() {
 		ledgerSideEffects, err := updated.updateLedgerWithGuarantee(*updated.ToMyRight, secretKey)
 		if err != nil {
-			slog.Error("error updating ledger funding", "error", err)
 			return o, protocols.SideEffects{}, WaitingForNothing, fmt.Errorf("%w: %w", ErrUpdatingLedgerFunding, err)
 		}
 		sideEffects.Merge(ledgerSideEffects)

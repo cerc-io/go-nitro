@@ -300,7 +300,7 @@ func (n *Node) Pay(channelId types.Destination, amount *big.Int) error {
 	}
 
 	if types.Gt(amount, (*big.Int)(paymentChannel.Balance.RemainingFunds)) {
-		return fmt.Errorf("Error making payment request: insufficient funds")
+		return fmt.Errorf("error making payment request: insufficient funds")
 	}
 
 	// Send the event to the engine

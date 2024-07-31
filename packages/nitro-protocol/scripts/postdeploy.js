@@ -1,6 +1,5 @@
-"use strict";
-exports.__esModule = true;
-var fs_1 = require("fs");
+var writeFileSync = require('fs').writeFileSync;
+var path = require('path');
 var CONTRACT_ENV_MAP = {
     ConsensusApp: 'CA_ADDRESS',
     NitroAdjudicator: 'NA_ADDRESS',
@@ -15,37 +14,37 @@ function deepDelete(object, keyToDelete) {
             deepDelete(object[key], keyToDelete);
     });
 }
-function deepSearch(object, keyToSearch) {
-    for (var key in object) {
-        if (object.hasOwnProperty(key)) {
-            if (key === keyToSearch) {
-                return object[key].address;
-            }
-            else if (typeof object[key] === 'object') {
-                var result = deepSearch(object[key], keyToSearch);
-                if (result !== null) {
-                    return result;
+function createEnvForContractAddresses(contractAddresses) {
+    for (var key in contractAddresses) {
+        var networkArray = contractAddresses[key];
+        var _loop_1 = function (network) {
+            var networkName = network.name;
+            var contractDetails = network.contracts;
+            var envToWrite = '';
+            var envFilePath = "./hardhat-deployments/".concat(networkName, "/.contracts.env");
+            Object.entries(contractDetails).forEach(function (_a) {
+                var contractName = _a[0], value = _a[1];
+                var envValue = value.address;
+                var envName = contractName;
+                if (CONTRACT_ENV_MAP.hasOwnProperty(contractName)) {
+                    envName = CONTRACT_ENV_MAP[contractName];
                 }
-            }
+                envToWrite += "export ".concat(envName, "=").concat(envValue, "\n");
+            });
+            var outputFilePath = path.resolve(envFilePath);
+            writeFileSync(outputFilePath, envToWrite);
+            console.log('Contracts deployed and address written to', outputFilePath);
+        };
+        for (var _i = 0, networkArray_1 = networkArray; _i < networkArray_1.length; _i++) {
+            var network = networkArray_1[_i];
+            _loop_1(network);
         }
     }
-    return null;
-}
-function createEnvForContractAddresses(contractAddresses) {
-    var outputEnvString = '';
-    Object.entries(CONTRACT_ENV_MAP).forEach(function (_a) {
-        var contractAddress = _a[0], envKey = _a[1];
-        var envValue = deepSearch(contractAddresses, contractAddress);
-        outputEnvString += "export ".concat(envKey, "=").concat(envValue, "\n");
-    });
-    return outputEnvString;
 }
 var jsonPath = __dirname + '/../addresses.json';
-var contractEnvPath = __dirname + '/../.contracts.env';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 var addresses = require(jsonPath);
 var keyToDelete = 'abi';
 deepDelete(addresses, keyToDelete);
-(0, fs_1.writeFileSync)(jsonPath, JSON.stringify(addresses, null, 2));
-var envData = createEnvForContractAddresses(addresses);
-(0, fs_1.writeFileSync)(contractEnvPath, envData);
+writeFileSync(jsonPath, JSON.stringify(addresses, null, 2));
+createEnvForContractAddresses(addresses);

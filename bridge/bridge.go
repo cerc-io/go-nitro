@@ -320,7 +320,6 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 		}
 
 	case *bridgeddefund.Objective:
-
 		ss, err := objective.C.LatestSupportedSignedState()
 		if err != nil {
 			return fmt.Errorf("error in latest supported signed state: %w", err)

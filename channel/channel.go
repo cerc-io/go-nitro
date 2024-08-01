@@ -380,11 +380,14 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 		c.OnChain.Outcome = e.Outcome()
 		c.OnChain.FinalizesAt = e.FinalizesAt
 		c.OnChain.IsChallengeInitiatedByMe = e.IsInitiatedByMe
-		ss, err := e.SignedState(c.FixedPart)
-		if err != nil {
-			return nil, err
+		if c.Id == event.ChannelID() {
+			ss, err := e.SignedState(c.FixedPart)
+			if err != nil {
+				return nil, err
+			}
+
+			c.AddSignedState(ss)
 		}
-		c.AddSignedState(ss)
 
 	case chainservice.ChallengeClearedEvent:
 		// On chain, statusOf map is updated with the same values below following a checkpoint transaction in ForceMove contract

@@ -247,7 +247,7 @@ func (b *Bridge) processCompletedObjectivesFromL1(objId protocols.ObjectiveId) e
 	}
 
 	// Create mirrored ledger channel between node BPrime and APrime
-	l2LedgerChannelResponse, err := b.nodeL2.CreateBridgeChannel(l1ledgerChannelStateClone.State().Participants[0], uint32(10), l2ChannelOutcome)
+	l2LedgerChannelResponse, err := b.nodeL2.CreateBridgeChannel(l1ledgerChannelStateClone.State().Participants[0], uint32(5), l2ChannelOutcome)
 	if err != nil {
 		return err
 	}
@@ -333,7 +333,7 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 		}
 
 		// Initiate mirror bridged defund on L1 using L2 signed state
-		_, err = b.nodeL1.MirrorBridgedDefund(mirrorInfo.L1ChannelId, signedState)
+		_, err = b.nodeL1.MirrorBridgedDefund(mirrorInfo.L1ChannelId, signedState, false)
 		if err != nil {
 			return fmt.Errorf("error in initiating mirror bridged defund: %w", err)
 		}

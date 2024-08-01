@@ -12,10 +12,12 @@ import (
 // jsonObjective replaces the mirrorbridgeddefund.Objective's channel pointer with
 // the channel's ID, making jsonObjective suitable for serialization
 type jsonObjective struct {
-	Status                     protocols.ObjectiveStatus
-	C                          types.Destination
-	MirrorTransactionSubmitted bool
-	L2SignedState              state.SignedState
+	Status                        protocols.ObjectiveStatus
+	C                             types.Destination
+	MirrorTransactionSubmitted    bool
+	L2SignedState                 state.SignedState
+	IsChallenge                   bool
+	ChallengeTransactionSubmitted bool
 }
 
 // MarshalJSON returns a JSON representation of the MirrorBridgedDefundObjective
@@ -27,6 +29,8 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.C.Id,
 		o.MirrorTransactionSubmitted,
 		o.L2SignedState,
+		o.IsChallenge,
+		o.ChallengeTransactionSubmitted,
 	}
 
 	return json.Marshal(jsonDDFO)
@@ -53,6 +57,8 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.C.Id = jsonDDFO.C
 	o.MirrorTransactionSubmitted = jsonDDFO.MirrorTransactionSubmitted
 	o.L2SignedState = jsonDDFO.L2SignedState
+	o.IsChallenge = jsonDDFO.IsChallenge
+	o.ChallengeTransactionSubmitted = jsonDDFO.ChallengeTransactionSubmitted
 
 	return nil
 }

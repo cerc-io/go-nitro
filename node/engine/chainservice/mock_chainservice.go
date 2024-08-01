@@ -36,6 +36,10 @@ func (mc *MockChainService) GetVirtualPaymentAppAddress() types.Address {
 	return types.Address{}
 }
 
+func (mc *MockChainService) GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error) {
+	return types.Destination{}, nil
+}
+
 func (mc *MockChainService) EventFeed() <-chan Event {
 	return mc.eventFeed
 }

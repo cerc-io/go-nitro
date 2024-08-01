@@ -304,8 +304,8 @@ func (n *Node) CloseBridgeChannel(channelId types.Destination) (protocols.Object
 	return objectiveRequest.Id(*n.Address, n.chainId), nil
 }
 
-func (n *Node) MirrorBridgedDefund(l1ChannelId types.Destination, l2SignedState state.SignedState) (protocols.ObjectiveId, error) {
-	objectiveRequest := mirrorbridgeddefund.NewObjectiveRequest(l1ChannelId, l2SignedState)
+func (n *Node) MirrorBridgedDefund(l1ChannelId types.Destination, l2SignedState state.SignedState, isChallenge bool) (protocols.ObjectiveId, error) {
+	objectiveRequest := mirrorbridgeddefund.NewObjectiveRequest(l1ChannelId, l2SignedState, isChallenge)
 
 	// Send the event to the engine
 	n.engine.ObjectiveRequestsFromAPI <- objectiveRequest

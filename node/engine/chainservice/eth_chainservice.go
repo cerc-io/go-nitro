@@ -260,6 +260,14 @@ func (ecs *EthChainService) defaultTxOpts() *bind.TransactOpts {
 	}
 }
 
+// defaultTxOpts returns transaction options suitable for most transaction submissions
+func (ecs *EthChainService) defaultCallOpts() *bind.CallOpts {
+	return &bind.CallOpts{
+		Pending: false,
+		From:    ecs.txSigner.From,
+	}
+}
+
 // SendTransaction sends the transaction and blocks until it has been submitted.
 func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error {
 	switch tx := tx.(type) {
@@ -423,6 +431,10 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 	default:
 		return fmt.Errorf("unexpected transaction type %T", tx)
 	}
+}
+
+func (ecs *EthChainService) GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error) {
+	return ecs.na.GetL2ToL1(ecs.defaultCallOpts(), l2Channel)
 }
 
 // dispatchChainEvents takes in a collection of event logs from the chain

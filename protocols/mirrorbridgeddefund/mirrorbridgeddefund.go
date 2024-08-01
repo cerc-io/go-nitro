@@ -20,6 +20,7 @@ const (
 	WaitingForFinalization protocols.WaitingFor = "WaitingForFinalization"
 	WaitingForNothing      protocols.WaitingFor = "WaitingForNothing" // Finished
 	WaitingForWithdraw     protocols.WaitingFor = "WaitingForWithdraw"
+	WaitingForChallenge    protocols.WaitingFor = "WaitingForChallenge"
 )
 
 const (
@@ -38,6 +39,9 @@ type Objective struct {
 	C                          *channel.Channel
 	L2SignedState              state.SignedState
 	MirrorTransactionSubmitted bool
+
+	IsChallenge                   bool
+	ChallengeTransactionSubmitted bool
 }
 
 // GetConsensusChannel describes functions which return a ConsensusChannel ledger channel for a channel id.
@@ -70,7 +74,7 @@ func NewObjective(
 	init.C = c.Clone()
 
 	init.L2SignedState = request.l2SignedState
-
+	init.IsChallenge = request.isChallenge
 	return init, nil
 }
 
@@ -208,6 +212,8 @@ func (o *Objective) clone() Objective {
 	clone.C = o.C.Clone()
 	clone.L2SignedState = o.L2SignedState
 	clone.MirrorTransactionSubmitted = o.MirrorTransactionSubmitted
+	clone.IsChallenge = o.IsChallenge
+	clone.ChallengeTransactionSubmitted = o.ChallengeTransactionSubmitted
 
 	return clone
 }
@@ -272,7 +278,7 @@ func ConstructObjectiveFromPayload(
 	}
 
 	cId := s.ChannelId()
-	request := NewObjectiveRequest(cId, state.SignedState{})
+	request := NewObjectiveRequest(cId, state.SignedState{}, false)
 	return NewObjective(request, preapprove, getConsensusChannel, false)
 }
 
@@ -307,14 +313,16 @@ func CreateChannelFromConsensusChannel(cc consensus_channel.ConsensusChannel) (*
 type ObjectiveRequest struct {
 	l1ChannelId      types.Destination
 	l2SignedState    state.SignedState
+	isChallenge      bool
 	objectiveStarted chan struct{}
 }
 
 // NewObjectiveRequest creates a new ObjectiveRequest.
-func NewObjectiveRequest(l1ChannelId types.Destination, l2SignedState state.SignedState) ObjectiveRequest {
+func NewObjectiveRequest(l1ChannelId types.Destination, l2SignedState state.SignedState, isChallenge bool) ObjectiveRequest {
 	return ObjectiveRequest{
 		l1ChannelId:      l1ChannelId,
 		l2SignedState:    l2SignedState,
+		isChallenge:      isChallenge,
 		objectiveStarted: make(chan struct{}),
 	}
 }

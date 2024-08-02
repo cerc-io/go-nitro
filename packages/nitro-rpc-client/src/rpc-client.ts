@@ -17,7 +17,7 @@ import {
   CounterChallengeAction,
   CounterChallengeResult,
   ObjectiveCompleteNotification,
-  LedgerChannelState,
+  SignedState,
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -253,9 +253,7 @@ export class NitroRpcClient implements RpcClientApi {
     return this.sendRequest("get_all_l2_channels", {});
   }
 
-  public async GetL2SignedState(
-    channelId: string
-  ): Promise<LedgerChannelState> {
+  public async GetL2SignedState(channelId: string): Promise<SignedState> {
     return this.sendRequest("get_l2_signed_state", { Id: channelId });
   }
 

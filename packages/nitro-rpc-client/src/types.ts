@@ -179,7 +179,7 @@ export type DirectDefundResponse = JsonRpcResponse<string>;
 export type BridgedDefundResponse = JsonRpcResponse<string>;
 export type VirtualDefundResponse = JsonRpcResponse<string>;
 export type GetAllLedgerChannelsResponse = JsonRpcResponse<LedgerChannelInfo[]>;
-export type GetL2SignedStateResponse = JsonRpcResponse<LedgerChannelState>;
+export type GetL2SignedStateResponse = JsonRpcResponse<SignedState>;
 export type GetPaymentChannelsByLedgerResponse = JsonRpcResponse<
   PaymentChannelInfo[]
 >;
@@ -260,7 +260,7 @@ export type LedgerChannelInfo = {
   ChannelMode: keyof typeof ChannelMode;
 };
 
-export type LedgerChannelState = {
+type LedgerChannelState = {
   Participants: string[];
   ChannelNonce: number;
   AppDefinition: string;
@@ -269,6 +269,17 @@ export type LedgerChannelState = {
   Outcome: Outcome;
   TurnNum: number;
   IsFinal: boolean;
+};
+
+type Signature = {
+  r: string;
+  s: string;
+  v: number;
+};
+
+export type SignedState = {
+  state: LedgerChannelState;
+  sigs: { [key: number]: Signature };
 };
 
 export type LedgerChannelBalance = {

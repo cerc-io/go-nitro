@@ -380,6 +380,8 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 		c.OnChain.Outcome = e.Outcome()
 		c.OnChain.FinalizesAt = e.FinalizesAt
 		c.OnChain.IsChallengeInitiatedByMe = e.IsInitiatedByMe
+
+		// Add a signed state from a chain event to a channel only if the channel ID matches, especially when a challenge is registered on the L2 state, as the channel IDs for L1 and L2 are different
 		if c.Id == event.ChannelID() {
 			ss, err := e.SignedState(c.FixedPart)
 			if err != nil {
@@ -401,10 +403,7 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 	case chainservice.ReclaimedEvent:
 	// TODO: Handle ReclaimedEvent
 	case chainservice.StatusUpdatedEvent:
-		statusUpdatedEvent, ok := event.(chainservice.StatusUpdatedEvent)
-		if ok {
-			c.OnChain.StateHash = statusUpdatedEvent.StateHash
-		}
+		c.OnChain.StateHash = e.StateHash
 	default:
 		return &Channel{}, fmt.Errorf("channel %+v cannot handle event %+v", c, event)
 	}

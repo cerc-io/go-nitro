@@ -35,13 +35,12 @@ const (
 
 // Objective is a cache of data computed by reading from the store. It stores (potentially) infinite data
 type Objective struct {
-	Status                     protocols.ObjectiveStatus
-	C                          *channel.Channel
-	L2SignedState              state.SignedState
-	MirrorTransactionSubmitted bool
-
-	IsChallenge                   bool
-	ChallengeTransactionSubmitted bool
+	Status                        protocols.ObjectiveStatus
+	C                             *channel.Channel
+	l2SignedState                 state.SignedState
+	mirrorTransactionSubmitted    bool
+	isChallenge                   bool
+	challengeTransactionSubmitted bool
 }
 
 // GetConsensusChannel describes functions which return a ConsensusChannel ledger channel for a channel id.
@@ -73,8 +72,8 @@ func NewObjective(
 	}
 	init.C = c.Clone()
 
-	init.L2SignedState = request.l2SignedState
-	init.IsChallenge = request.isChallenge
+	init.l2SignedState = request.l2SignedState
+	init.isChallenge = request.isChallenge
 	return init, nil
 }
 
@@ -210,10 +209,10 @@ func (o *Objective) clone() Objective {
 	clone.Status = o.Status
 
 	clone.C = o.C.Clone()
-	clone.L2SignedState = o.L2SignedState
-	clone.MirrorTransactionSubmitted = o.MirrorTransactionSubmitted
-	clone.IsChallenge = o.IsChallenge
-	clone.ChallengeTransactionSubmitted = o.ChallengeTransactionSubmitted
+	clone.l2SignedState = o.l2SignedState
+	clone.mirrorTransactionSubmitted = o.mirrorTransactionSubmitted
+	clone.isChallenge = o.isChallenge
+	clone.challengeTransactionSubmitted = o.challengeTransactionSubmitted
 
 	return clone
 }
@@ -236,7 +235,7 @@ func (o *Objective) CreateL1StateBasedOnL2() (state.State, error) {
 		return state.State{}, fmt.Errorf("could not retrieve latest signed state %w", err)
 	}
 
-	l1VariablePartBasedOnL2 := o.L2SignedState.State().VariablePart()
+	l1VariablePartBasedOnL2 := o.l2SignedState.State().VariablePart()
 
 	// Swap the L2 outcome: since Alice creates a ledger channel in L1, the 0th position in L1's state allocations corresponds to Alice. Similarly, since Bridge Prime creates a ledger channel in L2, the 0th position in L2's state allocations corresponds to Bridge Prime.
 	l1OutcomeBasedOnL2 := l1VariablePartBasedOnL2.Outcome.Clone()

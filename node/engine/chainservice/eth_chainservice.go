@@ -260,7 +260,7 @@ func (ecs *EthChainService) defaultTxOpts() *bind.TransactOpts {
 	}
 }
 
-// defaultTxOpts returns transaction options suitable for most transaction submissions
+// defaultCallOpts provides options to fine-tune a contract call request
 func (ecs *EthChainService) defaultCallOpts() *bind.CallOpts {
 	return &bind.CallOpts{
 		Pending: false,
@@ -433,6 +433,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 	}
 }
 
+// GetL1ChannelFromL2 returns the L1 ledger channel ID from the L2 ledger channel by making a contract call to the l2ToL1 map of the Nitro Adjudicator contract
 func (ecs *EthChainService) GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error) {
 	return ecs.na.GetL2ToL1(ecs.defaultCallOpts(), l2Channel)
 }

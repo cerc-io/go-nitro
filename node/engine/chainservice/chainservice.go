@@ -195,7 +195,7 @@ type ChainService interface {
 	GetLastConfirmedBlockNum() uint64
 	// GetLatestBlock returns the latest block
 	GetLatestBlock() Block
-
+	// GetL1ChannelFromL2 returns the L1 ledger channel ID from the L2 ledger channel by making a contract call to the l2ToL1 map of the Nitro Adjudicator contract
 	GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error)
 	// Close closes the ChainService
 	Close() error

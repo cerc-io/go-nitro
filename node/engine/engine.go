@@ -441,7 +441,7 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 		return EngineEvent{}, err
 	}
 
-	var L2ChallengeRegistered bool
+	var l2ChallengeRegistered bool
 	c, ok := e.store.GetChannelById(chainEvent.ChannelID())
 	if !ok {
 		// If channel doesn't exist and chain event is ChallengeRegistered then create a new direct defund objective
@@ -456,7 +456,6 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 			}
 
 			l1Channel, ok := e.store.GetChannelById(l1ChannelId)
-			L2ChallengeRegistered = true
 
 			if !ok {
 				ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent, true)
@@ -481,6 +480,8 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 			}
 
 			c = l1Channel
+			l2ChallengeRegistered = true
+
 		} else {
 			// TODO: Right now the chain service returns chain events for ALL channels even those we aren't involved in
 			// for now we can ignore channels we aren't involved in
@@ -529,7 +530,7 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 		}
 	}
 
-	if L2ChallengeRegistered {
+	if l2ChallengeRegistered {
 		objective, ok := e.store.GetObjectiveByChannelId(updatedChannel.Id)
 
 		if ok {
@@ -1100,7 +1101,8 @@ func (e *Engine) processStoreChannels(latestblock chainservice.Block) error {
 			obj, ok := e.store.GetObjectiveByChannelId(ch.Id)
 
 			if !ok {
-				return fmt.Errorf("Objective not found for liquidating the finalized ledger channel")
+				slog.Debug("Objective not found for liquidating the finalized ledger channel", "ledger channel", ch.Id)
+				return nil
 			}
 
 			switch objective := obj.(type) {

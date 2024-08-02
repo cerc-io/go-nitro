@@ -1098,20 +1098,22 @@ func (e *Engine) processStoreChannels(latestblock chainservice.Block) error {
 		// Liquidate assets for finalized ledger channels
 		if ch.Type == channel.Ledger && ch.OnChain.ChannelMode == channel.Finalized {
 			obj, ok := e.store.GetObjectiveByChannelId(ch.Id)
-			// TODO: Use switch case to determine the objective
 
-			dDfo, isDdfo := obj.(*directdefund.Objective)
-
-			if ok && isDdfo && dDfo.C.OnChain.IsChallengeInitiatedByMe {
-				_, err = e.attemptProgress(dDfo)
-				if err != nil {
-					return err
-				}
+			if !ok {
+				return fmt.Errorf("Objective not found for liquidating the finalized ledger channel")
 			}
 
-			mBdfo, isMBdfo := obj.(*mirrorbridgeddefund.Objective)
-			if ok && isMBdfo {
-				_, err = e.attemptProgress(mBdfo)
+			switch objective := obj.(type) {
+			case *directdefund.Objective:
+				if objective.C.OnChain.IsChallengeInitiatedByMe {
+					_, err = e.attemptProgress(objective)
+					if err != nil {
+						return err
+					}
+				}
+
+			case *mirrorbridgeddefund.Objective:
+				_, err = e.attemptProgress(objective)
 				if err != nil {
 					return err
 				}

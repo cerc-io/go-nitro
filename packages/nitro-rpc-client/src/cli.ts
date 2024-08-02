@@ -2,6 +2,8 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable @typescript-eslint/no-shadow */
 
+import * as fs from "fs";
+
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 
@@ -90,6 +92,51 @@ yargs(hideBin(process.argv))
       for (const ledger of ledgers) {
         console.log(`${compactJson(ledger)}`);
       }
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
+    "get-l2-signed-state <channelId> <jsonFilePath>",
+    "Get latest L2 signed state",
+    (yargsBuilder) => {
+      return yargsBuilder
+        .positional("channelId", {
+          describe: "The channel ID of the ledger channel",
+          type: "string",
+          demandOption: true,
+        })
+        .positional("jsonFilePath", {
+          describe: "Path to JSON file for saving L2 signed state",
+          type: "string",
+          demandOption: true,
+        });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const channelId = yargs.channelId;
+      const jsonFilePath = yargs.jsonFilePath;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort)
+      );
+      const l2SignedState = await rpcClient.GetL2SignedState(channelId);
+      console.log(`${compactJson(l2SignedState)}`);
+
+      fs.writeFile(
+        jsonFilePath,
+        JSON.stringify(l2SignedState, null, 2),
+        "utf8",
+        (err) => {
+          if (err) {
+            console.error("Error writing file:", err);
+          } else {
+            console.log("File has been saved.");
+          }
+        }
+      );
+
       await rpcClient.Close();
       process.exit(0);
     }

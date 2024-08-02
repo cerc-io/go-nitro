@@ -129,6 +129,10 @@ export type GetAllLedgerChannelsRequest = JsonRpcRequest<
   "get_all_ledger_channels",
   Record<string, never>
 >;
+export type GetL2SignedStateRequest = JsonRpcRequest<
+  "get_l2_signed_state",
+  GetChannelRequest
+>;
 export type GetPaymentChannelRequest = JsonRpcRequest<
   "get_payment_channel",
   GetChannelRequest
@@ -175,6 +179,7 @@ export type DirectDefundResponse = JsonRpcResponse<string>;
 export type BridgedDefundResponse = JsonRpcResponse<string>;
 export type VirtualDefundResponse = JsonRpcResponse<string>;
 export type GetAllLedgerChannelsResponse = JsonRpcResponse<LedgerChannelInfo[]>;
+export type GetL2SignedStateResponse = JsonRpcResponse<LedgerChannelState>;
 export type GetPaymentChannelsByLedgerResponse = JsonRpcResponse<
   PaymentChannelInfo[]
 >;
@@ -205,6 +210,7 @@ export type RPCRequestAndResponses = {
     GetAllLedgerChannelsRequest,
     GetAllLedgerChannelsResponse
   ];
+  get_l2_signed_state: [GetL2SignedStateRequest, GetL2SignedStateResponse];
   get_payment_channels_by_ledger: [
     GetPaymentChannelsByLedgerRequest,
     GetPaymentChannelsByLedgerResponse
@@ -252,6 +258,17 @@ export type LedgerChannelInfo = {
   Status: ChannelStatus;
   Balance: LedgerChannelBalance;
   ChannelMode: keyof typeof ChannelMode;
+};
+
+export type LedgerChannelState = {
+  Participants: string[];
+  ChannelNonce: number;
+  AppDefinition: string;
+  ChallengeDuration: number;
+  AppData: Uint8Array;
+  Outcome: Outcome;
+  TurnNum: number;
+  IsFinal: boolean;
 };
 
 export type LedgerChannelBalance = {

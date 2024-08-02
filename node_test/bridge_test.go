@@ -545,6 +545,125 @@ func TestExitL2WithVirtualChannelStateUnilaterally(t *testing.T) {
 	})
 }
 
+func TestL2Checkpoint(t *testing.T) {
+	tcL1 := TestCase{
+		Chain:             AnvilChainL1,
+		MessageService:    TestMessageService,
+		MessageDelay:      0,
+		LogName:           "Bridge_test",
+		ChallengeDuration: 5,
+		Participants: []TestParticipant{
+			{StoreType: MemStore, Actor: testactors.Alice},
+			{StoreType: MemStore, Actor: testactors.Bob},
+		},
+		deployerIndex: 1,
+	}
+
+	tcL2 := TestCase{
+		Chain:             AnvilChainL2,
+		MessageService:    TestMessageService,
+		MessageDelay:      0,
+		LogName:           "Bridge_test",
+		ChallengeDuration: 5,
+		Participants: []TestParticipant{
+			{StoreType: MemStore, Actor: testactors.Bob},
+			{StoreType: MemStore, Actor: testactors.Alice},
+		},
+		ChainPort:     "8546",
+		deployerIndex: 0,
+	}
+
+	challengeRegisteredEvent := chainservice.ChallengeRegisteredEvent{}
+
+	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	defer cleanup()
+
+	infraL1 := setupSharedInfra(tcL1)
+	defer infraL1.Close(t)
+
+	infraL2 := setupSharedInfra(tcL2)
+	defer infraL2.Close(t)
+
+	// Create go-nitro nodes
+	nodeA, _, _, storeA, chainServiceA := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{}, dataFolder)
+	defer nodeA.Close()
+
+	nodeB, _, _, _, chainServiceB := setupIntegrationNode(tcL1, tcL1.Participants[1], infraL1, []string{}, dataFolder)
+
+	infraL2.anvilChain.ContractAddresses.CaAddress = infraL1.anvilChain.ContractAddresses.CaAddress
+	infraL2.anvilChain.ContractAddresses.VpaAddress = infraL1.anvilChain.ContractAddresses.VpaAddress
+
+	nodeBPrime, _, _, storeBPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[0], infraL2, []string{}, dataFolder)
+
+	nodeAPrime, _, _, storeAPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{}, dataFolder)
+	defer nodeAPrime.Close()
+
+	// Separate chain service to listen for events
+	testChainService := setupChainService(tcL1, tcL1.Participants[0], infraL1)
+	defer testChainService.Close()
+
+	// Create ledger channel on L1 and mirror it on L2
+	l1ChannelId, mirroredLedgerChannelId := createL1L2Channels(t, nodeA, nodeB, nodeAPrime, nodeBPrime, storeA, tcL1, tcL2, chainServiceB)
+
+	oldL2SignedState := getLatestSignedState(storeAPrime, mirroredLedgerChannelId)
+
+	// Create virtual channel on mirrored ledger channel and make payments
+	virtualChannel := createL2VirtualChannel(t, nodeAPrime, nodeBPrime, storeBPrime, tcL2)
+
+	// Bridge pays APrime
+	err := nodeBPrime.Pay(virtualChannel.Id, big.NewInt(payAmount))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for APrime to recieve voucher
+	nodeAPrimeVoucher := <-nodeAPrime.ReceivedVouchers()
+	t.Logf("Voucher recieved %+v", nodeAPrimeVoucher)
+
+	// Virtual defund
+	virtualDefundResponse, _ := nodeBPrime.ClosePaymentChannel(virtualChannel.Id)
+	waitForObjectives(t, nodeBPrime, nodeAPrime, []node.Node{}, []protocols.ObjectiveId{virtualDefundResponse})
+
+	t.Run("Challenge L1 channel with older L2 signed state", func(t *testing.T) {
+		// Node A calls `challenge` contract method with L2 ledger channel state
+		challengerSig, _ := NitroAdjudicator.SignChallengeMessage(oldL2SignedState.State(), tcL1.Participants[0].PrivateKey)
+		challengeTx := protocols.NewChallengeTransaction(l1ChannelId, oldL2SignedState, []state.SignedState{}, challengerSig)
+		err := chainServiceA.SendTransaction(challengeTx)
+		if err != nil {
+			t.Error(err)
+		}
+
+		event := waitForEvent(t, testChainService.EventFeed(), chainservice.ChallengeRegisteredEvent{})
+		t.Log("Challenge registed event received", event)
+		challengeRegistered, ok := event.(chainservice.ChallengeRegisteredEvent)
+		challengeRegisteredEvent = challengeRegistered
+		testhelpers.Assert(t, ok, "Expected challenge registered event")
+	})
+
+	t.Run("Respond to challenge with a checkpoint using newer signed state", func(t *testing.T) {
+		newL2State := getLatestSignedState(storeBPrime, mirroredLedgerChannelId)
+		// Bridge calls checkpoint method using new state
+		checkpointTx := protocols.NewCheckpointTransaction(l1ChannelId, newL2State, make([]state.SignedState, 0))
+		err = chainServiceB.SendTransaction(checkpointTx)
+		if err != nil {
+			t.Error(err)
+		}
+		// Listen for challenge cleared event
+		event := waitForEvent(t, testChainService.EventFeed(), chainservice.ChallengeClearedEvent{})
+		t.Log("Challenge cleared event received", event)
+		challengeClearedEvent, ok := event.(chainservice.ChallengeClearedEvent)
+		testhelpers.Assert(t, ok, "Expected challenge cleared event")
+		testhelpers.Assert(t, challengeClearedEvent.ChannelID() == newL2State.State().ChannelId(), "Channel ID mismatch")
+		latestBlock, _ := infraL1.anvilChain.GetLatestBlock()
+		testhelpers.Assert(t, challengeRegisteredEvent.FinalizesAt.Uint64() <= latestBlock.Header().Time, "Expected challenge duration to be completed")
+
+		// Alice attempts to exit, but the attempt fails because the outcome has not been finalized
+		transferTx := protocols.NewMirrorTransferAllTransaction(l1ChannelId, oldL2SignedState)
+		err = chainServiceA.SendTransaction(transferTx)
+		testhelpers.Assert(t, err.Error() == "execution reverted: revert: Channel not finalized.", "Expected execution reverted error")
+	})
+}
+
 func createL1L2Channels(t *testing.T, nodeA node.Node, nodeB node.Node, nodeAPrime node.Node, nodeBPrime node.Node, nodeStore store.Store, tcL1 TestCase, tcL2 TestCase, bridgeChainService chainservice.ChainService) (types.Destination, types.Destination) {
 	// Create ledger channel
 	l1LedgerChannelId := openLedgerChannel(t, nodeA, nodeB, types.Address{}, uint32(tcL1.ChallengeDuration))

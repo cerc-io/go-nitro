@@ -17,7 +17,9 @@ type jsonObjective struct {
 	MirrorTransactionSubmitted    bool
 	L2SignedState                 state.SignedState
 	IsChallenge                   bool
+	IsCheckPoint                  bool
 	ChallengeTransactionSubmitted bool
+	CheckPointransactionSubmitted bool
 }
 
 // MarshalJSON returns a JSON representation of the MirrorBridgedDefundObjective
@@ -31,6 +33,8 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.L2SignedState,
 		o.IsChallenge,
 		o.ChallengeTransactionSubmitted,
+		o.IsCheckPoint,
+		o.CheckpointTransactionSubmitted,
 	}
 
 	return json.Marshal(jsonDDFO)
@@ -59,6 +63,8 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.L2SignedState = jsonDDFO.L2SignedState
 	o.IsChallenge = jsonDDFO.IsChallenge
 	o.ChallengeTransactionSubmitted = jsonDDFO.ChallengeTransactionSubmitted
+	o.IsCheckPoint = jsonDDFO.IsCheckPoint
+	o.CheckpointTransactionSubmitted = jsonDDFO.CheckPointransactionSubmitted
 
 	return nil
 }

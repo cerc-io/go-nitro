@@ -673,28 +673,50 @@ func (e *Engine) handlePaymentRequest(request PaymentRequest) (EngineEvent, erro
 
 // handleCounterChallengeRequest handles a counter challenge request for the given channel.
 func (e *Engine) handleCounterChallengeRequest(request types.CounterChallengeRequest) error {
-	objective, err := e.store.GetObjectiveById(protocols.ObjectiveId(directdefund.ObjectivePrefix + request.ChannelId.String()))
-	if err != nil {
-		return err
-	}
-	obj, ok := objective.(*directdefund.Objective)
-
-	if !ok {
-		return fmt.Errorf("direct defund objective required")
-	}
+	channelId := request.ChannelId
+	isCheckPoint := false
+	isChallenge := false
 
 	switch request.Action {
 	case types.Checkpoint:
-		obj.IsCheckpoint = true
+		isCheckPoint = true
 	case types.Challenge:
-		obj.IsChallenge = true
+		isChallenge = true
 	default:
 		return fmt.Errorf("unknown counter challenge action")
 	}
 
-	_, err = e.attemptProgress(objective)
-	if err != nil {
-		return err
+	obj, ok := e.store.GetObjectiveByChannelId(channelId)
+	if !ok {
+		return fmt.Errorf("objective to process the counter challenge request for channel Id %s could not be found", channelId.String())
+	}
+
+	switch objective := obj.(type) {
+	case *directdefund.Objective:
+		if isCheckPoint {
+			objective.IsCheckpoint = isCheckPoint
+		}
+		if isChallenge {
+			objective.IsChallenge = isChallenge
+		}
+		_, err := e.attemptProgress(objective)
+		if err != nil {
+			return err
+		}
+
+	case *mirrorbridgeddefund.Objective:
+		if isCheckPoint {
+			objective.IsCheckPoint = isCheckPoint
+		}
+		if isChallenge {
+			objective.IsChallenge = isChallenge
+		}
+		_, err := e.attemptProgress(objective)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown objective type %T", objective)
 	}
 
 	return nil

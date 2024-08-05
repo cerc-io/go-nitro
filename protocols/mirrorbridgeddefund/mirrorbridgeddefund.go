@@ -18,10 +18,11 @@ import (
 const ObjectivePrefix = "mirrorbridgeddefunding-"
 
 const (
-	WaitingForFinalization protocols.WaitingFor = "WaitingForFinalization"
-	WaitingForNothing      protocols.WaitingFor = "WaitingForNothing" // Finished
-	WaitingForWithdraw     protocols.WaitingFor = "WaitingForWithdraw"
-	WaitingForChallenge    protocols.WaitingFor = "WaitingForChallenge"
+	WaitingForFinalization     protocols.WaitingFor = "WaitingForFinalization"
+	WaitingForNothing          protocols.WaitingFor = "WaitingForNothing" // Finished
+	WaitingForWithdraw         protocols.WaitingFor = "WaitingForWithdraw"
+	WaitingForChallenge        protocols.WaitingFor = "WaitingForChallenge"
+	WaitingForChallengeCleared protocols.WaitingFor = "WaitingForChallengeCleared"
 )
 
 const (
@@ -36,12 +37,14 @@ const (
 
 // Objective is a cache of data computed by reading from the store. It stores (potentially) infinite data
 type Objective struct {
-	Status                        protocols.ObjectiveStatus
-	C                             *channel.Channel
-	L2SignedState                 state.SignedState
-	MirrorTransactionSubmitted    bool
-	IsChallenge                   bool
-	ChallengeTransactionSubmitted bool
+	Status                         protocols.ObjectiveStatus
+	C                              *channel.Channel
+	L2SignedState                  state.SignedState
+	MirrorTransactionSubmitted     bool
+	IsChallenge                    bool
+	IsCheckPoint                   bool
+	CheckpointTransactionSubmitted bool
+	ChallengeTransactionSubmitted  bool
 }
 
 // GetConsensusChannel describes functions which return a ConsensusChannel ledger channel for a channel id.
@@ -134,6 +137,18 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
 		updated.ChallengeTransactionSubmitted = true
 		return &updated, sideEffects, WaitingForChallenge, nil
+	}
+
+	// Initiate checkpoint transaction
+	if updated.IsCheckPoint && !updated.CheckpointTransactionSubmitted {
+		latestSupportedSignedState, err := updated.C.LatestSupportedSignedState()
+		if err != nil {
+			return &updated, sideEffects, WaitingForNothing, err
+		}
+		checkpointTx := protocols.NewCheckpointTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0))
+		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, checkpointTx)
+		updated.CheckpointTransactionSubmitted = true
+		return &updated, sideEffects, WaitingForChallengeCleared, nil
 	}
 
 	// Wait for L2 channel to finalize
@@ -264,7 +279,9 @@ func (o *Objective) clone() Objective {
 	clone.L2SignedState = o.L2SignedState
 	clone.MirrorTransactionSubmitted = o.MirrorTransactionSubmitted
 	clone.IsChallenge = o.IsChallenge
+	clone.IsCheckPoint = o.IsCheckPoint
 	clone.ChallengeTransactionSubmitted = o.ChallengeTransactionSubmitted
+	clone.CheckpointTransactionSubmitted = o.CheckpointTransactionSubmitted
 
 	return clone
 }

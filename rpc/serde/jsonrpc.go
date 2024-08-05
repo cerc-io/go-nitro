@@ -3,6 +3,7 @@ package serde
 import (
 	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
@@ -36,6 +37,8 @@ const (
 
 	// Bridge methods
 	GetAllL2ChannelsRequestMethod RequestMethod = "get_all_l2_channels"
+
+	GetL2SignedStateMethod RequestMethod = "get_l2_signed_state"
 )
 
 type NotificationMethod string
@@ -79,6 +82,10 @@ type (
 	NoPayloadRequest = struct{}
 )
 
+type GetL2SignedStateRequest struct {
+	Id types.Destination
+}
+
 type RequestPayload interface {
 	directfund.ObjectiveRequest |
 		directdefund.ObjectiveRequest |
@@ -89,6 +96,7 @@ type RequestPayload interface {
 		GetLedgerChannelRequest |
 		GetPaymentChannelRequest |
 		GetPaymentChannelsByLedgerRequest |
+		GetL2SignedStateRequest |
 		NoPayloadRequest |
 		payments.Voucher |
 		CounterChallengeRequest |
@@ -127,6 +135,7 @@ type ResponsePayload interface {
 		query.LedgerChannelInfo |
 		GetAllLedgersResponse |
 		GetPaymentChannelsByLedgerResponse |
+		state.SignedState |
 		payments.Voucher |
 		common.Address |
 		string |

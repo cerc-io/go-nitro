@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math/big"
 
+	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/internal/logging"
 	nitro "github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/query"
@@ -183,6 +184,18 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.CounterChallengeRequest) (serde.CounterChallengeRequest, error) {
 				nrs.node.CounterChallenge(req.ChannelId, req.Action)
 				return req, nil
+			})
+		case serde.GetL2SignedStateMethod:
+			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetL2SignedStateRequest) (state.SignedState, error) {
+				if err := serde.ValidateGetL2SignedStateRequest(req); err != nil {
+					return state.SignedState{}, err
+				}
+
+				latestState, err := nrs.node.GetSignedState(req.Id)
+				if err != nil {
+					return state.SignedState{}, err
+				}
+				return latestState, nil
 			})
 		default:
 			errRes := serde.NewJsonRpcErrorResponse(jsonrpcReq.Id, serde.MethodNotFoundError)

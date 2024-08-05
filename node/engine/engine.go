@@ -457,7 +457,10 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 
 			l1Channel, ok := e.store.GetChannelById(l1ChannelId)
 
-			if !ok {
+			if ok {
+				c = l1Channel
+				l2ChallengeRegistered = true
+			} else {
 				ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent, true)
 				if err != nil {
 					// Node should not panic if it is unable to find the required consensus channel before creating objective
@@ -478,10 +481,6 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 					return EngineEvent{}, err
 				}
 			}
-
-			c = l1Channel
-			l2ChallengeRegistered = true
-
 		} else {
 			// TODO: Right now the chain service returns chain events for ALL channels even those we aren't involved in
 			// for now we can ignore channels we aren't involved in

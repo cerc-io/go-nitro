@@ -185,9 +185,9 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 				nrs.node.CounterChallenge(req.ChannelId, req.Action)
 				return req, nil
 			})
-		case serde.GetL2SignedStateMethod:
-			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetL2SignedStateRequest) (state.SignedState, error) {
-				if err := serde.ValidateGetL2SignedStateRequest(req); err != nil {
+		case serde.GetSignedStateMethod:
+			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetSignedStateRequest) (state.SignedState, error) {
+				if err := serde.ValidateGetSignedStateRequest(req); err != nil {
 					return state.SignedState{}, err
 				}
 

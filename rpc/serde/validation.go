@@ -28,7 +28,7 @@ func ValidateGetPaymentChannelsByLedgerRequest(req GetPaymentChannelsByLedgerReq
 	return nil
 }
 
-func ValidateGetL2SignedStateRequest(req GetL2SignedStateRequest) error {
+func ValidateGetSignedStateRequest(req GetSignedStateRequest) error {
 	if (req.Id == types.Destination{}) {
 		return InvalidParamsError
 	}

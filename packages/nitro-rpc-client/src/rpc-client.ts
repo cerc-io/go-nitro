@@ -253,8 +253,8 @@ export class NitroRpcClient implements RpcClientApi {
     return this.sendRequest("get_all_l2_channels", {});
   }
 
-  public async GetL2SignedState(channelId: string): Promise<SignedState> {
-    return this.sendRequest("get_l2_signed_state", { Id: channelId });
+  public async GetSignedState(channelId: string): Promise<SignedState> {
+    return this.sendRequest("get_signed_state", { Id: channelId });
   }
 
   public async GetPaymentChannel(

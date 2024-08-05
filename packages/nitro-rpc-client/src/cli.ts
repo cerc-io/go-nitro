@@ -97,8 +97,8 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "get-l2-signed-state <channelId> <jsonFilePath>",
-    "Get latest L2 signed state",
+    "get-signed-state <channelId> <jsonFilePath>",
+    "Get latest signed state",
     (yargsBuilder) => {
       return yargsBuilder
         .positional("channelId", {
@@ -121,7 +121,7 @@ yargs(hideBin(process.argv))
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
         getRPCUrl(rpcHost, rpcPort)
       );
-      const l2SignedState = await rpcClient.GetL2SignedState(channelId);
+      const l2SignedState = await rpcClient.GetSignedState(channelId);
       console.log(`${compactJson(l2SignedState)}`);
 
       fs.writeFile(

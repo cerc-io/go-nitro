@@ -38,7 +38,7 @@ const (
 	// Bridge methods
 	GetAllL2ChannelsRequestMethod RequestMethod = "get_all_l2_channels"
 
-	GetL2SignedStateMethod RequestMethod = "get_l2_signed_state"
+	GetSignedStateMethod RequestMethod = "get_signed_state"
 )
 
 type NotificationMethod string
@@ -82,7 +82,7 @@ type (
 	NoPayloadRequest = struct{}
 )
 
-type GetL2SignedStateRequest struct {
+type GetSignedStateRequest struct {
 	Id types.Destination
 }
 
@@ -96,7 +96,7 @@ type RequestPayload interface {
 		GetLedgerChannelRequest |
 		GetPaymentChannelRequest |
 		GetPaymentChannelsByLedgerRequest |
-		GetL2SignedStateRequest |
+		GetSignedStateRequest |
 		NoPayloadRequest |
 		payments.Voucher |
 		CounterChallengeRequest |

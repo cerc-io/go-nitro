@@ -113,9 +113,57 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 
 	latestL1State := latestL1SignedState.State()
 
+<<<<<<< HEAD
 	// Check if L2 state present in objective and L1 state is finalized
 	// Condition satisfied by Alice
 	if len(updated.L2SignedState.Signatures()) != 0 && !latestL1State.IsFinal {
+=======
+func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
+	if !updated.challengeTransactionSubmitted {
+		// Update L1 state using L2 state to ensure off-chain balance reflects on-chain balance
+		updatedL1State, err := o.CreateL1StateBasedOnL2()
+		if err != nil {
+			return &updated, protocols.SideEffects{}, WaitingForChallenge, err
+		}
+
+		// Sign the updated L1 state
+		_, err = updated.C.SignAndAddState(updatedL1State, secretKey)
+		if err != nil {
+			return &updated, protocols.SideEffects{}, WaitingForChallenge, err
+		}
+
+		// Challenge L2 signed state to finalize the state
+		challengerSig, _ := NitroAdjudicator.SignChallengeMessage(updated.l2SignedState.State(), *secretKey)
+		challengeTx := protocols.NewChallengeTransaction(updated.C.Id, updated.l2SignedState, make([]state.SignedState, 0), challengerSig)
+		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, challengeTx)
+		updated.challengeTransactionSubmitted = true
+		return &updated, sideEffects, WaitingForChallenge, nil
+	}
+
+	// Wait for L2 channel to finalize
+	if updated.C.OnChain.ChannelMode == channel.Challenge {
+		return &updated, sideEffects, WaitingForFinalization, nil
+	}
+
+	if !updated.mirrorTransactionSubmitted {
+		// Send MirrorTransferAll transaction
+		mirrorWithdrawAllTx := protocols.NewMirrorTransferAllTransaction(updated.OwnsChannel(), updated.l2SignedState)
+		updated.mirrorTransactionSubmitted = true
+		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, mirrorWithdrawAllTx)
+		return &updated, sideEffects, WaitingForFinalization, nil
+	}
+
+	if !updated.FullyWithdrawn() {
+		// Wait until the channel no longer holds any assets on the chain
+		return &updated, sideEffects, WaitingForWithdraw, nil
+	}
+
+	return &updated, sideEffects, WaitingForNothing, nil
+}
+
+func (o *Objective) crank(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
+	if len(updated.l2SignedState.Signatures()) != 0 && !updated.mirrorTransactionSubmitted {
+>>>>>>> c29a2c07 (Update off chain balance)
 		// Create updated L1 state based on the variable part of the L2 state
 		latestL1State, err = o.CreateL1StateBasedOnL2()
 		if err != nil {

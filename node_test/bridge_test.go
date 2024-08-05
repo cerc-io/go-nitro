@@ -507,6 +507,8 @@ func TestBridgedFundWithChallenge(t *testing.T) {
 			}
 		}
 
+		checkLedgerChannel(t, l1LedgerChannelId, ledgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit-payAmount, payAmount, types.Address{}), query.Complete, nodeA)
+
 		balanceNodeA, _ := infraL1.anvilChain.GetAccountBalance(tcL1.Participants[0].Address())
 		balanceBridge, _ := infraL1.anvilChain.GetAccountBalance(tcL1.Participants[1].Address())
 		t.Logf("Balance of node A %v \nBalance of Bridge %v", balanceNodeA, balanceBridge)

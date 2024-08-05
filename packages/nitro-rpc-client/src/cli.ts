@@ -121,21 +121,13 @@ yargs(hideBin(process.argv))
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
         getRPCUrl(rpcHost, rpcPort)
       );
-      const l2SignedState = await rpcClient.GetSignedState(channelId);
-      console.log(`${compactJson(l2SignedState)}`);
+      const stringifiedState = await rpcClient.GetSignedState(channelId);
+      const signedState = JSON.parse(stringifiedState);
 
-      fs.writeFile(
-        jsonFilePath,
-        JSON.stringify(l2SignedState, null, 2),
-        "utf8",
-        (err) => {
-          if (err) {
-            console.error("Error writing file:", err);
-          } else {
-            console.log("File has been saved.");
-          }
-        }
-      );
+      const prettifiedSignedState = JSON.stringify(signedState, null, 2);
+      console.log(prettifiedSignedState);
+
+      fs.writeFileSync(jsonFilePath, prettifiedSignedState, "utf8");
 
       await rpcClient.Close();
       process.exit(0);

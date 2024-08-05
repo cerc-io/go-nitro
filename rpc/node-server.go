@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"math/big"
 
-	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/internal/logging"
 	nitro "github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/query"
@@ -186,16 +185,22 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 				return req, nil
 			})
 		case serde.GetSignedStateMethod:
-			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetSignedStateRequest) (state.SignedState, error) {
+			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetSignedStateRequest) (string, error) {
 				if err := serde.ValidateGetSignedStateRequest(req); err != nil {
-					return state.SignedState{}, err
+					return "", err
 				}
 
 				latestState, err := nrs.node.GetSignedState(req.Id)
 				if err != nil {
-					return state.SignedState{}, err
+					return "", err
 				}
-				return latestState, nil
+
+				marshalledState, err := json.Marshal(latestState)
+				if err != nil {
+					return "", err
+				}
+
+				return string(marshalledState), nil
 			})
 		default:
 			errRes := serde.NewJsonRpcErrorResponse(jsonrpcReq.Id, serde.MethodNotFoundError)

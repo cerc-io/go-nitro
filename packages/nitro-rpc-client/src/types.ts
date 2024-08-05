@@ -179,7 +179,7 @@ export type DirectDefundResponse = JsonRpcResponse<string>;
 export type BridgedDefundResponse = JsonRpcResponse<string>;
 export type VirtualDefundResponse = JsonRpcResponse<string>;
 export type GetAllLedgerChannelsResponse = JsonRpcResponse<LedgerChannelInfo[]>;
-export type GetSignedStateResponse = JsonRpcResponse<SignedState>;
+export type GetSignedStateResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelsByLedgerResponse = JsonRpcResponse<
   PaymentChannelInfo[]
 >;
@@ -260,18 +260,18 @@ export type LedgerChannelInfo = {
   ChannelMode: keyof typeof ChannelMode;
 };
 
-type LedgerChannelState = {
+export type LedgerChannelState = {
   Participants: string[];
   ChannelNonce: number;
   AppDefinition: string;
   ChallengeDuration: number;
-  AppData: Uint8Array;
+  AppData: string;
   Outcome: Outcome;
   TurnNum: number;
   IsFinal: boolean;
 };
 
-type Signature = {
+export type Signature = {
   r: string;
   s: string;
   v: number;

@@ -182,6 +182,7 @@ export function getAndValidateResult<T extends RequestMethod>(
     case "close_bridge_channel":
     case "version":
     case "get_address":
+    case "get_signed_state":
     case "close_payment_channel":
       return validateAndConvertResult(
         stringSchema,

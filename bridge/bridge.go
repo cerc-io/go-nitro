@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
+	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	nodeutils "github.com/statechannels/go-nitro/internal/node"
 	"github.com/statechannels/go-nitro/node"
@@ -399,6 +400,18 @@ func (b *Bridge) updateOnchainAssetAddressMap() error {
 // Since bridge node addresses are same
 func (b Bridge) GetBridgeAddress() common.Address {
 	return *b.nodeL1.Address
+}
+
+func (b Bridge) GetL2SupportedSignedState(id types.Destination) (state.SignedState, error) {
+	return b.nodeL2.GetSignedState(id)
+}
+
+func (b Bridge) MirrorBridgedDefund(l1ChannelId types.Destination, l2SignedState state.SignedState, isChallenge bool) (protocols.ObjectiveId, error) {
+	return b.nodeL1.MirrorBridgedDefund(l1ChannelId, l2SignedState, isChallenge)
+}
+
+func (b Bridge) CounterChallenge(id types.Destination, action types.CounterChallengeAction, payload interface{}) {
+	b.nodeL1.CounterChallenge(id, action, payload)
 }
 
 func (b Bridge) GetL2ChannelIdByL1ChannelId(l1ChannelId types.Destination) (l2ChannelId types.Destination, isCreated bool) {

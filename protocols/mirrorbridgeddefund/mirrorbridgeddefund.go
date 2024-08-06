@@ -110,7 +110,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
 	}
 
-	if updated.IsChallenge {
+	if updated.IsChallenge || updated.IsCheckPoint {
 		return o.crankWithChallenge(updated, sideEffects, secretKey)
 	}
 
@@ -118,7 +118,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 }
 
 func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.SideEffects, secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
-	if !updated.ChallengeTransactionSubmitted {
+	if updated.IsChallenge && !updated.ChallengeTransactionSubmitted {
 		// Update L1 state using L2 state to ensure off-chain balance reflects on-chain balance
 		updatedL1State, err := o.CreateL1StateBasedOnL2()
 		if err != nil {
@@ -141,11 +141,7 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 
 	// Initiate checkpoint transaction
 	if updated.IsCheckPoint && !updated.CheckpointTransactionSubmitted {
-		latestSupportedSignedState, err := updated.C.LatestSupportedSignedState()
-		if err != nil {
-			return &updated, sideEffects, WaitingForNothing, err
-		}
-		checkpointTx := protocols.NewCheckpointTransaction(updated.C.Id, latestSupportedSignedState, make([]state.SignedState, 0))
+		checkpointTx := protocols.NewCheckpointTransaction(updated.C.Id, updated.L2SignedState, make([]state.SignedState, 0))
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, checkpointTx)
 		updated.CheckpointTransactionSubmitted = true
 		return &updated, sideEffects, WaitingForChallengeCleared, nil
@@ -156,12 +152,18 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
-	if !updated.MirrorTransactionSubmitted {
+	// Mirror briged defund with challenge objective is complete after challenge is cleared
+	if updated.C.OnChain.ChannelMode == channel.Open {
+		updated.Status = protocols.Completed
+		return &updated, sideEffects, WaitingForNothing, nil
+	}
+
+	if updated.C.OnChain.ChannelMode == channel.Finalized && !updated.mirrorTransactionSubmitted && updated.C.OnChain.IsChallengeInitiatedByMe {
 		// Send MirrorTransferAll transaction
 		mirrorWithdrawAllTx := protocols.NewMirrorTransferAllTransaction(updated.OwnsChannel(), updated.L2SignedState)
-		updated.MirrorTransactionSubmitted = true
+		updated.mirrorTransactionSubmitted = true
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, mirrorWithdrawAllTx)
-		return &updated, sideEffects, WaitingForFinalization, nil
+		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
 
 	if !updated.FullyWithdrawn() {

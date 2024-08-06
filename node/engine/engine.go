@@ -469,6 +469,17 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 				return EngineEvent{}, err
 			}
 			c = channel
+		} else if _, isChallengeCleared := chainEvent.(chainservice.ChallengeClearedEvent); isChallengeCleared {
+			l1ChannelId, err := e.chain.GetL1ChannelFromL2(chainEvent.ChannelID())
+			if err != nil {
+				slog.Debug("l1 channel id not found from chain")
+			}
+
+			l1Channel, ok := e.store.GetChannelById(l1ChannelId)
+
+			if ok {
+				c = l1Channel
+			}
 		} else {
 			// TODO: Right now the chain service returns chain events for ALL channels even those we aren't involved in
 			// for now we can ignore channels we aren't involved in
@@ -754,10 +765,14 @@ func (e *Engine) handleCounterChallengeRequest(request types.CounterChallengeReq
 
 	case *mirrorbridgeddefund.Objective:
 		if isCheckPoint {
+			payload, _ := request.Payload.(state.SignedState)
 			objective.IsCheckPoint = isCheckPoint
+			objective.L2SignedState = payload
 		}
 		if isChallenge {
 			objective.IsChallenge = isChallenge
+			payload, _ := request.Payload.(state.SignedState)
+			objective.L2SignedState = payload
 		}
 		_, err := e.attemptProgress(objective)
 		if err != nil {

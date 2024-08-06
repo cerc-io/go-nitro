@@ -144,15 +144,11 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 		case serde.MirrorBridgedDefundRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.MirrorBridgedDefundRequest) (protocols.ObjectiveId, error) {
 				var l2SignedState state.SignedState
-
-				fmt.Println("signedState", req.StringifiedL2SignedState)
-
 				err := json.Unmarshal([]byte(req.StringifiedL2SignedState), &l2SignedState)
 				if err != nil {
 					return "", err
 				}
 
-				fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> l2signedState", l2SignedState)
 				return nrs.node.MirrorBridgedDefund(req.ChannelId, l2SignedState, req.IsChallenge)
 			})
 		case serde.CreatePaymentChannelRequestMethod:

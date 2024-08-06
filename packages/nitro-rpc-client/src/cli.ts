@@ -121,13 +121,11 @@ yargs(hideBin(process.argv))
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
         getRPCUrl(rpcHost, rpcPort)
       );
-      const stringifiedState = await rpcClient.GetSignedState(channelId);
-      const signedState = JSON.parse(stringifiedState);
+      const stringifiedSignedState = await rpcClient.GetSignedState(channelId);
 
-      const prettifiedSignedState = JSON.stringify(signedState, null, 2);
-      console.log(prettifiedSignedState);
+      console.log(stringifiedSignedState);
 
-      fs.writeFileSync(jsonFilePath, prettifiedSignedState, "utf8");
+      fs.writeFileSync(jsonFilePath, stringifiedSignedState, "utf8");
 
       await rpcClient.Close();
       process.exit(0);
@@ -306,13 +304,10 @@ yargs(hideBin(process.argv))
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
-      const data = fs.readFileSync(l2SignedStateFilePath, "utf8");
-
-      // Parse the JSON data
-      const l2SignedState = JSON.parse(data);
-
-      // Convert the JSON data to a string
-      const stringifiedL2SignedState = JSON.stringify(l2SignedState);
+      const stringifiedL2SignedState = fs.readFileSync(
+        l2SignedStateFilePath,
+        "utf8"
+      );
 
       const id = await rpcClient.MirrorBridgedDefund(
         yargs.channelId,
@@ -323,7 +318,7 @@ yargs(hideBin(process.argv))
       console.log(`Objective started ${id}`);
 
       await rpcClient.WaitForObjectiveToComplete(
-        `bridgeddefunding-${yargs.channelId}`
+        `mirrorbridgeddefunding-${yargs.channelId}`
       );
 
       console.log(`Objective Complete ${yargs.channelId}`);

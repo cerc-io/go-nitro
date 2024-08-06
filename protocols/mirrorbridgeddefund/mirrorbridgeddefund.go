@@ -17,10 +17,9 @@ import (
 const ObjectivePrefix = "mirrorbridgeddefunding-"
 
 const (
-	WaitingForFinalization           protocols.WaitingFor = "WaitingForFinalization"
-	WaitingForNothing                protocols.WaitingFor = "WaitingForNothing" // Finished
-	WaitingForWithdraw               protocols.WaitingFor = "WaitingForWithdraw"
-	WaitingForSupportedL1SignedState protocols.WaitingFor = "WaitingForSupportedL1SignedState"
+	WaitingForFinalization protocols.WaitingFor = "WaitingForFinalization"
+	WaitingForNothing      protocols.WaitingFor = "WaitingForNothing" // Finished
+	WaitingForWithdraw     protocols.WaitingFor = "WaitingForWithdraw"
 )
 
 const (
@@ -111,6 +110,8 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 
 	latestL1State := latestL1SignedState.State()
 
+	// Check if L2 state present in objective and L1 state is finalized
+	// Condition satisfied by Alice
 	if len(updated.L2SignedState.Signatures()) != 0 && !latestL1State.IsFinal {
 		// Create updated L1 state based on the variable part of the L2 state
 		latestL1State, err = o.CreateL1StateBasedOnL2()
@@ -118,29 +119,30 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 			return &updated, protocols.SideEffects{}, WaitingForFinalization, err
 		}
 
+		// Prepare new signed state instance (without signatures)
 		latestL1SignedState = state.NewSignedState(latestL1State)
 	}
 
+	// Executed for both Alice and Bob
 	if !latestL1SignedState.HasSignatureForParticipant(updated.C.MyIndex) {
 		// Sign the latest L1 signed state
 		l1SignedState, err := updated.C.SignAndAddState(latestL1State, secretKey)
 		if err != nil {
-			return &updated, protocols.SideEffects{}, WaitingForSupportedL1SignedState, fmt.Errorf("could not sign final state %w", err)
+			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not sign final state %w", err)
 		}
 
 		// Send latest L1 signed state to counterparty
 		messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), l1SignedState, SignedStatePayload, updated.otherParticipants()...)
 		if err != nil {
-			return &updated, protocols.SideEffects{}, WaitingForSupportedL1SignedState, fmt.Errorf("could not create payload message %w", err)
+			return &updated, protocols.SideEffects{}, WaitingForFinalization, fmt.Errorf("could not create payload message %w", err)
 		}
 		sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, messages...)
-		return &updated, sideEffects, WaitingForSupportedL1SignedState, nil
 	}
 
 	// Get latest supported signed state
 	latestSupportedState, err := updated.C.LatestSupportedState()
 	if err != nil {
-		return &updated, sideEffects, WaitingForSupportedL1SignedState, fmt.Errorf("error finding a supported state: %w", err)
+		return &updated, sideEffects, WaitingForFinalization, fmt.Errorf("error finding a supported state: %w", err)
 	}
 
 	// Wait until the latest supported L1 signed state is finalized
@@ -148,19 +150,19 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForFinalization, nil
 	}
 
-	if len(updated.L2SignedState.Signatures()) != 0 && !updated.MirrorTransactionSubmitted {
-		// Send MirrorWithdrawAll transaction
-		mirrorWithdrawAllTx := protocols.NewMirrorWithdrawAllTransaction(updated.OwnsChannel(), updated.L2SignedState)
-		updated.MirrorTransactionSubmitted = true
-		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, mirrorWithdrawAllTx)
-		return &updated, sideEffects, WaitingForFinalization, nil
-	}
-
 	if !updated.FullyWithdrawn() {
+		// Alice sends transaction as she has L2 signed state
+		if len(updated.L2SignedState.Signatures()) != 0 && !updated.MirrorTransactionSubmitted {
+			mirrorWithdrawAllTx := protocols.NewMirrorWithdrawAllTransaction(updated.OwnsChannel(), updated.L2SignedState)
+			updated.MirrorTransactionSubmitted = true
+			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, mirrorWithdrawAllTx)
+		}
+
 		// Wait until the channel no longer holds any assets on the chain
 		return &updated, sideEffects, WaitingForWithdraw, nil
 	}
 
+	updated.Status = protocols.Completed
 	return &updated, sideEffects, WaitingForNothing, nil
 }
 

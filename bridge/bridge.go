@@ -320,18 +320,20 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 		}
 
 	case *bridgeddefund.Objective:
-		ss, err := objective.C.LatestSupportedSignedState()
+		// Get latest supported signed state of L2
+		signedState, err := objective.C.LatestSupportedSignedState()
 		if err != nil {
 			return fmt.Errorf("error in latest supported signed state: %w", err)
 		}
 
+		// Get L1 ledger channel Id
 		mirrorInfo, err := b.bridgeStore.GetMirrorChannelDetails(obj.OwnsChannel())
 		if err != nil {
 			return fmt.Errorf("error in getting mirror channel details: %w", err)
 		}
 
 		// Initiate mirror bridged defund on L1 using L2 signed state
-		_, err = b.nodeL1.MirrorBridgedDefund(mirrorInfo.L1ChannelId, ss)
+		_, err = b.nodeL1.MirrorBridgedDefund(mirrorInfo.L1ChannelId, signedState)
 		if err != nil {
 			return fmt.Errorf("error in initiating mirror bridged defund: %w", err)
 		}

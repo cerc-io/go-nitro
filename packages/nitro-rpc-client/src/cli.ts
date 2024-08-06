@@ -292,11 +292,17 @@ yargs(hideBin(process.argv))
           describe: "Path to JSON file containing L2 signed state",
           type: "string",
           demandOption: true,
+        })
+        .option("isChallenge", {
+          describe: "To initiate challenge transaction",
+          type: "boolean",
+          default: false,
         });
     },
     async (yargs) => {
       const rpcPort = yargs.p;
       const rpcHost = yargs.h;
+      const isChallenge = yargs.isChallenge;
       const l2SignedStateFilePath = yargs.l2SignedStateFilePath;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
@@ -312,7 +318,7 @@ yargs(hideBin(process.argv))
       const id = await rpcClient.MirrorBridgedDefund(
         yargs.channelId,
         stringifiedL2SignedState,
-        true
+        isChallenge
       );
 
       console.log(`Objective started ${id}`);

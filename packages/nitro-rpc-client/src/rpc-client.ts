@@ -17,6 +17,7 @@ import {
   CounterChallengeAction,
   CounterChallengeResult,
   ObjectiveCompleteNotification,
+  MirrorBridgedDefundObjectiveRequest,
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -209,6 +210,19 @@ export class NitroRpcClient implements RpcClientApi {
       ChannelId: channelId,
     };
     return this.sendRequest("close_bridge_channel", payload);
+  }
+
+  public async MirrorBridgedDefund(
+    channelId: string,
+    stringifiedL2SignedState: string,
+    isChallenge: boolean
+  ): Promise<string> {
+    const payload: MirrorBridgedDefundObjectiveRequest = {
+      ChannelId: channelId,
+      IsChallenge: isChallenge,
+      StringifiedL2SignedState: stringifiedL2SignedState,
+    };
+    return this.sendRequest("mirror_bridged_defund", payload);
   }
 
   public async CounterChallenge(

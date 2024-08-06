@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math/big"
 
+	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/internal/logging"
 	nitro "github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/query"
@@ -139,6 +140,20 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 					return protocols.ObjectiveId(bridgeddefund.ObjectivePrefix + req.ChannelId.String()), fmt.Errorf("brided defund is currently disabled")
 				}
 				return nrs.node.CloseBridgeChannel(req.ChannelId)
+			})
+		case serde.MirrorBridgedDefundRequestMethod:
+			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.MirrorBridgedDefundRequest) (protocols.ObjectiveId, error) {
+				var l2SignedState state.SignedState
+
+				fmt.Println("signedState", req.StringifiedL2SignedState)
+
+				err := json.Unmarshal([]byte(req.StringifiedL2SignedState), &l2SignedState)
+				if err != nil {
+					return "", err
+				}
+
+				fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> l2signedState", l2SignedState)
+				return nrs.node.MirrorBridgedDefund(req.ChannelId, l2SignedState, req.IsChallenge)
 			})
 		case serde.CreatePaymentChannelRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req virtualfund.ObjectiveRequest) (virtualfund.ObjectiveResponse, error) {

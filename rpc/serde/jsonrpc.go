@@ -23,6 +23,7 @@ const (
 	CreateLedgerChannelRequestMethod  RequestMethod = "create_ledger_channel"
 	CloseLedgerChannelRequestMethod   RequestMethod = "close_ledger_channel"
 	CloseBridgeChannelRequestMethod   RequestMethod = "close_bridge_channel"
+	MirrorBridgedDefundRequestMethod  RequestMethod = "mirror_bridged_defund"
 	CreatePaymentChannelRequestMethod RequestMethod = "create_payment_channel"
 	ClosePaymentChannelRequestMethod  RequestMethod = "close_payment_channel"
 	PayRequestMethod                  RequestMethod = "pay"
@@ -62,6 +63,12 @@ type PaymentRequest struct {
 	Channel types.Destination
 }
 
+type MirrorBridgedDefundRequest struct {
+	ChannelId                types.Destination
+	StringifiedL2SignedState string
+	IsChallenge              bool
+}
+
 type CounterChallengeRequest struct {
 	ChannelId types.Destination
 	Action    types.CounterChallengeAction
@@ -88,6 +95,7 @@ type GetSignedStateRequest struct {
 type RequestPayload interface {
 	directfund.ObjectiveRequest |
 		directdefund.ObjectiveRequest |
+		MirrorBridgedDefundRequest |
 		virtualfund.ObjectiveRequest |
 		virtualdefund.ObjectiveRequest |
 		AuthRequest |

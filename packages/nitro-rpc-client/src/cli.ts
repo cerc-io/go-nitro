@@ -107,7 +107,7 @@ yargs(hideBin(process.argv))
           demandOption: true,
         })
         .positional("jsonFilePath", {
-          describe: "Path to JSON file for saving L2 signed state",
+          describe: "Path to JSON file for saving signed state",
           type: "string",
           demandOption: true,
         });
@@ -275,6 +275,57 @@ yargs(hideBin(process.argv))
       await rpcClient.WaitForObjectiveToComplete(
         `bridgeddefunding-${yargs.channelId}`
       );
+      console.log(`Objective Complete ${yargs.channelId}`);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
+    "mirror-bridged-defund <channelId> <l2SignedStateFilePath>",
+    "Defunds a mirror ledger channel",
+    (yargsBuilder) => {
+      return yargsBuilder
+        .positional("channelId", {
+          describe: "The id of ledger channel to call challenge on",
+          type: "string",
+          demandOption: true,
+        })
+        .positional("l2SignedStateFilePath", {
+          describe: "Path to JSON file containing L2 signed state",
+          type: "string",
+          demandOption: true,
+        });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const l2SignedStateFilePath = yargs.l2SignedStateFilePath;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort)
+      );
+      if (yargs.n) logOutChannelUpdates(rpcClient);
+
+      const data = fs.readFileSync(l2SignedStateFilePath, "utf8");
+
+      // Parse the JSON data
+      const l2SignedState = JSON.parse(data);
+
+      // Convert the JSON data to a string
+      const stringifiedL2SignedState = JSON.stringify(l2SignedState);
+
+      const id = await rpcClient.MirrorBridgedDefund(
+        yargs.channelId,
+        stringifiedL2SignedState,
+        true
+      );
+
+      console.log(`Objective started ${id}`);
+
+      await rpcClient.WaitForObjectiveToComplete(
+        `bridgeddefunding-${yargs.channelId}`
+      );
+
       console.log(`Objective Complete ${yargs.channelId}`);
       await rpcClient.Close();
       process.exit(0);

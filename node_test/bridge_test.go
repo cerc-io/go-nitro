@@ -85,12 +85,15 @@ func initializeUtils() (cleanup func()) {
 	return
 }
 
-func cleanupUtils(t *testing.T) {
+func cleanupUtils(t *testing.T, closeBridge bool) {
+	if closeBridge {
+		nodeB.Close()
+		nodeBPrime.Close()
+	}
+
 	infraL1.Close(t)
 	infraL2.Close(t)
 	nodeA.Close()
-	nodeB.Close()
-	nodeBPrime.Close()
 	nodeAPrime.Close()
 	testChainService.Close()
 }
@@ -249,7 +252,7 @@ func TestBridgedFund(t *testing.T) {
 func TestExitL2WithLedgerChannelStateUnilaterally(t *testing.T) {
 	cleanup := initializeUtils()
 	defer cleanup()
-	defer cleanupUtils(t)
+	defer cleanupUtils(t, false)
 
 	infraL2.anvilChain.ContractAddresses.CaAddress = infraL1.anvilChain.ContractAddresses.CaAddress
 	infraL2.anvilChain.ContractAddresses.VpaAddress = infraL1.anvilChain.ContractAddresses.VpaAddress
@@ -324,7 +327,7 @@ func TestExitL2WithLedgerChannelStateUnilaterally(t *testing.T) {
 func TestL2Checkpoint(t *testing.T) {
 	cleanup := initializeUtils()
 	defer cleanup()
-	defer cleanupUtils(t)
+	defer cleanupUtils(t, true)
 
 	challengeRegisteredEvent := chainservice.ChallengeRegisteredEvent{}
 
@@ -393,7 +396,7 @@ func TestL2Checkpoint(t *testing.T) {
 func TestL2CounterChallenge(t *testing.T) {
 	cleanup := initializeUtils()
 	defer cleanup()
-	defer cleanupUtils(t)
+	defer cleanupUtils(t, true)
 
 	// Create ledger channel on L1 and mirror it on L2
 	l1ChannelId, mirroredLedgerChannelId := createL1L2Channels(t, nodeA, nodeB, nodeAPrime, nodeBPrime, storeA, tcL1, tcL2, chainServiceB)
@@ -466,7 +469,7 @@ func TestL2CounterChallenge(t *testing.T) {
 func TestExitL2WithVirtualChannelStateUnilaterally(t *testing.T) {
 	cleanup := initializeUtils()
 	defer cleanup()
-	defer cleanupUtils(t)
+	defer cleanupUtils(t, false)
 
 	l1ChannelId, mirroredLedgerChannelId := createL1L2Channels(t, nodeA, nodeB, nodeAPrime, nodeBPrime, storeA, tcL1, tcL2, chainServiceB)
 

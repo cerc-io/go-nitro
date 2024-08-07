@@ -415,6 +415,9 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 	case protocols.SetL2ToL1Transaction:
 		_, err := ecs.na.SetL2ToL1(ecs.defaultTxOpts(), tx.ChannelId(), tx.MirrorChannelId)
 		return err
+	case protocols.SetL2ToL1AssetAddressTransaction:
+		_, err := ecs.na.SetL2ToL1AssetAddress(ecs.defaultTxOpts(), tx.L1AssetAddress, tx.L2AssetAddress)
+		return err
 	case protocols.MirrorWithdrawAllTransaction:
 		signedState := tx.SignedState.State()
 		signatures := tx.SignedState.Signatures()

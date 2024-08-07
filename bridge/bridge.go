@@ -289,6 +289,32 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 			return fmt.Errorf("error in send transaction %w", err)
 		}
 
+		// Get asset addresses on L1 and L2
+		var l1AssetAddress common.Address
+
+		l2State, err := objective.C.LatestSupportedState()
+		if err != nil {
+			return err
+		}
+
+		// Assuming only one asset is used
+		l2AssetAddress := l2State.Outcome[0].Asset
+
+		// Get l1 asset address using L2 state and L1 to L1 asset address map
+		for l1Address, l2address := range b.L1ToL2AssetAddressMap {
+			if l2address == l2AssetAddress {
+				l1AssetAddress = l1Address
+				break
+			}
+		}
+
+		// Node B calls contract method to store L2AssetAddress => L1AssetAddress
+		setL2ToL1AssetAddressTx := protocols.NewSetL2ToL1AssetAddressTransaction(mirrorChannelDetails.L1ChannelId, l1AssetAddress, l2AssetAddress)
+		err = b.chainServiceL1.SendTransaction(setL2ToL1AssetAddressTx)
+		if err != nil {
+			return fmt.Errorf("error in send transaction %w", err)
+		}
+
 		// use a nonblocking send in case no one is listening
 		select {
 		case b.completedMirrorChannels <- l2channelId:

@@ -137,6 +137,24 @@ func NewSetL2ToL1Transaction(
 	}
 }
 
+type SetL2ToL1AssetAddressTransaction struct {
+	ChainTransaction
+	L1AssetAddress common.Address
+	L2AssetAddress common.Address
+}
+
+func NewSetL2ToL1AssetAddressTransaction(
+	channelId types.Destination,
+	L1AssetAddress common.Address,
+	L2AssetAddress common.Address,
+) SetL2ToL1AssetAddressTransaction {
+	return SetL2ToL1AssetAddressTransaction{
+		ChainTransaction: ChainTransactionBase{channelId: channelId},
+		L1AssetAddress:   L1AssetAddress,
+		L2AssetAddress:   L2AssetAddress,
+	}
+}
+
 type UpdateMirroredChannelStatesTransaction struct {
 	ChainTransaction
 	StateHash    types.Bytes32

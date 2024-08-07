@@ -111,6 +111,7 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
             holdings[asset][l1ChannelId] -= totalPayouts[assetIndex];
             emit AllocationUpdated(
                 l1ChannelId,
+                asset,
                 assetIndex,
                 initialHoldings[assetIndex],
                 holdings[asset][l1ChannelId]
@@ -180,6 +181,7 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
             holdings[asset][channelId] -= totalPayouts[assetIndex];
             emit AllocationUpdated(
                 channelId,
+                asset,
                 assetIndex,
                 initialHoldings[assetIndex],
                 holdings[asset][channelId]

@@ -482,7 +482,7 @@ func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 			}
 			ecs.logger.Debug("assetAddress", "assetAddress", assetAddress)
 
-			event := NewAllocationUpdatedEvent(au.ChannelId, Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, l.TxIndex, assetAddress, au.FinalHoldings)
+			event := NewAllocationUpdatedEvent(au.ChannelId, Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, l.TxIndex, au.Asset, au.FinalHoldings)
 			ecs.out <- event
 
 		case concludedTopic:

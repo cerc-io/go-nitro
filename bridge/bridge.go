@@ -289,16 +289,15 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 			return fmt.Errorf("error in send transaction %w", err)
 		}
 
-		// Get asset addresses on L1 and L2
-		var l1AssetAddress common.Address
-
-		l2State, err := objective.C.LatestSupportedState()
+		l2SignedState, err := b.nodeL2.GetSignedState(objective.OwnsChannel())
 		if err != nil {
 			return err
 		}
 
 		// Assuming only one asset is used
-		l2AssetAddress := l2State.Outcome[0].Asset
+		var l1AssetAddress common.Address
+
+		l2AssetAddress := l2SignedState.State().Outcome[0].Asset
 
 		// Get l1 asset address using L2 state and L1 to L1 asset address map
 		for l1Address, l2address := range b.L1ToL2AssetAddressMap {

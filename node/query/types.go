@@ -60,7 +60,7 @@ func (lcb LedgerChannelBalance) Equal(other LedgerChannelBalance) bool {
 
 // Equal returns true if the other LedgerChannelInfo is equal to this one
 func (li LedgerChannelInfo) Equal(other LedgerChannelInfo) bool {
-	return li.ID == other.ID && li.Status == other.Status && li.Balance.Equal(other.Balance)
+	return li.ID == other.ID && li.Status == other.Status && li.Balance.Equal(other.Balance) && li.ChannelMode == other.ChannelMode
 }
 
 // Equal returns true if the other PaymentChannelInfo is equal to this one

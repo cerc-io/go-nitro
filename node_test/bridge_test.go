@@ -139,6 +139,184 @@ func TestBridgedFund(t *testing.T) {
 	})
 }
 
+func TestBridgedFundWithCheckpoint(t *testing.T) {
+	tcL1 := TestCase{
+		Chain:             AnvilChainL1,
+		MessageService:    P2PMessageService,
+		MessageDelay:      0,
+		LogName:           "Bridge_test",
+		ChallengeDuration: 15,
+		Participants: []TestParticipant{
+			{StoreType: MemStore, Actor: testactors.Alice},
+			{StoreType: MemStore, Actor: testactors.Bob},
+		},
+		deployerIndex: 1,
+	}
+
+	tcL2 := TestCase{
+		Chain:             AnvilChainL2,
+		MessageService:    P2PMessageService,
+		MessageDelay:      0,
+		LogName:           "Bridge_test",
+		ChallengeDuration: 15,
+		Participants: []TestParticipant{
+			{StoreType: MemStore, Actor: testactors.BobPrime},
+			{StoreType: MemStore, Actor: testactors.AlicePrime},
+		},
+		ChainPort:     "8546",
+		deployerIndex: 0,
+	}
+
+	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	defer cleanup()
+
+	infraL1 := setupSharedInfra(tcL1)
+	defer infraL1.Close(t)
+
+	infraL2 := setupSharedInfra(tcL2)
+	defer infraL2.Close(t)
+
+	bridgeConfig := bridge.BridgeConfig{
+		L1ChainUrl:        infraL1.anvilChain.ChainUrl,
+		L2ChainUrl:        infraL2.anvilChain.ChainUrl,
+		L1ChainStartBlock: 0,
+		L2ChainStartBlock: 0,
+		ChainPK:           infraL1.anvilChain.ChainPks[tcL1.Participants[1].ChainAccountIndex],
+		StateChannelPK:    common.Bytes2Hex(tcL1.Participants[1].PrivateKey),
+		NaAddress:         infraL1.anvilChain.ContractAddresses.NaAddress.String(),
+		VpaAddress:        infraL1.anvilChain.ContractAddresses.VpaAddress.String(),
+		CaAddress:         infraL1.anvilChain.ContractAddresses.CaAddress.String(),
+		BridgeAddress:     infraL2.anvilChain.ContractAddresses.BridgeAddress.String(),
+		DurableStoreDir:   dataFolder,
+		BridgePublicIp:    DEFAULT_PUBLIC_IP,
+		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
+		NodeL2MsgPort:     int(tcL2.Participants[0].Port),
+	}
+
+	bridge := bridge.New()
+	_, _, bridgeMultiaddressL1, bridgeMultiaddressL2, err := bridge.Start(bridgeConfig)
+	if err != nil {
+		t.Log("error in starting bridge", err)
+	}
+	defer bridge.Close()
+	bridgeAddress := bridge.GetBridgeAddress()
+
+	nodeA, _, _, _, _ := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
+	defer nodeA.Close()
+
+	nodeAPrime, _, _, storeAPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{bridgeMultiaddressL2}, dataFolder)
+	defer nodeAPrime.Close()
+
+	var l1LedgerChannelId types.Destination
+	var l2LedgerChannelId types.Destination
+	var oldL2SignedState state.SignedState
+
+	t.Run("Create ledger channel on L1 and mirror it on L2", func(t *testing.T) {
+		// Alice create ledger channel with bridge
+		outcome := CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{})
+		l1LedgerChannelResponse, err := nodeA.CreateLedgerChannel(bridgeAddress, uint32(tcL1.ChallengeDuration), outcome)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log("Waiting for direct-fund objective to complete...")
+		l1LedgerChannelId = l1LedgerChannelResponse.ChannelId
+		<-nodeA.ObjectiveCompleteChan(l1LedgerChannelResponse.Id)
+		t.Log("L1 channel created", l1LedgerChannelResponse.Id)
+
+		// Wait for mirror channel to be created
+		completedMirrorChannel := <-bridge.CompletedMirrorChannels()
+		l2LedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
+
+		cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		oldL2SignedState = cc.SupportedSignedState()
+
+		testhelpers.Assert(t, completedMirrorChannel == l2LedgerChannelId, "Expects mirror channel id to be %v", l2LedgerChannelId)
+		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{}), query.Open, nodeA)
+		checkLedgerChannel(t, l2LedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, types.Address{}), query.Open, nodeAPrime)
+	})
+
+	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
+		// Create virtual channel on mirrored ledger channel on L2
+		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, types.Address{})
+		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{}, bridgeAddress, uint32(tcL2.ChallengeDuration), virtualOutcome)
+		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
+		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeAPrime)
+
+		// APrime pays BPrime
+		nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
+
+		// Virtual defund
+		virtualDefundResponse, _ := nodeAPrime.ClosePaymentChannel(virtualResponse.ChannelId)
+		<-nodeAPrime.ObjectiveCompleteChan(virtualDefundResponse)
+
+		ledgerChannelInfo, _ := nodeAPrime.GetLedgerChannel(l2LedgerChannelId)
+		balanceNodeBPrime := ledgerChannelInfo.Balance.TheirBalance.ToInt()
+		balanceNodeAPrime := ledgerChannelInfo.Balance.MyBalance.ToInt()
+		t.Log("Balance of node BPrime", balanceNodeBPrime, "\nBalance of node APrime", balanceNodeAPrime)
+
+		// APrime's balance is determined by subtracting amount paid from it's ledger deposit, while BPrime's balance is calculated by adding the amount received
+		testhelpers.Assert(t, balanceNodeBPrime.Cmp(big.NewInt(payAmount)) == 0, "Balance of node BPrime (%v) should be equal to (%v)", balanceNodeBPrime, ledgerChannelDeposit+payAmount)
+		testhelpers.Assert(t, balanceNodeAPrime.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of node APrime (%v) should be equal to (%v)", balanceNodeAPrime, ledgerChannelDeposit-payAmount)
+	})
+
+	t.Run("Unilaterally exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
+		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
+		ch := nodeA.CompletedObjectives()
+
+		// Alice unilaterally exits from L1 using old L2 signed state
+		_, err = nodeA.MirrorBridgedDefund(l1LedgerChannelId, oldL2SignedState, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		newL2signedState, err := bridge.GetL2SupportedSignedState(l2LedgerChannelId)
+		if err != nil {
+			t.Log(err)
+		}
+
+		// Wait for challenge registered event
+		listenForLedgerUpdates(ledgerUpdatesChannelNodeA, channel.Challenge)
+
+		// Bridge clears the challenge
+		bridge.CounterChallenge(l1LedgerChannelId, types.Checkpoint, newL2signedState)
+
+		// Wait for mirror bridged defund to complete
+		for val := range ch {
+			if val == protocols.ObjectiveId(mirrorbridgeddefund.ObjectivePrefix+l1LedgerChannelId.String()) {
+				break
+			}
+		}
+
+		// Bridge unilaterally exits from L1 using new L2 signed state
+		_, err = bridge.MirrorBridgedDefund(l1LedgerChannelId, newL2signedState, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Wait for mirror bridged defund to complete
+		for val := range ch {
+			if val == protocols.ObjectiveId(mirrorbridgeddefund.ObjectivePrefix+l1LedgerChannelId.String()) {
+				break
+			}
+		}
+
+		// TODO: Check off-chain balance does not match on-chain balance
+		// checkLedgerChannel(t, l1LedgerChannelId, ledgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit-payAmount, payAmount, types.Address{}), query.Complete, nodeA)
+
+		balanceNodeA, _ := infraL1.anvilChain.GetAccountBalance(tcL1.Participants[0].Address())
+		balanceBridge, _ := infraL1.anvilChain.GetAccountBalance(tcL1.Participants[1].Address())
+		t.Logf("Balance of node A %v \nBalance of Bridge %v", balanceNodeA, balanceBridge)
+
+		// NodeA's balance is determined by subtracting amount paid from it's ledger deposit, while Bridge's balance is calculated by adding the amount received
+		testhelpers.Assert(t, balanceNodeA.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of node A (%v) should be equal to (%v)", balanceNodeA, ledgerChannelDeposit-payAmount)
+		testhelpers.Assert(t, balanceBridge.Cmp(big.NewInt(payAmount)) == 0, "Balance of Bridge (%v) should be equal to (%v)", balanceBridge, payAmount)
+	})
+}
+
 func TestBridgedFundWithIntermediary(t *testing.T) {
 	utils, cleanup := initializeUtilsWithBridge(t, true)
 	defer cleanup()

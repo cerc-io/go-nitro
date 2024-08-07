@@ -167,7 +167,7 @@ func TestCheckpoint(t *testing.T) {
 
 	// Bob waits for the channel to enter challenge mode and then counters the registered challenge by checkpoint
 	listenForLedgerUpdates(ledgerUpdatesChannelNodeB, channel.Challenge)
-	nodeB.CounterChallenge(ledgerChannel, types.Checkpoint, nil)
+	nodeB.CounterChallenge(ledgerChannel, types.Checkpoint, state.SignedState{})
 
 	// Wait for direct defund objectives to complete
 	chA := nodeA.ObjectiveCompleteChan(res)
@@ -273,7 +273,7 @@ func TestCounterChallenge(t *testing.T) {
 
 	// Bob waits for the channel to enter challenge mode and then counters the registered challenge by raising a new one
 	listenForLedgerUpdates(ledgerUpdatesChannelNodeB, channel.Challenge)
-	nodeB.CounterChallenge(ledgerChannel, types.Challenge, nil)
+	nodeB.CounterChallenge(ledgerChannel, types.Challenge, state.SignedState{})
 
 	// Wait for direct defund objectives to complete
 	chA := nodeA.ObjectiveCompleteChan(res)

@@ -410,7 +410,7 @@ func (b Bridge) MirrorBridgedDefund(l1ChannelId types.Destination, l2SignedState
 	return b.nodeL1.MirrorBridgedDefund(l1ChannelId, l2SignedState, isChallenge)
 }
 
-func (b Bridge) CounterChallenge(id types.Destination, action types.CounterChallengeAction, payload interface{}) {
+func (b Bridge) CounterChallenge(id types.Destination, action types.CounterChallengeAction, payload state.SignedState) {
 	b.nodeL1.CounterChallenge(id, action, payload)
 }
 

@@ -158,10 +158,10 @@ func (o *Objective) crankWithChallenge(updated Objective, sideEffects protocols.
 		return &updated, sideEffects, WaitingForNothing, nil
 	}
 
-	if updated.C.OnChain.ChannelMode == channel.Finalized && !updated.mirrorTransactionSubmitted && updated.C.OnChain.IsChallengeInitiatedByMe {
+	if updated.C.OnChain.ChannelMode == channel.Finalized && !updated.MirrorTransactionSubmitted && updated.C.OnChain.IsChallengeInitiatedByMe {
 		// Send MirrorTransferAll transaction
 		mirrorWithdrawAllTx := protocols.NewMirrorTransferAllTransaction(updated.OwnsChannel(), updated.L2SignedState)
-		updated.mirrorTransactionSubmitted = true
+		updated.MirrorTransactionSubmitted = true
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, mirrorWithdrawAllTx)
 		return &updated, sideEffects, WaitingForWithdraw, nil
 	}

@@ -14,6 +14,7 @@ import {MultiAssetHolder} from './MultiAssetHolder.sol';
  */
 contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Ownable {
     mapping(bytes32 => bytes32) public l2Tol1;
+    mapping(address => address) public l2Tol1AssetAddress;
 
     // Function to set map from l2ChannelId to l1ChannelId
     function setL2ToL1(bytes32 l1ChannelId, bytes32 l2ChannelId) public onlyOwner {
@@ -25,6 +26,13 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
         return l2Tol1[l2ChannelId];
     }
 
+    function setL2ToL1AssetAddress(address l1AssetAddress, address l2AssetAddress) public onlyOwner {
+        l2Tol1AssetAddress[l2AssetAddress] = l1AssetAddress;
+    }
+
+    function getL2ToL1AssetAddress(address l2AssetAddress) public view returns (address) {
+        return l2Tol1AssetAddress[l2AssetAddress];
+    }
     /**
      * @notice Finalizes a channel according to the given candidate, and liquidates all assets for the channel.
      * @dev Finalizes a channel according to the given candidate, and liquidates all assets for the channel.
@@ -68,6 +76,12 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
         uint256[] memory totalPayouts = new uint256[](outcome.length);
         for (uint256 assetIndex = 0; assetIndex < outcome.length; assetIndex++) {
             Outcome.SingleAssetExit memory assetOutcome = outcome[assetIndex];
+
+            // Replace address of custom asset deployed on to L2 with asset address on L1
+            address l1Asset = getL2ToL1AssetAddress(assetOutcome.asset);
+            assetOutcome.asset = l1Asset;
+            outcome[assetIndex].asset = l1Asset;
+
             Outcome.Allocation[] memory allocations = assetOutcome.allocations;
             address asset = outcome[assetIndex].asset;
             initialHoldings[assetIndex] = holdings[asset][l1ChannelId];

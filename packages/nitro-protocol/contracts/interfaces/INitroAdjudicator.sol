@@ -51,4 +51,10 @@ interface INitroAdjudicator is IMultiAssetHolder, IForceMove {
 
     // Function to retrieve the mapped value of l2ChannelId
     function getL2ToL1(bytes32 l2ChannelId) external view returns (bytes32);
+
+        // Function to set map from l2ChannelId to l1ChannelId
+    function setL2ToL1AssetAddress(address l1AssetAddress, address l2AssetAddress) external;
+
+    // Function to retrieve the mapped value of l2ChannelId
+    function getL2ToL1AssetAddress(address l2AssetAddress) external view returns (address);
 }

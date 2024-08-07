@@ -3,7 +3,6 @@ package serde
 import (
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
@@ -73,7 +72,7 @@ type MirrorBridgedDefundRequest struct {
 type CounterChallengeRequest struct {
 	ChannelId types.Destination
 	Action    types.CounterChallengeAction
-	Payload   state.SignedState
+	Payload   string
 }
 
 type GetPaymentChannelRequest struct {

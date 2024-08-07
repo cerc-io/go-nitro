@@ -195,7 +195,7 @@ type ChainService interface {
 	GetLastConfirmedBlockNum() uint64
 	// GetLatestBlock returns the latest block
 	GetLatestBlock() Block
-	// TODO: Implement method for eth calls
+	// TODO: Implement method for eth calls (similar to sendTransaction method)
 	// GetL1ChannelFromL2 returns the L1 ledger channel ID from the L2 ledger channel by making a contract call to the l2ToL1 map of the Nitro Adjudicator contract
 	GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error)
 	GetL1AssetAddressFromL2(l2AssetAddress common.Address) (common.Address, error)

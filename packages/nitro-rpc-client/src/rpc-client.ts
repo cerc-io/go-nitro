@@ -227,11 +227,13 @@ export class NitroRpcClient implements RpcClientApi {
 
   public async CounterChallenge(
     channelId: string,
-    action: CounterChallengeAction
+    action: CounterChallengeAction,
+    signedState?: string
   ): Promise<CounterChallengeResult> {
     const payload = {
       ChannelId: channelId,
       Action: action,
+      Payload: signedState,
     };
     return this.sendRequest("counter_challenge", payload);
   }

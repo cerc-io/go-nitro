@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable @typescript-eslint/no-shadow */
 
-import * as fs from "fs";
+import { readFileSync, writeFileSync } from "fs";
 
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
@@ -125,7 +125,7 @@ yargs(hideBin(process.argv))
 
       console.log(stringifiedSignedState);
 
-      fs.writeFileSync(jsonFilePath, stringifiedSignedState, "utf8");
+      writeFileSync(jsonFilePath, stringifiedSignedState, "utf8");
 
       await rpcClient.Close();
       process.exit(0);
@@ -310,7 +310,7 @@ yargs(hideBin(process.argv))
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
-      const stringifiedL2SignedState = fs.readFileSync(
+      const stringifiedL2SignedState = readFileSync(
         l2SignedStateFilePath,
         "utf8"
       );
@@ -508,22 +508,34 @@ yargs(hideBin(process.argv))
           type: "string",
           choices: ["checkpoint", "challenge"],
           demandOption: true,
+        })
+        .option("l2SignedStateFilePath", {
+          describe: "Path to JSON file containing L2 signed state",
+          type: "string",
+          demandOption: false,
         });
     },
     async (yargs) => {
       const rpcPort = yargs.p;
       const rpcHost = yargs.h;
+      const l2SignedStateFilePath = yargs.l2SignedStateFilePath;
+      let stringifiedL2SignedState: string | undefined;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
         getRPCUrl(rpcHost, rpcPort)
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
+      if (l2SignedStateFilePath) {
+        stringifiedL2SignedState = readFileSync(l2SignedStateFilePath, "utf8");
+      }
+
       const response = await rpcClient.CounterChallenge(
         yargs.channelId,
         CounterChallengeAction[
           yargs.action as keyof typeof CounterChallengeAction
-        ]
+        ],
+        stringifiedL2SignedState
       );
       console.log(
         `Sending ${response.Action} transaction for channel ${response.ChannelId}`

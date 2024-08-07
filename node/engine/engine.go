@@ -451,8 +451,10 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	channelId := chainEvent.ChannelID()
 
 	_, isChallengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
-	if isChallengeRegistered {
-		// Check whether a challenge has been registered for the L2 channel, and then retrieve its L1 channel using an eth call to NitroAdjudicator contract
+	_, isChallengeCleared := chainEvent.(chainservice.ChallengeClearedEvent)
+
+	if isChallengeRegistered || isChallengeCleared {
+		// Check whether a challenge has been registered / cleared for the L2 channel, and then retrieve its L1 channel using an eth call to NitroAdjudicator contract
 		l1ChannelId, err := e.chain.GetL1ChannelFromL2(chainEvent.ChannelID())
 		if err != nil {
 			return EngineEvent{}, err
@@ -460,31 +462,54 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 
 		if !l1ChannelId.IsZero() {
 			channelId = l1ChannelId
+
+			// If channel doesn't exist and chain event is ChallengeRegistered on L2 then create a new mirror bridged defund objective
+			// This doesn't occur for actor who registered the challenge on L2
+			_, ok := e.store.GetChannelById(channelId)
+			if isChallengeRegistered && !ok {
+				mbdfo, err := mirrorbridgeddefund.NewObjective(mirrorbridgeddefund.NewObjectiveRequest(l1ChannelId, state.SignedState{}, false), true, e.store.GetConsensusChannelById, true)
+				if err != nil {
+					return EngineEvent{}, err
+				}
+
+				// Destroy the consensus channel to prevent it being used (Channel will now take over governance)
+				err = e.store.DestroyConsensusChannel(mbdfo.C.Id)
+				if err != nil {
+					return EngineEvent{}, err
+				}
+
+				err = e.store.SetObjective(&mbdfo)
+				if err != nil {
+					return EngineEvent{}, err
+				}
+			}
 		}
 	}
 
 	c, ok := e.store.GetChannelById(channelId)
 	if !ok {
+		// If channel doesn't exist and chain event is ChallengeRegistered then create a new direct defund objective
+		// This doesn't occur for actor who registered the challenge
 		_, isChallengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
 		if isChallengeRegistered {
-			channel, err := e.processChallengeRegisteredEvent(chainEvent)
+			ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent, true)
 			if err != nil {
-				if errors.Is(err, store.ErrNoSuchChannel) {
+				// Node should not panic if it is unable to find the required consensus channel before creating objective
+				if errors.Is(err, directdefund.ErrChannelNotExist) {
 					return EngineEvent{}, nil
 				}
+
 				return EngineEvent{}, err
 			}
-			c = channel
-		} else if _, isChallengeCleared := chainEvent.(chainservice.ChallengeClearedEvent); isChallengeCleared {
-			l1ChannelId, err := e.chain.GetL1ChannelFromL2(chainEvent.ChannelID())
+			// If ddfo creation was successful, destroy the consensus channel to prevent it being used (a Channel will now take over governance)
+			err = e.store.DestroyConsensusChannel(chainEvent.ChannelID())
 			if err != nil {
-				slog.Debug("l1 channel id not found from chain")
+				return EngineEvent{}, err
 			}
-
-			l1Channel, ok := e.store.GetChannelById(l1ChannelId)
-
-			if ok {
-				c = l1Channel
+			c = ddfo.C
+			err = e.store.SetObjective(&ddfo)
+			if err != nil {
+				return EngineEvent{}, err
 			}
 		} else {
 			// TODO: Right now the chain service returns chain events for ALL channels even those we aren't involved in
@@ -535,67 +560,6 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	}
 
 	return EngineEvent{}, nil
-}
-
-func (e *Engine) processChallengeRegisteredEvent(chainEvent chainservice.Event) (*channel.Channel, error) {
-	l1ChannelId, err := e.chain.GetL1ChannelFromL2(chainEvent.ChannelID())
-	if err != nil {
-		slog.Debug("l1 channel id not found from chain, proceeding with processing the registered challenge event")
-	}
-
-	if !l1ChannelId.IsZero() {
-		l1Channel, ok := e.store.GetChannelById(l1ChannelId)
-
-		if ok {
-			return l1Channel, nil
-		}
-
-		mbdfo, err := mirrorbridgeddefund.NewObjective(mirrorbridgeddefund.NewObjectiveRequest(l1ChannelId, state.SignedState{}, false), true, e.store.GetConsensusChannelById, true)
-		if err != nil {
-			return nil, err
-		}
-
-		// Destroy the consensus channel to prevent it being used (Channel will now take over governance)
-		err = e.store.DestroyConsensusChannel(mbdfo.C.Id)
-		if err != nil {
-			return nil, err
-		}
-
-		err = e.store.SetObjective(&mbdfo)
-		if err != nil {
-			return nil, err
-		}
-
-		return mbdfo.C, nil
-	}
-
-	consensusChannel, err := e.store.GetConsensusChannelById(chainEvent.ChannelID())
-	if err != nil {
-		return nil, err
-	}
-
-	// Create direct defund objective if consensus channel exists
-	// This doesn't occur for actor who registered the challenge
-	if !consensusChannel.Id.IsZero() {
-		ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent, true)
-		if err != nil {
-			return nil, err
-		}
-
-		// If ddfo creation was successful, destroy the consensus channel to prevent it being used (a Channel will now take over governance)
-		err = e.store.DestroyConsensusChannel(chainEvent.ChannelID())
-		if err != nil {
-			return nil, err
-		}
-		err = e.store.SetObjective(&ddfo)
-		if err != nil {
-			return nil, err
-		}
-
-		return ddfo.C, nil
-	}
-
-	return nil, fmt.Errorf("invalid channel id %s from challenge registered event", chainEvent.ChannelID())
 }
 
 // handleObjectiveRequest handles an ObjectiveRequest (triggered by a client API call).

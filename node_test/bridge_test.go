@@ -201,7 +201,7 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 	defer bridge.Close()
 	bridgeAddress := bridge.GetBridgeAddress()
 
-	nodeA, _, _, _, _ := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
+	nodeA, _, _, storeA, _ := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
 	defer nodeA.Close()
 
 	nodeAPrime, _, _, storeAPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{bridgeMultiaddressL2}, dataFolder)
@@ -247,7 +247,10 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeAPrime)
 
 		// APrime pays BPrime
-		nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
+		err := nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		// Virtual defund
 		virtualDefundResponse, _ := nodeAPrime.ClosePaymentChannel(virtualResponse.ChannelId)
@@ -265,7 +268,7 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 
 	t.Run("Unilaterally exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
-		ch := nodeA.CompletedObjectives()
+		completedObjectiveChannel := nodeA.CompletedObjectives()
 
 		// Alice unilaterally exits from L1 using old L2 signed state
 		_, err = nodeA.MirrorBridgedDefund(l1LedgerChannelId, oldL2SignedState, true)
@@ -285,7 +288,7 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 		bridge.CounterChallenge(l1LedgerChannelId, types.Checkpoint, newL2signedState)
 
 		// Wait for mirror bridged defund to complete
-		for val := range ch {
+		for val := range completedObjectiveChannel {
 			if val == protocols.ObjectiveId(mirrorbridgeddefund.ObjectivePrefix+l1LedgerChannelId.String()) {
 				break
 			}
@@ -297,10 +300,17 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Wait for mirror bridged defund to complete
-		for val := range ch {
-			if val == protocols.ObjectiveId(mirrorbridgeddefund.ObjectivePrefix+l1LedgerChannelId.String()) {
-				break
+		// Wait for mirror bridged defund to complete on L1
+		for completedObjectiveId := range completedObjectiveChannel {
+			if mirrorbridgeddefund.IsMirrorBridgedDefundObjective(completedObjectiveId) {
+				objective, err := storeA.GetObjectiveById(completedObjectiveId)
+				if err != nil {
+					t.Fatal("mirror bridged defund objective not found", err)
+				}
+
+				if objective.OwnsChannel() == l1LedgerChannelId {
+					break
+				}
 			}
 		}
 
@@ -369,14 +379,14 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 	}
 
 	bridge := bridge.New()
-	bridgeMultiaddressL1, bridgeMultiaddressL2, err := bridge.Start(bridgeConfig)
+	_, _, bridgeMultiaddressL1, bridgeMultiaddressL2, err := bridge.Start(bridgeConfig)
 	if err != nil {
 		t.Log("error in starting bridge", err)
 	}
 	defer bridge.Close()
 	bridgeAddress := bridge.GetBridgeAddress()
 
-	nodeA, _, _, _, _ := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
+	nodeA, _, _, storeA, _ := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
 	defer nodeA.Close()
 
 	nodeAPrime, _, _, storeAPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{bridgeMultiaddressL2}, dataFolder)
@@ -388,7 +398,7 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 
 	t.Run("Create ledger channel on L1 and mirror it on L2", func(t *testing.T) {
 		// Alice create ledger channel with bridge
-		outcome := ledgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{})
+		outcome := CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{})
 		l1LedgerChannelResponse, err := nodeA.CreateLedgerChannel(bridgeAddress, uint32(tcL1.ChallengeDuration), outcome)
 		if err != nil {
 			t.Fatal(err)
@@ -410,8 +420,8 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 		oldL2SignedState = cc.SupportedSignedState()
 
 		testhelpers.Assert(t, completedMirrorChannel == l2LedgerChannelId, "Expects mirror channel id to be %v", l2LedgerChannelId)
-		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, ledgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{}), query.Open, nodeA)
-		checkLedgerChannel(t, l2LedgerChannelId, ledgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, types.Address{}), query.Open, nodeAPrime)
+		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{}), query.Open, nodeA)
+		checkLedgerChannel(t, l2LedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, types.Address{}), query.Open, nodeAPrime)
 	})
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
@@ -422,7 +432,10 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeAPrime)
 
 		// APrime pays BPrime
-		nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
+		err := nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		// Virtual defund
 		virtualDefundResponse, _ := nodeAPrime.ClosePaymentChannel(virtualResponse.ChannelId)
@@ -440,7 +453,7 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 
 	t.Run("Unilaterally exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
-		ch := nodeA.CompletedObjectives()
+		completedObjectiveChannel := nodeA.CompletedObjectives()
 
 		// Alice unilaterally exits from L1 using old L2 signed state
 		_, err = nodeA.MirrorBridgedDefund(l1LedgerChannelId, oldL2SignedState, true)
@@ -459,10 +472,17 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 		// Bridge counters the Alice' challenge
 		bridge.CounterChallenge(l1LedgerChannelId, types.Challenge, newL2signedState)
 
-		// Wait for mirror bridged defund to complete
-		for val := range ch {
-			if val == protocols.ObjectiveId(mirrorbridgeddefund.ObjectivePrefix+l1LedgerChannelId.String()) {
-				break
+		// Wait for mirror bridged defund to complete on L1
+		for completedObjectiveId := range completedObjectiveChannel {
+			if mirrorbridgeddefund.IsMirrorBridgedDefundObjective(completedObjectiveId) {
+				objective, err := storeA.GetObjectiveById(completedObjectiveId)
+				if err != nil {
+					t.Fatal("mirror bridged defund objective not found", err)
+				}
+
+				if objective.OwnsChannel() == l1LedgerChannelId {
+					break
+				}
 			}
 		}
 

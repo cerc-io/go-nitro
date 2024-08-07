@@ -50,6 +50,7 @@ const counterChallengeSchema = {
   properties: {
     ChannelId: { type: "string" },
     Action: { type: "int32" },
+    Payload: { type: "string" },
   },
 } as const;
 type CounterChallengeSchemaType = JTDDataType<typeof counterChallengeSchema>;

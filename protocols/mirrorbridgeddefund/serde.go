@@ -17,8 +17,8 @@ type jsonObjective struct {
 	MirrorTransactionSubmitted    bool
 	L2SignedState                 state.SignedState
 	IsChallenge                   bool
-	IsCheckPoint                  bool
 	ChallengeTransactionSubmitted bool
+	IsCheckPoint                  bool
 	CheckPointransactionSubmitted bool
 }
 

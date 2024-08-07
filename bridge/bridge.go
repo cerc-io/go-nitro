@@ -299,7 +299,7 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 
 		l2AssetAddress := l2SignedState.State().Outcome[0].Asset
 
-		// Get l1 asset address using L2 state and L1 to L1 asset address map
+		// Get l1 asset address using L2 state and L2 to L1 asset address map
 		for l1Address, l2address := range b.L1ToL2AssetAddressMap {
 			if l2address == l2AssetAddress {
 				l1AssetAddress = l1Address

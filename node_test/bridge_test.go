@@ -23,18 +23,19 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
-var tcL1, tcL2 TestCase
+type Utils struct {
+	tcL1, tcL2                   TestCase
+	nodeA, nodeB                 node.Node
+	nodeAPrime, nodeBPrime       node.Node
+	chainServiceA, chainServiceB chainservice.ChainService
+	testChainService             chainservice.ChainService
+	storeA, storeB               store.Store
+	storeAPrime, storeBPrime     store.Store
+	infraL1, infraL2             sharedTestInfrastructure
+}
 
-var nodeA, nodeB, nodeAPrime, nodeBPrime node.Node
-
-var chainServiceA, chainServiceB, testChainService chainservice.ChainService
-
-var storeA, storeB, storeAPrime, storeBPrime store.Store
-
-var infraL1, infraL2 sharedTestInfrastructure
-
-func initializeUtils() (cleanup func()) {
-	tcL1 = TestCase{
+func initializeUtils() (Utils, func()) {
+	tcL1 := TestCase{
 		Chain:             AnvilChainL1,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
@@ -47,7 +48,7 @@ func initializeUtils() (cleanup func()) {
 		deployerIndex: 1,
 	}
 
-	tcL2 = TestCase{
+	tcL2 := TestCase{
 		Chain:             AnvilChainL2,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
@@ -63,39 +64,58 @@ func initializeUtils() (cleanup func()) {
 
 	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
 
-	infraL1 = setupSharedInfra(tcL1)
-
-	infraL2 = setupSharedInfra(tcL2)
+	infraL1 := setupSharedInfra(tcL1)
+	infraL2 := setupSharedInfra(tcL2)
 
 	// Create go-nitro nodes
-	nodeA, _, _, storeA, chainServiceA = setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{}, dataFolder)
+	nodeA, _, _, storeA, chainServiceA := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{}, dataFolder)
 
-	nodeB, _, _, storeB, chainServiceB = setupIntegrationNode(tcL1, tcL1.Participants[1], infraL1, []string{}, dataFolder)
+	nodeB, _, _, storeB, chainServiceB := setupIntegrationNode(tcL1, tcL1.Participants[1], infraL1, []string{}, dataFolder)
 
 	infraL2.anvilChain.ContractAddresses.CaAddress = infraL1.anvilChain.ContractAddresses.CaAddress
 	infraL2.anvilChain.ContractAddresses.VpaAddress = infraL1.anvilChain.ContractAddresses.VpaAddress
 
-	nodeBPrime, _, _, storeBPrime, _ = setupIntegrationNode(tcL2, tcL2.Participants[0], infraL2, []string{}, dataFolder)
+	nodeBPrime, _, _, storeBPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[0], infraL2, []string{}, dataFolder)
 
-	nodeAPrime, _, _, storeAPrime, _ = setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{}, dataFolder)
+	nodeAPrime, _, _, storeAPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{}, dataFolder)
 
 	// Seperate chain service to listen for events
-	testChainService = setupChainService(tcL1, tcL1.Participants[0], infraL1)
+	testChainService := setupChainService(tcL1, tcL1.Participants[0], infraL1)
 
-	return
-}
-
-func cleanupUtils(t *testing.T, closeBridge bool) {
-	if closeBridge {
-		nodeB.Close()
-		nodeBPrime.Close()
+	utils := Utils{
+		tcL1:             tcL1,
+		tcL2:             tcL2,
+		nodeA:            nodeA,
+		nodeB:            nodeB,
+		nodeAPrime:       nodeAPrime,
+		nodeBPrime:       nodeBPrime,
+		chainServiceA:    chainServiceA,
+		chainServiceB:    chainServiceB,
+		testChainService: testChainService,
+		storeA:           storeA,
+		storeB:           storeB,
+		storeAPrime:      storeAPrime,
+		storeBPrime:      storeBPrime,
+		infraL1:          infraL1,
+		infraL2:          infraL2,
 	}
 
-	infraL1.Close(t)
-	infraL2.Close(t)
-	nodeA.Close()
-	nodeAPrime.Close()
-	testChainService.Close()
+	return utils, cleanup
+}
+
+func cleanupUtils(t *testing.T, closeBridge bool, utils Utils, cleanup func()) {
+	cleanup()
+
+	if closeBridge {
+		utils.nodeB.Close()
+		utils.nodeBPrime.Close()
+	}
+
+	utils.infraL1.Close(t)
+	utils.infraL2.Close(t)
+	utils.nodeA.Close()
+	utils.nodeAPrime.Close()
+	utils.testChainService.Close()
 }
 
 func TestBridgedFund(t *testing.T) {
@@ -250,9 +270,17 @@ func TestBridgedFund(t *testing.T) {
 }
 
 func TestExitL2WithLedgerChannelStateUnilaterally(t *testing.T) {
-	cleanup := initializeUtils()
-	defer cleanup()
-	defer cleanupUtils(t, false)
+	utils, cleanup := initializeUtils()
+	defer cleanupUtils(t, false, utils, cleanup)
+
+	tcL1, tcL2 := utils.tcL1, utils.tcL2
+	nodeA, nodeB := utils.nodeA, utils.nodeB
+	nodeAPrime, nodeBPrime := utils.nodeAPrime, utils.nodeBPrime
+	chainServiceA, chainServiceB := utils.chainServiceA, utils.chainServiceB
+	testChainService := utils.testChainService
+	storeA := utils.storeA
+	storeAPrime, storeBPrime := utils.storeAPrime, utils.storeBPrime
+	infraL1, infraL2 := utils.infraL1, utils.infraL2
 
 	infraL2.anvilChain.ContractAddresses.CaAddress = infraL1.anvilChain.ContractAddresses.CaAddress
 	infraL2.anvilChain.ContractAddresses.VpaAddress = infraL1.anvilChain.ContractAddresses.VpaAddress
@@ -325,9 +353,17 @@ func TestExitL2WithLedgerChannelStateUnilaterally(t *testing.T) {
 }
 
 func TestL2Checkpoint(t *testing.T) {
-	cleanup := initializeUtils()
-	defer cleanup()
-	defer cleanupUtils(t, true)
+	utils, cleanup := initializeUtils()
+	defer cleanupUtils(t, true, utils, cleanup)
+
+	tcL1, tcL2 := utils.tcL1, utils.tcL2
+	nodeA, nodeB := utils.nodeA, utils.nodeB
+	nodeAPrime, nodeBPrime := utils.nodeAPrime, utils.nodeBPrime
+	chainServiceA, chainServiceB := utils.chainServiceA, utils.chainServiceB
+	testChainService := utils.testChainService
+	storeA := utils.storeA
+	storeAPrime, storeBPrime := utils.storeAPrime, utils.storeBPrime
+	infraL1 := utils.infraL1
 
 	challengeRegisteredEvent := chainservice.ChallengeRegisteredEvent{}
 
@@ -394,9 +430,17 @@ func TestL2Checkpoint(t *testing.T) {
 }
 
 func TestL2CounterChallenge(t *testing.T) {
-	cleanup := initializeUtils()
-	defer cleanup()
-	defer cleanupUtils(t, true)
+	utils, cleanup := initializeUtils()
+	defer cleanupUtils(t, true, utils, cleanup)
+
+	tcL1, tcL2 := utils.tcL1, utils.tcL2
+	nodeA, nodeB := utils.nodeA, utils.nodeB
+	nodeAPrime, nodeBPrime := utils.nodeAPrime, utils.nodeBPrime
+	chainServiceA, chainServiceB := utils.chainServiceA, utils.chainServiceB
+	testChainService := utils.testChainService
+	storeA := utils.storeA
+	storeAPrime, storeBPrime := utils.storeAPrime, utils.storeBPrime
+	infraL1 := utils.infraL1
 
 	// Create ledger channel on L1 and mirror it on L2
 	l1ChannelId, mirroredLedgerChannelId := createL1L2Channels(t, nodeA, nodeB, nodeAPrime, nodeBPrime, storeA, tcL1, tcL2, chainServiceB)
@@ -467,9 +511,17 @@ func TestL2CounterChallenge(t *testing.T) {
 }
 
 func TestExitL2WithVirtualChannelStateUnilaterally(t *testing.T) {
-	cleanup := initializeUtils()
-	defer cleanup()
-	defer cleanupUtils(t, false)
+	utils, cleanup := initializeUtils()
+	defer cleanupUtils(t, false, utils, cleanup)
+
+	tcL1, tcL2 := utils.tcL1, utils.tcL2
+	nodeA, nodeB := utils.nodeA, utils.nodeB
+	nodeAPrime, nodeBPrime := utils.nodeAPrime, utils.nodeBPrime
+	chainServiceA, chainServiceB := utils.chainServiceA, utils.chainServiceB
+	testChainService := utils.testChainService
+	storeA := utils.storeA
+	storeAPrime, storeBPrime := utils.storeAPrime, utils.storeBPrime
+	infraL1 := utils.infraL1
 
 	l1ChannelId, mirroredLedgerChannelId := createL1L2Channels(t, nodeA, nodeB, nodeAPrime, nodeBPrime, storeA, tcL1, tcL2, chainServiceB)
 

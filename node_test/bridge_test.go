@@ -342,7 +342,9 @@ func TestL2ChallengeAndCounterChallenge(t *testing.T) {
 		transferTx := protocols.NewMirrorTransferAllTransaction(l1ChannelId, oldL2SignedState)
 		err = chainServiceA.SendTransaction(transferTx)
 		testhelpers.Assert(t, err.Error() == "execution reverted: revert: Channel not finalized.", "Expected execution reverted error")
+	})
 
+	t.Run("Make payment after checkpoint and virtual defund", func(t *testing.T) {
 		// Create virtual channel on mirrored ledger channel and make payments (since channel is open)
 		virtualChannel := createL2VirtualChannel(t, nodeBPrime, nodeAPrime, storeBPrime, tcL2)
 		oldL2SignedState = getLatestSignedState(storeAPrime, mirroredLedgerChannelId)
@@ -399,8 +401,13 @@ func TestL2ChallengeAndCounterChallenge(t *testing.T) {
 
 		testhelpers.Assert(t, challengeRegisteredEvent.ChannelID() == newL2SignedState.State().ChannelId(), "Channel ID mismatch")
 
-		// Liquidate the channel based on new L2 ledger channel state
-		transferTx := protocols.NewMirrorTransferAllTransaction(l1ChannelId, newL2SignedState)
+		// Alice attempts to exit with old l2 channel state but the attempt fails because of incorrect fingerprint
+		transferTx := protocols.NewMirrorTransferAllTransaction(l1ChannelId, oldL2SignedState)
+		err = chainServiceA.SendTransaction(transferTx)
+		testhelpers.Assert(t, err.Error() == "execution reverted: revert: incorrect fingerprint", "Expected execution reverted error")
+
+		// Bob liquidates the channel based on new L2 ledger channel state
+		transferTx = protocols.NewMirrorTransferAllTransaction(l1ChannelId, newL2SignedState)
 		err = chainServiceB.SendTransaction(transferTx)
 		if err != nil {
 			t.Fatal(err)

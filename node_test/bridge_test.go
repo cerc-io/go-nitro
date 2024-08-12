@@ -304,8 +304,10 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
 
 		// APrime pays CharliePrime
-		nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
-
+		err := nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
+		if err != nil {
+			t.Fatal(err)
+		}
 		// Virtual defund
 		virtualDefundResponse, _ := nodeAPrime.ClosePaymentChannel(virtualResponse.ChannelId)
 		<-nodeAPrime.ObjectiveCompleteChan(virtualDefundResponse)

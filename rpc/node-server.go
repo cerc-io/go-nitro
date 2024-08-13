@@ -143,6 +143,10 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 			})
 		case serde.MirrorBridgedDefundRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.MirrorBridgedDefundRequest) (protocols.ObjectiveId, error) {
+				if DISABLE_BRIDGE_DEFUND {
+					return protocols.ObjectiveId(bridgeddefund.ObjectivePrefix + req.ChannelId.String()), fmt.Errorf("brided defund is currently disabled")
+				}
+
 				var l2SignedState state.SignedState
 				err := json.Unmarshal([]byte(req.StringifiedL2SignedState), &l2SignedState)
 				if err != nil {

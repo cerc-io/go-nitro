@@ -140,72 +140,14 @@ func TestBridgedFund(t *testing.T) {
 }
 
 func TestBridgedFundWithCheckpoint(t *testing.T) {
-	tcL1 := TestCase{
-		Chain:             AnvilChainL1,
-		MessageService:    P2PMessageService,
-		MessageDelay:      0,
-		LogName:           "Bridge_test",
-		ChallengeDuration: 15,
-		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.Alice},
-			{StoreType: MemStore, Actor: testactors.Bob},
-		},
-		deployerIndex: 1,
-	}
-
-	tcL2 := TestCase{
-		Chain:             AnvilChainL2,
-		MessageService:    P2PMessageService,
-		MessageDelay:      0,
-		LogName:           "Bridge_test",
-		ChallengeDuration: 15,
-		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.BobPrime},
-			{StoreType: MemStore, Actor: testactors.AlicePrime},
-		},
-		ChainPort:     "8546",
-		deployerIndex: 0,
-	}
-
-	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	utils, cleanup := initializeUtilsWithBridge(t, true)
 	defer cleanup()
 
-	infraL1 := setupSharedInfra(tcL1)
-	defer infraL1.Close(t)
-
-	infraL2 := setupSharedInfra(tcL2)
-	defer infraL2.Close(t)
-
-	bridgeConfig := bridge.BridgeConfig{
-		L1ChainUrl:        infraL1.anvilChain.ChainUrl,
-		L2ChainUrl:        infraL2.anvilChain.ChainUrl,
-		L1ChainStartBlock: 0,
-		L2ChainStartBlock: 0,
-		ChainPK:           infraL1.anvilChain.ChainPks[tcL1.Participants[1].ChainAccountIndex],
-		StateChannelPK:    common.Bytes2Hex(tcL1.Participants[1].PrivateKey),
-		NaAddress:         infraL1.anvilChain.ContractAddresses.NaAddress.String(),
-		VpaAddress:        infraL1.anvilChain.ContractAddresses.VpaAddress.String(),
-		CaAddress:         infraL1.anvilChain.ContractAddresses.CaAddress.String(),
-		BridgeAddress:     infraL2.anvilChain.ContractAddresses.BridgeAddress.String(),
-		DurableStoreDir:   dataFolder,
-		BridgePublicIp:    DEFAULT_PUBLIC_IP,
-		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
-		NodeL2MsgPort:     int(tcL2.Participants[0].Port),
-	}
-
-	bridge := bridge.New()
-	_, _, bridgeMultiaddressL1, bridgeMultiaddressL2, err := bridge.Start(bridgeConfig)
-	if err != nil {
-		t.Log("error in starting bridge", err)
-	}
-	defer bridge.Close()
-	bridgeAddress := bridge.GetBridgeAddress()
-
-	nodeA, _, _, storeA, _ := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
-	defer nodeA.Close()
-
-	nodeAPrime, _, _, storeAPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{bridgeMultiaddressL2}, dataFolder)
-	defer nodeAPrime.Close()
+	tcL1, tcL2 := utils.tcL1, utils.tcL2
+	nodeA, nodeAPrime := utils.nodeA, utils.nodeAPrime
+	bridge, bridgeAddress := utils.bridge, utils.bridgeAddress
+	storeA, storeAPrime := utils.storeA, utils.storeAPrime
+	infraL1 := utils.infraL1
 
 	var l1LedgerChannelId types.Destination
 	var l2LedgerChannelId types.Destination
@@ -271,7 +213,7 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 		completedObjectiveChannel := nodeA.CompletedObjectives()
 
 		// Alice unilaterally exits from L1 using old L2 signed state
-		_, err = nodeA.MirrorBridgedDefund(l1LedgerChannelId, oldL2SignedState, true)
+		_, err := nodeA.MirrorBridgedDefund(l1LedgerChannelId, oldL2SignedState, true)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -325,72 +267,14 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 }
 
 func TestBridgedFundWithCounterChallenge(t *testing.T) {
-	tcL1 := TestCase{
-		Chain:             AnvilChainL1,
-		MessageService:    P2PMessageService,
-		MessageDelay:      0,
-		LogName:           "Bridge_test",
-		ChallengeDuration: 15,
-		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.Alice},
-			{StoreType: MemStore, Actor: testactors.Bob},
-		},
-		deployerIndex: 1,
-	}
-
-	tcL2 := TestCase{
-		Chain:             AnvilChainL2,
-		MessageService:    P2PMessageService,
-		MessageDelay:      0,
-		LogName:           "Bridge_test",
-		ChallengeDuration: 15,
-		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.BobPrime},
-			{StoreType: MemStore, Actor: testactors.AlicePrime},
-		},
-		ChainPort:     "8546",
-		deployerIndex: 0,
-	}
-
-	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	utils, cleanup := initializeUtilsWithBridge(t, true)
 	defer cleanup()
 
-	infraL1 := setupSharedInfra(tcL1)
-	defer infraL1.Close(t)
-
-	infraL2 := setupSharedInfra(tcL2)
-	defer infraL2.Close(t)
-
-	bridgeConfig := bridge.BridgeConfig{
-		L1ChainUrl:        infraL1.anvilChain.ChainUrl,
-		L2ChainUrl:        infraL2.anvilChain.ChainUrl,
-		L1ChainStartBlock: 0,
-		L2ChainStartBlock: 0,
-		ChainPK:           infraL1.anvilChain.ChainPks[tcL1.Participants[1].ChainAccountIndex],
-		StateChannelPK:    common.Bytes2Hex(tcL1.Participants[1].PrivateKey),
-		NaAddress:         infraL1.anvilChain.ContractAddresses.NaAddress.String(),
-		VpaAddress:        infraL1.anvilChain.ContractAddresses.VpaAddress.String(),
-		CaAddress:         infraL1.anvilChain.ContractAddresses.CaAddress.String(),
-		BridgeAddress:     infraL2.anvilChain.ContractAddresses.BridgeAddress.String(),
-		DurableStoreDir:   dataFolder,
-		BridgePublicIp:    DEFAULT_PUBLIC_IP,
-		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
-		NodeL2MsgPort:     int(tcL2.Participants[0].Port),
-	}
-
-	bridge := bridge.New()
-	_, _, bridgeMultiaddressL1, bridgeMultiaddressL2, err := bridge.Start(bridgeConfig)
-	if err != nil {
-		t.Log("error in starting bridge", err)
-	}
-	defer bridge.Close()
-	bridgeAddress := bridge.GetBridgeAddress()
-
-	nodeA, _, _, storeA, _ := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
-	defer nodeA.Close()
-
-	nodeAPrime, _, _, storeAPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{bridgeMultiaddressL2}, dataFolder)
-	defer nodeAPrime.Close()
+	tcL1, tcL2 := utils.tcL1, utils.tcL2
+	nodeA, nodeAPrime := utils.nodeA, utils.nodeAPrime
+	bridge, bridgeAddress := utils.bridge, utils.bridgeAddress
+	storeA, storeAPrime := utils.storeA, utils.storeAPrime
+	infraL1 := utils.infraL1
 
 	var l1LedgerChannelId types.Destination
 	var l2LedgerChannelId types.Destination
@@ -456,7 +340,7 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 		completedObjectiveChannel := nodeA.CompletedObjectives()
 
 		// Alice unilaterally exits from L1 using old L2 signed state
-		_, err = nodeA.MirrorBridgedDefund(l1LedgerChannelId, oldL2SignedState, true)
+		_, err := nodeA.MirrorBridgedDefund(l1LedgerChannelId, oldL2SignedState, true)
 		if err != nil {
 			t.Fatal(err)
 		}

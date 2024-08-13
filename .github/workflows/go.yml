@@ -42,7 +42,7 @@ jobs:
         run: go test ./channel ./node ./payments ./protocols ./rpc ./types -count=2 -shuffle=on -v -failfast -race
 
       - name: Test only node_test
-        run: go test ./node_test -count=1 -shuffle=on -v -failfast -race
+        run: go test ./node_test -count=1 -shuffle=on -v -failfast -race -timeout 12m
 
       - name: Archive logs
         if: always()

@@ -381,7 +381,8 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 		c.OnChain.FinalizesAt = e.FinalizesAt
 		c.OnChain.IsChallengeInitiatedByMe = e.IsInitiatedByMe
 
-		// Add a signed state from a chain event to a channel only if the channel ID matches, especially when a challenge is registered on the L2 state, as the channel IDs for L1 and L2 are different
+		// Add a signed state from a chain event to a channel only if the channel ID matches
+		// If challenge is registered on the L2 state then then channel Ids will be different
 		if c.Id == event.ChannelID() {
 			ss, err := e.SignedState(c.FixedPart)
 			if err != nil {

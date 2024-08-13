@@ -43,12 +43,12 @@ function createEnvForContractAddresses(contractAddresses: ContractDetails) {
         if (CONTRACT_ENV_MAP.hasOwnProperty(contractName)) {
           envName = CONTRACT_ENV_MAP[contractName];
         } 
+
         envToWrite += `export ${envName}=${envValue}\n`;
       });
 
       const outputFilePath = path.resolve(envFilePath);
       writeFileSync(outputFilePath, envToWrite);
-      console.log('Contracts deployed and address written to', outputFilePath);
     }
   } 
 }

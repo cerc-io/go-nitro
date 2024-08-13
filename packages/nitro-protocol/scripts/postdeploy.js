@@ -33,7 +33,6 @@ function createEnvForContractAddresses(contractAddresses) {
             });
             var outputFilePath = path.resolve(envFilePath);
             writeFileSync(outputFilePath, envToWrite);
-            console.log('Contracts deployed and address written to', outputFilePath);
         };
         for (var _i = 0, networkArray_1 = networkArray; _i < networkArray_1.length; _i++) {
             var network = networkArray_1[_i];

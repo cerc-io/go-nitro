@@ -441,45 +441,42 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 		return EngineEvent{}, err
 	}
 
-	var l2ChallengeRegistered bool
-	c, ok := e.store.GetChannelById(chainEvent.ChannelID())
+	channelId := chainEvent.ChannelID()
+
+	_, isChallengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
+	if isChallengeRegistered {
+		// Check whether a challenge has been registered for the L2 channel, and then retrieve its L1 channel using an eth call
+		l1ChannelId, err := e.chain.GetL1ChannelFromL2(chainEvent.ChannelID())
+		if err == nil {
+			channelId = l1ChannelId
+		}
+	}
+
+	c, ok := e.store.GetChannelById(channelId)
 	if !ok {
 		// If channel doesn't exist and chain event is ChallengeRegistered then create a new direct defund objective
 		// This doesn't occur for actor who registered the challenge
 		_, isChallengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
 
 		if isChallengeRegistered {
-
-			l1ChannelId, err := e.chain.GetL1ChannelFromL2(chainEvent.ChannelID())
+			ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent, true)
 			if err != nil {
-				slog.Warn("l1 channel id not found")
+				// Node should not panic if it is unable to find the required consensus channel before creating objective
+				if errors.Is(err, directdefund.ErrChannelNotExist) {
+					return EngineEvent{}, nil
+				}
+
+				return EngineEvent{}, err
 			}
-
-			l1Channel, ok := e.store.GetChannelById(l1ChannelId)
-
-			if ok {
-				c = l1Channel
-				l2ChallengeRegistered = true
-			} else {
-				ddfo, err := directdefund.NewObjective(directdefund.NewObjectiveRequest(chainEvent.ChannelID(), false), true, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent, true)
-				if err != nil {
-					// Node should not panic if it is unable to find the required consensus channel before creating objective
-					if errors.Is(err, directdefund.ErrChannelNotExist) {
-						return EngineEvent{}, nil
-					}
-
-					return EngineEvent{}, err
-				}
-				// If ddfo creation was successful, destroy the consensus channel to prevent it being used (a Channel will now take over governance)
-				err = e.store.DestroyConsensusChannel(chainEvent.ChannelID())
-				if err != nil {
-					return EngineEvent{}, err
-				}
-				c = ddfo.C
-				err = e.store.SetObjective(&ddfo)
-				if err != nil {
-					return EngineEvent{}, err
-				}
+			// If ddfo creation was successful, destroy the consensus channel to prevent it being used (a Channel will now take over governance)
+			err = e.store.DestroyConsensusChannel(chainEvent.ChannelID())
+			if err != nil {
+				return EngineEvent{}, err
+			}
+			c = ddfo.C
+			err = e.store.SetObjective(&ddfo)
+			if err != nil {
+				return EngineEvent{}, err
 			}
 		} else {
 			// TODO: Right now the chain service returns chain events for ALL channels even those we aren't involved in
@@ -500,7 +497,7 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 		return EngineEvent{}, err
 	}
 
-	objective, ok := e.store.GetObjectiveByChannelId(chainEvent.ChannelID())
+	objective, ok := e.store.GetObjectiveByChannelId(updatedChannel.Id)
 
 	if ok {
 		return e.attemptProgress(objective)
@@ -526,14 +523,6 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 			if ok {
 				return e.attemptProgress(obj)
 			}
-		}
-	}
-
-	if l2ChallengeRegistered {
-		objective, ok := e.store.GetObjectiveByChannelId(updatedChannel.Id)
-
-		if ok {
-			return e.attemptProgress(objective)
 		}
 	}
 
@@ -1114,9 +1103,11 @@ func (e *Engine) processStoreChannels(latestblock chainservice.Block) error {
 				}
 
 			case *mirrorbridgeddefund.Objective:
-				_, err = e.attemptProgress(objective)
-				if err != nil {
-					return err
+				if objective.C.OnChain.IsChallengeInitiatedByMe {
+					_, err = e.attemptProgress(objective)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}

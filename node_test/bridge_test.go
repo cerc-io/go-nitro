@@ -34,73 +34,27 @@ type Utils struct {
 	infraL1, infraL2             sharedTestInfrastructure
 }
 
+type UtilsWithBridge struct {
+	tcL1, tcL2                                 TestCase
+	bridge                                     *bridge.Bridge
+	bridgeAddress                              common.Address
+	bridgeMultiaddressL1, bridgeMultiaddressL2 string
+	dataFolder                                 string
+	nodeA, nodeAPrime                          node.Node
+	chainServiceA, chainServiceAPrime          chainservice.ChainService
+	storeA, storeAPrime                        store.Store
+	infraL1, infraL2                           sharedTestInfrastructure
+}
+
 func TestBridgedFund(t *testing.T) {
-	tcL1 := TestCase{
-		Chain:             AnvilChainL1,
-		MessageService:    P2PMessageService,
-		MessageDelay:      0,
-		LogName:           "Bridge_test",
-		ChallengeDuration: 5,
-		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.Alice},
-			{StoreType: MemStore, Actor: testactors.Bob},
-		},
-		deployerIndex: 1,
-	}
-
-	tcL2 := TestCase{
-		Chain:             AnvilChainL2,
-		MessageService:    P2PMessageService,
-		MessageDelay:      0,
-		LogName:           "Bridge_test",
-		ChallengeDuration: 5,
-		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.BobPrime},
-			{StoreType: MemStore, Actor: testactors.AlicePrime},
-		},
-		ChainPort:     "8546",
-		deployerIndex: 0,
-	}
-
-	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	utils, cleanup := initializeUtilsWithBridge(t, true)
 	defer cleanup()
 
-	infraL1 := setupSharedInfra(tcL1)
-	defer infraL1.Close(t)
-
-	infraL2 := setupSharedInfra(tcL2)
-	defer infraL2.Close(t)
-
-	bridgeConfig := bridge.BridgeConfig{
-		L1ChainUrl:        infraL1.anvilChain.ChainUrl,
-		L2ChainUrl:        infraL2.anvilChain.ChainUrl,
-		L1ChainStartBlock: 0,
-		L2ChainStartBlock: 0,
-		ChainPK:           infraL1.anvilChain.ChainPks[tcL1.Participants[1].ChainAccountIndex],
-		StateChannelPK:    common.Bytes2Hex(tcL1.Participants[1].PrivateKey),
-		NaAddress:         infraL1.anvilChain.ContractAddresses.NaAddress.String(),
-		VpaAddress:        infraL1.anvilChain.ContractAddresses.VpaAddress.String(),
-		CaAddress:         infraL1.anvilChain.ContractAddresses.CaAddress.String(),
-		BridgeAddress:     infraL2.anvilChain.ContractAddresses.BridgeAddress.String(),
-		DurableStoreDir:   dataFolder,
-		BridgePublicIp:    DEFAULT_PUBLIC_IP,
-		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
-		NodeL2MsgPort:     int(tcL2.Participants[0].Port),
-	}
-
-	bridge := bridge.New()
-	_, _, bridgeMultiaddressL1, bridgeMultiaddressL2, err := bridge.Start(bridgeConfig)
-	if err != nil {
-		t.Log("error in starting bridge", err)
-	}
-	defer bridge.Close()
-	bridgeAddress := bridge.GetBridgeAddress()
-
-	nodeA, _, _, storeA, _ := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
-	defer nodeA.Close()
-
-	nodeAPrime, _, _, _, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{bridgeMultiaddressL2}, dataFolder)
-	defer nodeAPrime.Close()
+	tcL1, tcL2 := utils.tcL1, utils.tcL2
+	nodeA, nodeAPrime := utils.nodeA, utils.nodeAPrime
+	bridge, bridgeAddress := utils.bridge, utils.bridgeAddress
+	storeA := utils.storeA
+	infraL1 := utils.infraL1
 
 	var l1LedgerChannelId types.Destination
 	var l2LedgerChannelId types.Destination
@@ -186,75 +140,16 @@ func TestBridgedFund(t *testing.T) {
 }
 
 func TestBridgedFundWithIntermediary(t *testing.T) {
-	tcL1 := TestCase{
-		Chain:             AnvilChainL1,
-		MessageService:    P2PMessageService,
-		MessageDelay:      0,
-		LogName:           "Bridge_test",
-		ChallengeDuration: 5,
-		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.Alice},
-			{StoreType: MemStore, Actor: testactors.Bob},
-			{StoreType: MemStore, Actor: testactors.Irene},
-		},
-		deployerIndex: 1,
-		ChainPort:     "8546",
-	}
-
-	tcL2 := TestCase{
-		Chain:             AnvilChainL2,
-		MessageService:    P2PMessageService,
-		MessageDelay:      0,
-		LogName:           "Bridge_test",
-		ChallengeDuration: 5,
-		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.BobPrime},
-			{StoreType: MemStore, Actor: testactors.AlicePrime},
-			{StoreType: MemStore, Actor: testactors.Irene},
-		},
-		ChainPort:     "8547",
-		deployerIndex: 0,
-	}
-
-	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	utils, cleanup := initializeUtilsWithBridge(t, true)
 	defer cleanup()
 
-	infraL1 := setupSharedInfra(tcL1)
-	defer infraL1.Close(t)
-
-	infraL2 := setupSharedInfra(tcL2)
-	defer infraL2.Close(t)
-
-	bridgeConfig := bridge.BridgeConfig{
-		L1ChainUrl:        infraL1.anvilChain.ChainUrl,
-		L2ChainUrl:        infraL2.anvilChain.ChainUrl,
-		L1ChainStartBlock: 0,
-		L2ChainStartBlock: 0,
-		ChainPK:           infraL1.anvilChain.ChainPks[tcL1.Participants[1].ChainAccountIndex],
-		StateChannelPK:    common.Bytes2Hex(tcL1.Participants[1].PrivateKey),
-		NaAddress:         infraL1.anvilChain.ContractAddresses.NaAddress.String(),
-		VpaAddress:        infraL1.anvilChain.ContractAddresses.VpaAddress.String(),
-		CaAddress:         infraL1.anvilChain.ContractAddresses.CaAddress.String(),
-		BridgeAddress:     infraL2.anvilChain.ContractAddresses.BridgeAddress.String(),
-		DurableStoreDir:   dataFolder,
-		BridgePublicIp:    DEFAULT_PUBLIC_IP,
-		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
-		NodeL2MsgPort:     int(tcL2.Participants[0].Port),
-	}
-
-	bridge := bridge.New()
-	_, _, bridgeMultiaddressL1, bridgeMultiaddressL2, err := bridge.Start(bridgeConfig)
-	if err != nil {
-		t.Log("error in starting bridge", err)
-	}
-	defer bridge.Close()
-	bridgeAddress := bridge.GetBridgeAddress()
-
-	nodeA, _, _, storeA, _ := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
-	defer nodeA.Close()
-
-	nodeAPrime, _, _, _, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{bridgeMultiaddressL2}, dataFolder)
-	defer nodeAPrime.Close()
+	tcL1, tcL2 := utils.tcL1, utils.tcL2
+	nodeA, nodeAPrime := utils.nodeA, utils.nodeAPrime
+	bridge, bridgeAddress := utils.bridge, utils.bridgeAddress
+	bridgeMultiaddressL1, bridgeMultiaddressL2 := utils.bridgeMultiaddressL1, utils.bridgeMultiaddressL2
+	storeA := utils.storeA
+	infraL1, infraL2 := utils.infraL1, utils.infraL2
+	dataFolder := utils.dataFolder
 
 	nodeC, _, _, storeC, _ := setupIntegrationNode(tcL1, tcL1.Participants[2], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
 	defer nodeC.Close()
@@ -385,72 +280,14 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 }
 
 func TestBridgedFundWithChallenge(t *testing.T) {
-	tcL1 := TestCase{
-		Chain:             AnvilChainL1,
-		MessageService:    P2PMessageService,
-		MessageDelay:      0,
-		LogName:           "Bridge_test",
-		ChallengeDuration: 5,
-		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.Alice},
-			{StoreType: MemStore, Actor: testactors.Bob},
-		},
-		deployerIndex: 1,
-	}
-
-	tcL2 := TestCase{
-		Chain:             AnvilChainL2,
-		MessageService:    P2PMessageService,
-		MessageDelay:      0,
-		LogName:           "Bridge_test",
-		ChallengeDuration: 5,
-		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.BobPrime},
-			{StoreType: MemStore, Actor: testactors.AlicePrime},
-		},
-		ChainPort:     "8546",
-		deployerIndex: 0,
-	}
-
-	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+	utils, cleanup := initializeUtilsWithBridge(t, true)
 	defer cleanup()
 
-	infraL1 := setupSharedInfra(tcL1)
-	defer infraL1.Close(t)
-
-	infraL2 := setupSharedInfra(tcL2)
-	defer infraL2.Close(t)
-
-	bridgeConfig := bridge.BridgeConfig{
-		L1ChainUrl:        infraL1.anvilChain.ChainUrl,
-		L2ChainUrl:        infraL2.anvilChain.ChainUrl,
-		L1ChainStartBlock: 0,
-		L2ChainStartBlock: 0,
-		ChainPK:           infraL1.anvilChain.ChainPks[tcL1.Participants[1].ChainAccountIndex],
-		StateChannelPK:    common.Bytes2Hex(tcL1.Participants[1].PrivateKey),
-		NaAddress:         infraL1.anvilChain.ContractAddresses.NaAddress.String(),
-		VpaAddress:        infraL1.anvilChain.ContractAddresses.VpaAddress.String(),
-		CaAddress:         infraL1.anvilChain.ContractAddresses.CaAddress.String(),
-		BridgeAddress:     infraL2.anvilChain.ContractAddresses.BridgeAddress.String(),
-		DurableStoreDir:   dataFolder,
-		BridgePublicIp:    DEFAULT_PUBLIC_IP,
-		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
-		NodeL2MsgPort:     int(tcL2.Participants[0].Port),
-	}
-
-	bridge := bridge.New()
-	_, _, bridgeMultiaddressL1, bridgeMultiaddressL2, err := bridge.Start(bridgeConfig)
-	if err != nil {
-		t.Log("error in starting bridge", err)
-	}
-	defer bridge.Close()
-	bridgeAddress := bridge.GetBridgeAddress()
-
-	nodeA, _, _, storeA, _ := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
-	defer nodeA.Close()
-
-	nodeAPrime, _, _, storeAPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{bridgeMultiaddressL2}, dataFolder)
-	defer nodeAPrime.Close()
+	tcL1, tcL2 := utils.tcL1, utils.tcL2
+	nodeA, nodeAPrime := utils.nodeA, utils.nodeAPrime
+	bridge, bridgeAddress := utils.bridge, utils.bridgeAddress
+	storeA, storeAPrime := utils.storeA, utils.storeAPrime
+	infraL1 := utils.infraL1
 
 	var l1LedgerChannelId types.Destination
 	var l2LedgerChannelId types.Destination
@@ -1048,4 +885,101 @@ func initializeUtils(t *testing.T, closeBridge bool) (Utils, func()) {
 	}
 
 	return utils, cleanupUtils
+}
+
+func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge, func()) {
+	tcL1 := TestCase{
+		Chain:             AnvilChainL1,
+		MessageService:    P2PMessageService,
+		MessageDelay:      0,
+		LogName:           "Bridge_test",
+		ChallengeDuration: 5,
+		Participants: []TestParticipant{
+			{StoreType: MemStore, Actor: testactors.Alice},
+			{StoreType: MemStore, Actor: testactors.Bob},
+			{StoreType: MemStore, Actor: testactors.Irene},
+		},
+		deployerIndex: 1,
+	}
+
+	tcL2 := TestCase{
+		Chain:             AnvilChainL2,
+		MessageService:    P2PMessageService,
+		MessageDelay:      0,
+		LogName:           "Bridge_test",
+		ChallengeDuration: 5,
+		Participants: []TestParticipant{
+			{StoreType: MemStore, Actor: testactors.BobPrime},
+			{StoreType: MemStore, Actor: testactors.AlicePrime},
+			{StoreType: MemStore, Actor: testactors.Irene},
+		},
+		ChainPort:     "8546",
+		deployerIndex: 0,
+	}
+
+	dataFolder, cleanup := testhelpers.GenerateTempStoreFolder()
+
+	infraL1 := setupSharedInfra(tcL1)
+
+	infraL2 := setupSharedInfra(tcL2)
+
+	bridgeConfig := bridge.BridgeConfig{
+		L1ChainUrl:        infraL1.anvilChain.ChainUrl,
+		L2ChainUrl:        infraL2.anvilChain.ChainUrl,
+		L1ChainStartBlock: 0,
+		L2ChainStartBlock: 0,
+		ChainPK:           infraL1.anvilChain.ChainPks[tcL1.Participants[1].ChainAccountIndex],
+		StateChannelPK:    common.Bytes2Hex(tcL1.Participants[1].PrivateKey),
+		NaAddress:         infraL1.anvilChain.ContractAddresses.NaAddress.String(),
+		VpaAddress:        infraL1.anvilChain.ContractAddresses.VpaAddress.String(),
+		CaAddress:         infraL1.anvilChain.ContractAddresses.CaAddress.String(),
+		BridgeAddress:     infraL2.anvilChain.ContractAddresses.BridgeAddress.String(),
+		DurableStoreDir:   dataFolder,
+		BridgePublicIp:    DEFAULT_PUBLIC_IP,
+		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
+		NodeL2MsgPort:     int(tcL2.Participants[0].Port),
+	}
+
+	bridge := bridge.New()
+	_, _, bridgeMultiaddressL1, bridgeMultiaddressL2, err := bridge.Start(bridgeConfig)
+	if err != nil {
+		t.Log("error in starting bridge", err)
+	}
+	bridgeAddress := bridge.GetBridgeAddress()
+
+	nodeA, _, _, storeA, chainServiceA := setupIntegrationNode(tcL1, tcL1.Participants[0], infraL1, []string{bridgeMultiaddressL1}, dataFolder)
+	nodeAPrime, _, _, storeAPrime, chainServiceAPrime := setupIntegrationNode(tcL2, tcL2.Participants[1], infraL2, []string{bridgeMultiaddressL2}, dataFolder)
+
+	utils := UtilsWithBridge{
+		tcL1:                 tcL1,
+		tcL2:                 tcL2,
+		nodeA:                nodeA,
+		bridge:               bridge,
+		bridgeAddress:        bridgeAddress,
+		bridgeMultiaddressL1: bridgeMultiaddressL1,
+		bridgeMultiaddressL2: bridgeMultiaddressL2,
+		dataFolder:           dataFolder,
+		nodeAPrime:           nodeAPrime,
+		chainServiceA:        chainServiceA,
+		chainServiceAPrime:   chainServiceAPrime,
+		storeA:               storeA,
+		storeAPrime:          storeAPrime,
+		infraL1:              infraL1,
+		infraL2:              infraL2,
+	}
+
+	cleanupUtilsWithBridge := func() {
+		cleanup()
+
+		if closeBridge {
+			utils.bridge.Close()
+		}
+
+		utils.infraL1.Close(t)
+		utils.infraL2.Close(t)
+		utils.nodeA.Close()
+		utils.nodeAPrime.Close()
+	}
+
+	return utils, cleanupUtilsWithBridge
 }

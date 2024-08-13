@@ -445,9 +445,13 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 
 	_, isChallengeRegistered := chainEvent.(chainservice.ChallengeRegisteredEvent)
 	if isChallengeRegistered {
-		// Check whether a challenge has been registered for the L2 channel, and then retrieve its L1 channel using an eth call
+		// Check whether a challenge has been registered for the L2 channel, and then retrieve its L1 channel using an eth call to NitroAdjudicator contract
 		l1ChannelId, err := e.chain.GetL1ChannelFromL2(chainEvent.ChannelID())
-		if err == nil {
+		if err != nil {
+			return EngineEvent{}, err
+		}
+
+		if !l1ChannelId.IsZero() {
 			channelId = l1ChannelId
 		}
 	}

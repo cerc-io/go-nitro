@@ -266,7 +266,7 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 		testhelpers.Assert(t, balanceNodeAPrime.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of node APrime (%v) should be equal to (%v)", balanceNodeAPrime, ledgerChannelDeposit-payAmount)
 	})
 
-	t.Run("Unilaterally exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
+	t.Run("Clear the registered challenge using checkpoint and exit L2 using latest L2 state", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
 		completedObjectiveChannel := nodeA.CompletedObjectives()
 
@@ -284,10 +284,10 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 		// Wait for challenge registered event
 		listenForLedgerUpdates(ledgerUpdatesChannelNodeA, channel.Challenge)
 
-		// Bridge clears the challenge
+		// Bridge clears the challenge using new L2 signed state
 		bridge.CounterChallenge(l1LedgerChannelId, types.Checkpoint, newL2signedState)
 
-		// Wait for mirror bridged defund to complete
+		// Wait for mirror bridged defund to complete on L1 (objective is completed after the challenge cleared event occurs)
 		for val := range completedObjectiveChannel {
 			if val == protocols.ObjectiveId(mirrorbridgeddefund.ObjectivePrefix+l1LedgerChannelId.String()) {
 				break
@@ -451,7 +451,7 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 		testhelpers.Assert(t, balanceNodeAPrime.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of node APrime (%v) should be equal to (%v)", balanceNodeAPrime, ledgerChannelDeposit-payAmount)
 	})
 
-	t.Run("Unilaterally exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
+	t.Run("Counter the registered challenge by challenging with new L2 state and exit L2 using the new L2 state", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
 		completedObjectiveChannel := nodeA.CompletedObjectives()
 
@@ -469,7 +469,7 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 		// Wait for Alice's challenge to be registered
 		listenForLedgerUpdates(ledgerUpdatesChannelNodeA, channel.Challenge)
 
-		// Bridge counters the Alice' challenge
+		// Bridge counters the Alice' challenge using new L2 signed state
 		bridge.CounterChallenge(l1LedgerChannelId, types.Challenge, newL2signedState)
 
 		// Wait for mirror bridged defund to complete on L1

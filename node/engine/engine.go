@@ -722,16 +722,8 @@ func (e *Engine) handleCounterChallengeRequest(request CounterChallengeRequest) 
 
 	switch objective := obj.(type) {
 	case *directdefund.Objective:
-		if isCheckPoint {
-			objective.IsCheckpoint = isCheckPoint
-		}
-		if isChallenge {
-			objective.IsChallenge = isChallenge
-		}
-		_, err := e.attemptProgress(objective)
-		if err != nil {
-			return err
-		}
+		objective.IsCheckpoint = isCheckPoint
+		objective.IsChallenge = isChallenge
 
 	case *mirrorbridgeddefund.Objective:
 		if request.Payload.State().ChannelId().IsZero() {
@@ -739,18 +731,16 @@ func (e *Engine) handleCounterChallengeRequest(request CounterChallengeRequest) 
 		}
 
 		objective.L2SignedState = request.Payload
-		if isCheckPoint {
-			objective.IsCheckPoint = isCheckPoint
-		}
-		if isChallenge {
-			objective.IsChallenge = isChallenge
-		}
-		_, err := e.attemptProgress(objective)
-		if err != nil {
-			return err
-		}
+		objective.IsCheckPoint = isCheckPoint
+		objective.IsChallenge = isChallenge
+
 	default:
 		return fmt.Errorf("unknown objective type %T", objective)
+	}
+
+	_, err := e.attemptProgress(obj)
+	if err != nil {
+		return err
 	}
 
 	return nil

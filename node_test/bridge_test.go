@@ -214,6 +214,11 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		// Wait for CharliePrime to recieve voucher
+		nodeCPrimeVoucher := <-nodeCPrime.ReceivedVouchers()
+		t.Logf("Voucher recieved %+v", nodeCPrimeVoucher)
+
 		// Virtual defund
 		virtualDefundResponse, _ := nodeAPrime.ClosePaymentChannel(virtualResponse.ChannelId)
 		<-nodeAPrime.ObjectiveCompleteChan(virtualDefundResponse)

@@ -87,6 +87,10 @@ export type DefundObjectiveRequest = {
 export type DirectDefundObjectiveRequest = DefundObjectiveRequest & {
   IsChallenge: boolean;
 };
+export type MirrorBridgedDefundObjectiveRequest =
+  DirectDefundObjectiveRequest & {
+    StringifiedL2SignedState: string;
+  };
 export type ObjectiveResponse = {
   Id: string;
   ChannelId: string;
@@ -129,6 +133,10 @@ export type GetAllLedgerChannelsRequest = JsonRpcRequest<
   "get_all_ledger_channels",
   Record<string, never>
 >;
+export type GetSignedStateRequest = JsonRpcRequest<
+  "get_signed_state",
+  GetChannelRequest
+>;
 export type GetPaymentChannelRequest = JsonRpcRequest<
   "get_payment_channel",
   GetChannelRequest
@@ -146,6 +154,10 @@ export type DirectDefundRequest = JsonRpcRequest<
 export type BridgedDefundRequest = JsonRpcRequest<
   "close_bridge_channel",
   DefundObjectiveRequest
+>;
+export type MirrorBridgedDefundRequest = JsonRpcRequest<
+  "mirror_bridged_defund",
+  MirrorBridgedDefundObjectiveRequest
 >;
 export type VirtualDefundRequest = JsonRpcRequest<
   "close_payment_channel",
@@ -172,9 +184,11 @@ export type VersionResponse = JsonRpcResponse<string>;
 export type GetAddressResponse = JsonRpcResponse<string>;
 export type DirectFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type DirectDefundResponse = JsonRpcResponse<string>;
+export type MirrorBridgedDefundResponse = JsonRpcResponse<string>;
 export type BridgedDefundResponse = JsonRpcResponse<string>;
 export type VirtualDefundResponse = JsonRpcResponse<string>;
 export type GetAllLedgerChannelsResponse = JsonRpcResponse<LedgerChannelInfo[]>;
+export type GetSignedStateResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelsByLedgerResponse = JsonRpcResponse<
   PaymentChannelInfo[]
 >;
@@ -189,6 +203,10 @@ export type RPCRequestAndResponses = {
   create_ledger_channel: [DirectFundRequest, DirectFundResponse];
   close_ledger_channel: [DirectDefundRequest, DirectDefundResponse];
   close_bridge_channel: [BridgedDefundRequest, BridgedDefundResponse];
+  mirror_bridged_defund: [
+    MirrorBridgedDefundRequest,
+    MirrorBridgedDefundResponse
+  ];
   version: [VersionRequest, VersionResponse];
   create_payment_channel: [VirtualFundRequest, VirtualFundResponse];
   get_address: [GetAddressRequest, GetAddressResponse];
@@ -205,6 +223,7 @@ export type RPCRequestAndResponses = {
     GetAllLedgerChannelsRequest,
     GetAllLedgerChannelsResponse
   ];
+  get_signed_state: [GetSignedStateRequest, GetSignedStateResponse];
   get_payment_channels_by_ledger: [
     GetPaymentChannelsByLedgerRequest,
     GetPaymentChannelsByLedgerResponse
@@ -252,6 +271,28 @@ export type LedgerChannelInfo = {
   Status: ChannelStatus;
   Balance: LedgerChannelBalance;
   ChannelMode: keyof typeof ChannelMode;
+};
+
+export type LedgerChannelState = {
+  Participants: string[];
+  ChannelNonce: number;
+  AppDefinition: string;
+  ChallengeDuration: number;
+  AppData: string;
+  Outcome: Outcome;
+  TurnNum: number;
+  IsFinal: boolean;
+};
+
+export type Signature = {
+  r: string;
+  s: string;
+  v: number;
+};
+
+export type SignedState = {
+  state: LedgerChannelState;
+  sigs: { [key: number]: Signature };
 };
 
 export type LedgerChannelBalance = {

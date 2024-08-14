@@ -356,6 +356,15 @@ func (n *Node) GetLedgerChannel(id types.Destination) (query.LedgerChannelInfo, 
 	return query.GetLedgerChannelInfo(id, n.store)
 }
 
+func (n *Node) GetSignedState(id types.Destination) (state.SignedState, error) {
+	consensusChannel, err := n.store.GetConsensusChannelById(id)
+	if err != nil {
+		return state.SignedState{}, err
+	}
+
+	return consensusChannel.SupportedSignedState(), nil
+}
+
 // Close stops the node from responding to any input.
 func (n *Node) Close() error {
 	if err := n.engine.Close(); err != nil {

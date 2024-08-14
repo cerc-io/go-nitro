@@ -17,6 +17,7 @@ import {
   CounterChallengeAction,
   CounterChallengeResult,
   ObjectiveCompleteNotification,
+  MirrorBridgedDefundObjectiveRequest,
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -211,6 +212,19 @@ export class NitroRpcClient implements RpcClientApi {
     return this.sendRequest("close_bridge_channel", payload);
   }
 
+  public async MirrorBridgedDefund(
+    channelId: string,
+    stringifiedL2SignedState: string,
+    isChallenge: boolean
+  ): Promise<string> {
+    const payload: MirrorBridgedDefundObjectiveRequest = {
+      ChannelId: channelId,
+      IsChallenge: isChallenge,
+      StringifiedL2SignedState: stringifiedL2SignedState,
+    };
+    return this.sendRequest("mirror_bridged_defund", payload);
+  }
+
   public async CounterChallenge(
     channelId: string,
     action: CounterChallengeAction
@@ -250,6 +264,10 @@ export class NitroRpcClient implements RpcClientApi {
 
   public async GetAllL2Channels(): Promise<LedgerChannelInfo[]> {
     return this.sendRequest("get_all_l2_channels", {});
+  }
+
+  public async GetSignedState(channelId: string): Promise<string> {
+    return this.sendRequest("get_signed_state", { Id: channelId });
   }
 
   public async GetPaymentChannel(

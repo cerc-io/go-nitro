@@ -27,3 +27,10 @@ func ValidateGetPaymentChannelsByLedgerRequest(req GetPaymentChannelsByLedgerReq
 	}
 	return nil
 }
+
+func ValidateGetSignedStateRequest(req GetSignedStateRequest) error {
+	if (req.Id == types.Destination{}) {
+		return InvalidParamsError
+	}
+	return nil
+}

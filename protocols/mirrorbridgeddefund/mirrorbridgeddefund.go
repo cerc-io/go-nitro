@@ -296,6 +296,8 @@ func (o *Objective) CreateL1StateBasedOnL2() (state.State, error) {
 	l1OutcomeBasedOnL2[0].Allocations[1] = tempAllocation
 	l1VariablePartBasedOnL2.Outcome = l1OutcomeBasedOnL2
 
+	l1VariablePartBasedOnL2.TurnNum++
+
 	return state.StateFromFixedAndVariablePart(l1State.FixedPart(), l1VariablePartBasedOnL2), nil
 }
 

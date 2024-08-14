@@ -214,6 +214,11 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		// Wait for CharliePrime to recieve voucher
+		nodeCPrimeVoucher := <-nodeCPrime.ReceivedVouchers()
+		t.Logf("Voucher recieved %+v", nodeCPrimeVoucher)
+
 		// Virtual defund
 		virtualDefundResponse, _ := nodeAPrime.ClosePaymentChannel(virtualResponse.ChannelId)
 		<-nodeAPrime.ObjectiveCompleteChan(virtualDefundResponse)
@@ -877,11 +882,13 @@ func initializeUtils(t *testing.T, closeBridge bool) (Utils, func()) {
 			utils.nodeBPrime.Close()
 		}
 
-		utils.infraL1.Close(t)
-		utils.infraL2.Close(t)
+		utils.testChainService.Close()
+
 		utils.nodeA.Close()
 		utils.nodeAPrime.Close()
-		utils.testChainService.Close()
+
+		utils.infraL1.Close(t)
+		utils.infraL2.Close(t)
 	}
 
 	return utils, cleanupUtils
@@ -975,10 +982,11 @@ func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge,
 			utils.bridge.Close()
 		}
 
-		utils.infraL1.Close(t)
-		utils.infraL2.Close(t)
 		utils.nodeA.Close()
 		utils.nodeAPrime.Close()
+
+		utils.infraL1.Close(t)
+		utils.infraL2.Close(t)
 	}
 
 	return utils, cleanupUtilsWithBridge

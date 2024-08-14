@@ -2,6 +2,8 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable @typescript-eslint/no-shadow */
 
+import * as fs from "fs";
+
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 
@@ -90,6 +92,41 @@ yargs(hideBin(process.argv))
       for (const ledger of ledgers) {
         console.log(`${compactJson(ledger)}`);
       }
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
+    "get-signed-state <channelId> <jsonFilePath>",
+    "Get latest signed state",
+    (yargsBuilder) => {
+      return yargsBuilder
+        .positional("channelId", {
+          describe: "The channel ID of the ledger channel",
+          type: "string",
+          demandOption: true,
+        })
+        .positional("jsonFilePath", {
+          describe: "Path to JSON file for saving signed state",
+          type: "string",
+          demandOption: true,
+        });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const channelId = yargs.channelId;
+      const jsonFilePath = yargs.jsonFilePath;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort)
+      );
+      const stringifiedSignedState = await rpcClient.GetSignedState(channelId);
+
+      console.log(stringifiedSignedState);
+
+      fs.writeFileSync(jsonFilePath, stringifiedSignedState, "utf8");
+
       await rpcClient.Close();
       process.exit(0);
     }
@@ -236,6 +273,60 @@ yargs(hideBin(process.argv))
       await rpcClient.WaitForObjectiveToComplete(
         `bridgeddefunding-${yargs.channelId}`
       );
+      console.log(`Objective Complete ${yargs.channelId}`);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
+    "mirror-bridged-defund <channelId> <l2SignedStateFilePath>",
+    "Defunds a mirror ledger channel",
+    (yargsBuilder) => {
+      return yargsBuilder
+        .positional("channelId", {
+          describe: "The id of ledger channel to call challenge on",
+          type: "string",
+          demandOption: true,
+        })
+        .positional("l2SignedStateFilePath", {
+          describe: "Path to JSON file containing L2 signed state",
+          type: "string",
+          demandOption: true,
+        })
+        .option("isChallenge", {
+          describe: "To initiate challenge transaction",
+          type: "boolean",
+          default: false,
+        });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isChallenge = yargs.isChallenge;
+      const l2SignedStateFilePath = yargs.l2SignedStateFilePath;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort)
+      );
+      if (yargs.n) logOutChannelUpdates(rpcClient);
+
+      const stringifiedL2SignedState = fs.readFileSync(
+        l2SignedStateFilePath,
+        "utf8"
+      );
+
+      const id = await rpcClient.MirrorBridgedDefund(
+        yargs.channelId,
+        stringifiedL2SignedState,
+        isChallenge
+      );
+
+      console.log(`Objective started ${id}`);
+
+      await rpcClient.WaitForObjectiveToComplete(
+        `mirrorbridgeddefunding-${yargs.channelId}`
+      );
+
       console.log(`Objective Complete ${yargs.channelId}`);
       await rpcClient.Close();
       process.exit(0);

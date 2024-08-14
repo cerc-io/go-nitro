@@ -180,8 +180,10 @@ export function getAndValidateResult<T extends RequestMethod>(
     case "get_auth_token":
     case "close_ledger_channel":
     case "close_bridge_channel":
+    case "mirror_bridged_defund":
     case "version":
     case "get_address":
+    case "get_signed_state":
     case "close_payment_channel":
       return validateAndConvertResult(
         stringSchema,

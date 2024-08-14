@@ -21,19 +21,9 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
         l2Tol1[l2ChannelId] = l1ChannelId;
     }
 
-    // Function to retrieve the mapped value of l2ChannelId
-    function getL2ToL1(bytes32 l2ChannelId) public view returns (bytes32) {
-        return l2Tol1[l2ChannelId];
-    }
-
     // Function to set map from l2AssetAddress to l1AssetAddress
     function setL2ToL1AssetAddress(address l1AssetAddress, address l2AssetAddress) public onlyOwner {
         l2Tol1AssetAddress[l2AssetAddress] = l1AssetAddress;
-    }
-
-    // Function to retrieve the mapped value of l2AssetAddress
-    function getL2ToL1AssetAddress(address l2AssetAddress) public view returns (address) {
-        return l2Tol1AssetAddress[l2AssetAddress];
     }
 
     /**
@@ -70,7 +60,7 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
         _requireChannelFinalized(mirrorChannelId);
         _requireMatchingFingerprint(stateHash, NitroUtils.hashOutcome(outcome), mirrorChannelId);
 
-        bytes32 l1ChannelId = getL2ToL1(mirrorChannelId);
+        bytes32 l1ChannelId = l2Tol1[mirrorChannelId];
 
         // computation
         bool allocatesOnlyZerosForAllAssets = true;
@@ -81,7 +71,7 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
             Outcome.SingleAssetExit memory assetOutcome = outcome[assetIndex];
 
             // Replace address of custom asset deployed on to L2 with asset address on L1
-            address l1Asset = getL2ToL1AssetAddress(assetOutcome.asset);
+            address l1Asset = l2Tol1AssetAddress[assetOutcome.asset];
             assetOutcome.asset = l1Asset;
             outcome[assetIndex].asset = l1Asset;
 
@@ -115,7 +105,6 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
             emit AllocationUpdated(
                 l1ChannelId,
                 asset,
-                assetIndex,
                 initialHoldings[assetIndex],
                 holdings[asset][l1ChannelId]
             );
@@ -185,7 +174,6 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
             emit AllocationUpdated(
                 channelId,
                 asset,
-                assetIndex,
                 initialHoldings[assetIndex],
                 holdings[asset][channelId]
             );

@@ -438,11 +438,11 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 
 // GetL1ChannelFromL2 returns the L1 ledger channel ID from the L2 ledger channel by making a contract call to the l2ToL1 map of the Nitro Adjudicator contract
 func (ecs *EthChainService) GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error) {
-	return ecs.na.GetL2ToL1(ecs.defaultCallOpts(), l2Channel)
+	return ecs.na.L2Tol1(ecs.defaultCallOpts(), l2Channel)
 }
 
 func (ecs *EthChainService) GetL1AssetAddressFromL2(l2AssetAddress common.Address) (common.Address, error) {
-	return ecs.na.GetL2ToL1AssetAddress(ecs.defaultCallOpts(), l2AssetAddress)
+	return ecs.na.L2Tol1AssetAddress(ecs.defaultCallOpts(), l2AssetAddress)
 }
 
 // dispatchChainEvents takes in a collection of event logs from the chain
@@ -472,19 +472,13 @@ func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 				return fmt.Errorf("error in ParseAllocationUpdated: %w", err)
 			}
 
-			tx, pending, err := ecs.chain.TransactionByHash(ecs.ctx, l.TxHash)
+			_, pending, err := ecs.chain.TransactionByHash(ecs.ctx, l.TxHash)
 			if pending {
 				return fmt.Errorf("expected transaction to be part of the chain, but the transaction is pending")
 			}
 			if err != nil {
 				return fmt.Errorf("error in TransactionByHash: %w", err)
 			}
-
-			assetAddress, err := assetAddressForIndex(ecs.na, tx, au.AssetIndex)
-			if err != nil {
-				return fmt.Errorf("error in assetAddressForIndex: %w", err)
-			}
-			ecs.logger.Debug("assetAddress", "assetAddress", assetAddress)
 
 			event := NewAllocationUpdatedEvent(au.ChannelId, Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, l.TxIndex, au.Asset, au.FinalHoldings)
 			ecs.out <- event

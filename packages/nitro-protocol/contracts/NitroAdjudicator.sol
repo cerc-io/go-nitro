@@ -26,13 +26,16 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
         return l2Tol1[l2ChannelId];
     }
 
+    // Function to set map from l2AssetAddress to l1AssetAddress
     function setL2ToL1AssetAddress(address l1AssetAddress, address l2AssetAddress) public onlyOwner {
         l2Tol1AssetAddress[l2AssetAddress] = l1AssetAddress;
     }
 
+    // Function to retrieve the mapped value of l2AssetAddress
     function getL2ToL1AssetAddress(address l2AssetAddress) public view returns (address) {
         return l2Tol1AssetAddress[l2AssetAddress];
     }
+
     /**
      * @notice Finalizes a channel according to the given candidate, and liquidates all assets for the channel.
      * @dev Finalizes a channel according to the given candidate, and liquidates all assets for the channel.

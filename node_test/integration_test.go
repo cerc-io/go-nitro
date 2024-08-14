@@ -117,6 +117,7 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 		aliceLedgers := make([]types.Destination, tc.NumOfHops)
 		bobLedgers := make([]types.Destination, tc.NumOfHops)
 		for i, clientI := range intermediaries {
+			t.Log("DEBUG: Setting up ledger channel between Alice/Bob and intermediaries, intermediary number", i)
 			// Setup and check the ledger channel between Alice and the intermediary
 			aliceLedgers[i] = openLedgerChannel(t, clientA, clientI, asset, 0)
 			checkLedgerChannel(t, aliceLedgers[i], CreateLedgerOutcome(*clientA.Address, *clientI.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset), query.Open, clientA)
@@ -126,8 +127,11 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 
 		}
 
+		t.Log("DEBUG: After setting up ledger channels between Alice/Bob and intermediaries")
+
 		if tc.NumOfHops == 2 {
 			openLedgerChannel(t, intermediaries[0], intermediaries[1], asset, 0)
+			t.Log("DEBUG: After setting up ledger channels when NumOfHops is 2")
 		}
 		// Setup virtual channels
 		objectiveIds := make([]protocols.ObjectiveId, tc.NumOfChannels)
@@ -143,12 +147,16 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			t.Log("DEBUG: Created virtual channel, number: ", i)
 			objectiveIds[i] = response.Id
 			virtualIds[i] = response.ChannelId
 
 		}
 		// Wait for all the virtual channels to be ready
 		waitForObjectives(t, clientA, clientB, intermediaries, objectiveIds)
+
+		t.Log("DEBUG: After Setting up virtual channels")
 
 		// Check all the virtual channels
 		for i := 0; i < len(virtualIds); i++ {
@@ -169,10 +177,14 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 			}
 		}
 
+		t.Log("DEBUG: After making payments")
+
 		// Wait for all the vouchers to be received by bob
 		for i := 0; i < len(virtualIds)*int(tc.NumOfPayments); i++ {
 			<-clientB.ReceivedVouchers()
 		}
+
+		t.Log("DEBUG: After waiting for vouchers")
 
 		// Check the payment channels have the correct outcome after the payments
 		for i := 0; i < len(virtualIds); i++ {
@@ -182,6 +194,8 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 				query.Open,
 				clientA, clientB)
 		}
+
+		t.Log("DEBUG: After checking payment channels")
 
 		// Close virtual channels
 		closeVirtualIds := make([]protocols.ObjectiveId, len(virtualIds))
@@ -203,20 +217,27 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 
 		waitForObjectives(t, clientA, clientB, intermediaries, closeVirtualIds)
 
+		t.Log("DEBUG: After closing virtual channels")
+
 		// Close all the ledger channels we opened
 
 		closeLedgerChannel(t, clientA, intermediaries[0], aliceLedgers[0])
 		checkLedgerChannel(t, aliceLedgers[0], finalAliceLedger(*intermediaries[0].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, clientA)
+		t.Log("DEBUG: After closing first alice ledger Channel")
 
 		// TODO: This is brittle, we should generalize this to n number of intermediaries
 		if tc.NumOfHops == 1 {
 			closeLedgerChannel(t, intermediaries[0], clientB, bobLedgers[0])
 			checkLedgerChannel(t, bobLedgers[0], finalBobLedger(*intermediaries[0].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, clientB)
+			t.Log("DEBUG: After closing ledger channel when NumOfHops is 1")
 		}
 		if tc.NumOfHops == 2 {
 			closeLedgerChannel(t, intermediaries[1], clientB, bobLedgers[1])
 			checkLedgerChannel(t, bobLedgers[1], finalBobLedger(*intermediaries[1].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, clientB)
+			t.Log("DEBUG: After closing ledger channel when NumOfHops is 2")
 		}
+
+		t.Log("DEBUG: After closing all ledger channels")
 
 		var chainLastConfirmedBlockNum uint64
 		if infra.mockChain != nil {
@@ -229,8 +250,12 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 			chainLastConfirmedBlockNum = latestBlock.NumberU64() - chainservice.REQUIRED_BLOCK_CONFIRMATIONS
 		}
 
+		t.Log("DEBUG: Waiting for block confirmations")
+
 		waitForClientBlockNum(t, clientA, chainLastConfirmedBlockNum, 10*time.Second)
 		waitForClientBlockNum(t, clientB, chainLastConfirmedBlockNum, 10*time.Second)
+
+		t.Log("DEBUG: After waiting for client block num")
 	})
 }
 

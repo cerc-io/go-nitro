@@ -441,6 +441,10 @@ func (ecs *EthChainService) GetL1ChannelFromL2(l2Channel types.Destination) (typ
 	return ecs.na.GetL2ToL1(ecs.defaultCallOpts(), l2Channel)
 }
 
+func (ecs *EthChainService) GetL1AssetAddressFromL2(l2AssetAddress common.Address) (common.Address, error) {
+	return ecs.na.GetL2ToL1AssetAddress(ecs.defaultCallOpts(), l2AssetAddress)
+}
+
 // dispatchChainEvents takes in a collection of event logs from the chain
 // and dispatches events to the out channel
 func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {

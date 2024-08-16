@@ -199,7 +199,7 @@ describe('transfer', () => {
             event: 'AllocationUpdated',
             args: {
               channelId,
-              assetIndex: BigNumber.from(0),
+              asset: MAGIC_ADDRESS_INDICATING_ETH,
               initialHoldings: heldBefore[addresses.c],
             },
           },

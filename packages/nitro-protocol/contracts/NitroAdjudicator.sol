@@ -22,7 +22,10 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
     }
 
     // Function to set map from l2AssetAddress to l1AssetAddress
-    function setL2ToL1AssetAddress(address l1AssetAddress, address l2AssetAddress) public onlyOwner {
+    function setL2ToL1AssetAddress(
+        address l1AssetAddress,
+        address l2AssetAddress
+    ) public onlyOwner {
         l2Tol1AssetAddress[l2AssetAddress] = l1AssetAddress;
     }
 

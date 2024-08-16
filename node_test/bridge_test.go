@@ -221,7 +221,11 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 
 		// Virtual defund
 		virtualDefundResponse, _ := nodeAPrime.ClosePaymentChannel(virtualResponse.ChannelId)
-		<-nodeAPrime.ObjectiveCompleteChan(virtualDefundResponse)
+		nodeAPrimeObjCompleteChan := nodeAPrime.ObjectiveCompleteChan(virtualDefundResponse)
+		nodeCPrimeObjCompleteChan := nodeCPrime.ObjectiveCompleteChan(virtualDefundResponse)
+
+		<-nodeAPrimeObjCompleteChan
+		<-nodeCPrimeObjCompleteChan
 
 		checkLedgerChannel(t, l2AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeAPrime.Address, bridgeAddress, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, types.Address{}), query.Open, nodeAPrime)
 		checkLedgerChannel(t, l2CharlieBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeCPrime.Address, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, types.Address{}), query.Open, nodeCPrime)

@@ -32,17 +32,17 @@ import (
 
 // Node provides the interface for the consuming application
 type Node struct {
-	engine          engine.Engine // The core business logic of the node
-	Address         *types.Address
-	channelNotifier *notifier.ChannelNotifier
+	engine                      engine.Engine // The core business logic of the node
+	Address                     *types.Address
+	channelNotifier             *notifier.ChannelNotifier
+	completedObjectivesNotifier *notifier.CompletedObjetivesNotifier
 
-	completedObjectivesForRPC chan protocols.ObjectiveId // This is only used by the RPC server
-	completedObjectives       *safesync.Map[chan struct{}]
-	failedObjectives          chan protocols.ObjectiveId
-	receivedVouchers          chan payments.Voucher
-	chainId                   *big.Int
-	store                     store.Store
-	vm                        *payments.VoucherManager
+	completedObjectives *safesync.Map[chan struct{}]
+	failedObjectives    chan protocols.ObjectiveId
+	receivedVouchers    chan payments.Voucher
+	chainId             *big.Int
+	store               store.Store
+	vm                  *payments.VoucherManager
 }
 
 // New is the constructor for a Node. It accepts a messaging service, a chain service, and a store as injected dependencies.
@@ -60,13 +60,13 @@ func New(messageService messageservice.MessageService, chainservice chainservice
 
 	n.engine = engine.New(n.vm, messageService, chainservice, store, policymaker, n.handleEngineEvent)
 	n.completedObjectives = &safesync.Map[chan struct{}]{}
-	n.completedObjectivesForRPC = make(chan protocols.ObjectiveId, 100)
 
 	n.failedObjectives = make(chan protocols.ObjectiveId, 100)
 	// Using a larger buffer since payments can be sent frequently.
 	n.receivedVouchers = make(chan payments.Voucher, 1000)
 
 	n.channelNotifier = notifier.NewChannelNotifier(store, n.vm)
+	n.completedObjectivesNotifier = notifier.NewCompletedObjectivesNotifier()
 
 	return n
 }
@@ -78,11 +78,8 @@ func (n *Node) handleEngineEvent(update engine.EngineEvent) {
 		close(d)
 		n.completedObjectives.Delete(string(completed.Id()))
 
-		// use a nonblocking send to the RPC Client in case no one is listening
-		select {
-		case n.completedObjectivesForRPC <- completed.Id():
-		default:
-		}
+		// Broadcast completed objective ID to all listeners
+		n.completedObjectivesNotifier.BroadcastCompletedObjective(completed.Id())
 	}
 
 	for _, erred := range update.FailedObjectives {
@@ -130,11 +127,6 @@ func (n *Node) Version() string {
 	return version
 }
 
-// CompletedObjectives returns a chan that receives a objective id whenever that objective is completed. Not suitable fo multiple subscribers.
-func (n *Node) CompletedObjectives() <-chan protocols.ObjectiveId {
-	return n.completedObjectivesForRPC
-}
-
 // LedgerUpdates returns a chan that receives ledger channel info whenever that ledger channel is updated. Not suitable for multiple subscribers.
 func (n *Node) LedgerUpdates() <-chan query.LedgerChannelInfo {
 	return n.channelNotifier.RegisterForAllLedgerUpdates()
@@ -143,6 +135,11 @@ func (n *Node) LedgerUpdates() <-chan query.LedgerChannelInfo {
 // PaymentUpdates returns a chan that receives payment channel info whenever that payment channel is updated. Not suitable fo multiple subscribers.
 func (n *Node) PaymentUpdates() <-chan query.PaymentChannelInfo {
 	return n.channelNotifier.RegisterForAllPaymentUpdates()
+}
+
+// CompletedObjectives returns a chan that receives a objective ID whenever that objective is completed
+func (n *Node) CompletedObjectives() <-chan protocols.ObjectiveId {
+	return n.completedObjectivesNotifier.RegisterForAllCompletedObjectives()
 }
 
 // ObjectiveCompleteChan returns a chan that is closed when the objective with given id is completed
@@ -374,9 +371,9 @@ func (n *Node) Close() error {
 		return err
 	}
 
-	// If there are blocking consumers (for or select channel statements) on any channel for which the node is a producer,
-	// those channels need to be closed.
-	close(n.completedObjectivesForRPC)
+	if err := n.completedObjectivesNotifier.Close(); err != nil {
+		return err
+	}
 
 	return n.store.Close()
 }

@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/statechannels/go-nitro/node/query"
+	"github.com/statechannels/go-nitro/protocols"
 )
 
 // paymentChannelListeners is a struct that holds a list of listeners for payment channel info.
@@ -122,6 +123,51 @@ func (li *ledgerChannelListeners) getOrCreateListener() <-chan query.LedgerChann
 
 // Close closes all listeners.
 func (li *ledgerChannelListeners) Close() error {
+	li.listenersLock.Lock()
+	defer li.listenersLock.Unlock()
+	for _, c := range li.listeners {
+		close(c)
+	}
+
+	return nil
+}
+
+type completedObjectivesListeners struct {
+	// listeners is a list of listeners for completed objectives that we need to notify
+	listeners []chan protocols.ObjectiveId
+	// listenersLock is used to protect against concurrent access to sibling struct members
+	listenersLock sync.Mutex
+}
+
+func newCompletedObjectivesListeners() *completedObjectivesListeners {
+	return &completedObjectivesListeners{listeners: []chan protocols.ObjectiveId{}, listenersLock: sync.Mutex{}}
+}
+
+// createNewListener creates a new listener and adds it to the list of listeners
+func (li *completedObjectivesListeners) createNewListener() <-chan protocols.ObjectiveId {
+	li.listenersLock.Lock()
+	defer li.listenersLock.Unlock()
+	// Use a buffered channel to avoid blocking the notifier.
+	listener := make(chan protocols.ObjectiveId, 1000)
+	li.listeners = append(li.listeners, listener)
+	return listener
+}
+
+// broadcastCompletedObjective broadcasts the completed objectives to all the listeners
+func (li *completedObjectivesListeners) broadcastCompletedObjective(objectiveId protocols.ObjectiveId) {
+	li.listenersLock.Lock()
+	defer li.listenersLock.Unlock()
+
+	for _, listener := range li.listeners {
+		select {
+		case listener <- objectiveId:
+		default:
+		}
+	}
+}
+
+// Close closes all listeners
+func (li *completedObjectivesListeners) Close() error {
 	li.listenersLock.Lock()
 	defer li.listenersLock.Unlock()
 	for _, c := range li.listeners {

@@ -89,7 +89,7 @@ interface IMultiAssetHolder {
      */
     event AllocationUpdated(
         bytes32 indexed channelId,
-        uint256 assetIndex,
+        address asset,
         uint256 initialHoldings,
         uint256 finalHoldings
     );

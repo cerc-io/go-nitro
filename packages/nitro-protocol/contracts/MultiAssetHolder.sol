@@ -209,7 +209,7 @@ contract MultiAssetHolder is IMultiAssetHolder, StatusManager {
         _updateFingerprint(channelId, stateHash, keccak256(abi.encode(outcome)));
 
         // emit the information needed to compute the new outcome stored in the fingerprint
-        emit AllocationUpdated(channelId, assetIndex, initialHoldings, holdings[asset][channelId]);
+        emit AllocationUpdated(channelId, asset, initialHoldings, holdings[asset][channelId]);
     }
 
     function _apply_transfer_interactions(

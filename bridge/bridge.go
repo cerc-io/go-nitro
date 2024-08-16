@@ -160,6 +160,11 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	b.cancel = cancelFunc
 
+	err = b.updateOnchainAssetAddressMap()
+	if err != nil {
+		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
+	}
+
 	ds, err := NewDurableStore(configOpts.DurableStoreDir, buntdb.Config{})
 	if err != nil {
 		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
@@ -369,6 +374,26 @@ func (b *Bridge) getUpdateMirrorChannelStateTransaction(con *consensus_channel.C
 	updateMirroredChannelStateTx := protocols.NewUpdateMirroredChannelStatesTransaction(con.Id, stateHash, outcomeByte, asset, holdingAmount)
 
 	return updateMirroredChannelStateTx, nil
+}
+
+// Set L2AssetAddress => L1AssetAddress if it doesn't already exist on L1 chain
+func (b *Bridge) updateOnchainAssetAddressMap() error {
+	for l1AssetAddress, l2AssetAddress := range b.L1ToL2AssetAddressMap {
+		l1OnchainAssetAddress, err := b.chainServiceL1.GetL1AssetAddressFromL2(l2AssetAddress)
+		if err != nil {
+			return err
+		}
+
+		if l1OnchainAssetAddress != l1AssetAddress {
+			setL2ToL1AssetAddressTx := protocols.NewSetL2ToL1AssetAddressTransaction(l1AssetAddress, l2AssetAddress)
+			err = b.chainServiceL1.SendTransaction(setL2ToL1AssetAddressTx)
+			if err != nil {
+				return fmt.Errorf("error in send transaction %w", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // Since bridge node addresses are same

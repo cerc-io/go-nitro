@@ -100,7 +100,7 @@ const MAX_QUERY_BLOCK_RANGE = 2000
 const RESUB_INTERVAL = 15 * time.Second
 
 // REQUIRED_BLOCK_CONFIRMATIONS is how many blocks must be mined before an emitted event is processed
-const REQUIRED_BLOCK_CONFIRMATIONS = 2
+const REQUIRED_BLOCK_CONFIRMATIONS = 3
 
 // MAX_EPOCHS is the maximum range of old epochs we can query with a single "FilterLogs" request
 // This is a restriction enforced by the rpc provider
@@ -294,21 +294,12 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				}
 
 				// Get current block
-
-				confirmedBlockNum := ecs.GetLastConfirmedBlockNum()
-
-				c, err := ecs.GetBlockByNumber(big.NewInt(int64(confirmedBlockNum)))
-				if err != nil {
-					return err
-				}
-				currentConfirmedBlock := c.Header()
+				currentBlock := <-ecs.newBlockChan
 
 				isApproveTxRetried := false
 
 				// Transaction hash of retried Approve transaction
 				var retryApproveTxHash common.Hash
-
-				var approvalEventBlockNum uint64
 
 				// Wait for the Approve transaction to be mined before continuing
 			approvalEventListenerLoop:
@@ -316,25 +307,15 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 					select {
 					case log := <-approvalLogsChan:
 						if log.Owner == ecs.txSigner.From {
-							approvalEventBlockNum = log.Raw.BlockNumber
 							approvalSubscription.Unsubscribe()
 							break approvalEventListenerLoop
 						}
 					case err := <-approvalSubscription.Err():
 						return err
-					case <-ecs.newBlockChan:
-						confirmedBlockNum := ecs.GetLastConfirmedBlockNum()
-
-						c, err := ecs.GetBlockByNumber(big.NewInt(int64(confirmedBlockNum)))
-						if err != nil {
-							return err
-						}
-
-						newConfirmedBlock := c.Header()
-
-						if (newConfirmedBlock.Number.Int64() - currentConfirmedBlock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
+					case newBlock := <-ecs.newBlockChan:
+						if (newBlock.Number.Int64() - currentBlock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
 							if isApproveTxRetried {
-								slog.Error("approve transaction was retried with higher gas and event Approval was not emitted till latest block", "txHash", retryApproveTxHash, "latestBlock", newConfirmedBlock.Number.String())
+								slog.Error("approve transaction was retried with higher gas and event Approval was not emitted till latest block", "txHash", retryApproveTxHash, "latestBlock", newBlock.Number.String())
 								return nil
 							}
 
@@ -356,28 +337,11 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 							}
 
 							isApproveTxRetried = true
-							currentConfirmedBlock = newConfirmedBlock
+							currentBlock = newBlock
 							retryApproveTxHash = reApproveTx.Hash()
 
 							slog.Info("Resubmitted transaction with higher gas limit", "gasLimit", approveTxOpts.GasLimit, "approveTxHash", reApproveTx.Hash().String())
 						}
-					}
-				}
-
-				approvalEventBlock, err := ecs.GetBlockByNumber(big.NewInt(int64(approvalEventBlockNum)))
-				if err != nil {
-					return err
-				}
-
-			blockConfirmationLoop:
-				for range ecs.newBlockChan {
-					currentConfirmedBlockNum := ecs.GetLastConfirmedBlockNum()
-					currentConfirmedBlock, err := ecs.GetBlockByNumber(big.NewInt(int64(currentConfirmedBlockNum)))
-					if err != nil {
-						return err
-					}
-					if approvalEventBlock.Hash() == currentConfirmedBlock.Hash() {
-						break blockConfirmationLoop
 					}
 				}
 			}
@@ -391,7 +355,9 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 
 			_, err = ecs.na.Deposit(txOpts, tokenAddress, tx.ChannelId(), holdings, amount)
 			if err != nil {
-				return err
+				// Return nil to not panic the node and log the error instead
+				slog.Error("error sending Deposit transaction", "error", err)
+				return nil
 			}
 		}
 		return nil

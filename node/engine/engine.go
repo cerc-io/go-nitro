@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
@@ -210,8 +211,19 @@ func (e *Engine) run(ctx context.Context) {
 			blockNum := e.chain.GetLastConfirmedBlockNum()
 			err = e.store.SetLastBlockNumSeen(blockNum)
 			e.checkError(err)
-			block := e.chain.GetLatestBlock()
-			err = e.processStoreChannels(block)
+
+			var block *ethTypes.Block
+
+			block, err = e.chain.GetBlockByNumber(big.NewInt(int64(blockNum)))
+
+			chainServiceBlock := chainservice.Block{
+				BlockNum:  block.NumberU64(),
+				Timestamp: block.Time(),
+			}
+
+			e.checkError(err)
+
+			err = e.processStoreChannels(chainServiceBlock)
 		case <-ctx.Done():
 			e.wg.Done()
 			return

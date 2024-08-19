@@ -288,7 +288,15 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				}
 
 				// Get current block
-				currentBlock := <-ecs.newBlockChan
+				// currentConfirmedBlock := <-ecs.newBlockChan
+
+				confirmedBlockNum := ecs.GetLastConfirmedBlockNum()
+
+				c, err := ecs.GetBlockByNumber(big.NewInt(int64(confirmedBlockNum)))
+				if err != nil {
+					return err
+				}
+				currentConfirmedBlock := c.Header()
 
 				isApproveTxRetried := false
 
@@ -306,10 +314,19 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 						}
 					case err := <-approvalSubscription.Err():
 						return err
-					case newBlock := <-ecs.newBlockChan:
-						if (newBlock.Number.Int64() - currentBlock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
+					case <-ecs.newBlockChan:
+						confirmedBlockNum := ecs.GetLastConfirmedBlockNum()
+
+						c, err := ecs.GetBlockByNumber(big.NewInt(int64(confirmedBlockNum)))
+						if err != nil {
+							return err
+						}
+
+						newConfirmedBlock := c.Header()
+
+						if (newConfirmedBlock.Number.Int64() - currentConfirmedBlock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
 							if isApproveTxRetried {
-								slog.Error("approve transaction was retried with higher gas and event Approval was not emitted till latest block", "txHash", retryApproveTxHash, "latestBlock", newBlock.Number.String())
+								slog.Error("approve transaction was retried with higher gas and event Approval was not emitted till latest block", "txHash", retryApproveTxHash, "latestBlock", newConfirmedBlock.Number.String())
 								return nil
 							}
 
@@ -331,7 +348,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 							}
 
 							isApproveTxRetried = true
-							currentBlock = newBlock
+							currentConfirmedBlock = newConfirmedBlock
 							retryApproveTxHash = reApproveTx.Hash()
 
 							slog.Info("Resubmitted transaction with higher gas limit", "gasLimit", approveTxOpts.GasLimit, "approveTxHash", reApproveTx.Hash().String())
@@ -781,6 +798,15 @@ func (ecs *EthChainService) GetLatestBlock() Block {
 	ecs.eventTracker.mu.Lock()
 	defer ecs.eventTracker.mu.Unlock()
 	return ecs.eventTracker.latestBlock
+}
+
+func (ecs *EthChainService) GetBlockByNumber(blockNum *big.Int) (*ethTypes.Block, error) {
+	block, err := ecs.chain.BlockByNumber(context.Background(), blockNum)
+	if err != nil {
+		return nil, err
+	}
+
+	return block, nil
 }
 
 func (ecs *EthChainService) Close() error {

@@ -288,7 +288,6 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				}
 
 				// Get current block
-				// currentConfirmedBlock := <-ecs.newBlockChan
 
 				confirmedBlockNum := ecs.GetLastConfirmedBlockNum()
 
@@ -303,12 +302,15 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				// Transaction hash of retried Approve transaction
 				var retryApproveTxHash common.Hash
 
+				var approvalEventBlockNum uint64
+
 				// Wait for the Approve transaction to be mined before continuing
 			approvalEventListenerLoop:
 				for {
 					select {
 					case log := <-approvalLogsChan:
 						if log.Owner == ecs.txSigner.From {
+							approvalEventBlockNum = log.Raw.BlockNumber
 							approvalSubscription.Unsubscribe()
 							break approvalEventListenerLoop
 						}
@@ -353,6 +355,23 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 
 							slog.Info("Resubmitted transaction with higher gas limit", "gasLimit", approveTxOpts.GasLimit, "approveTxHash", reApproveTx.Hash().String())
 						}
+					}
+				}
+
+				approvalEventBlock, err := ecs.GetBlockByNumber(big.NewInt(int64(approvalEventBlockNum)))
+				if err != nil {
+					return err
+				}
+
+			blockConfirmationLoop:
+				for range ecs.newBlockChan {
+					currentConfirmedBlockNum := ecs.GetLastConfirmedBlockNum()
+					currentConfirmedBlock, err := ecs.GetBlockByNumber(big.NewInt(int64(currentConfirmedBlockNum)))
+					if err != nil {
+						return err
+					}
+					if approvalEventBlock.Hash() == currentConfirmedBlock.Hash() {
+						break blockConfirmationLoop
 					}
 				}
 			}

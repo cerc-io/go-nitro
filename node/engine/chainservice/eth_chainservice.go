@@ -166,7 +166,13 @@ func newEthChainService(chain ethChain, startBlockNum uint64, na *NitroAdjudicat
 		return nil, err
 	}
 
-	ecs.newBlockChan = newBlockChan
+	newBlockSubChan := make(chan *ethTypes.Header)
+	_, err = ecs.chain.SubscribeNewHead(ecs.ctx, newBlockSubChan)
+	if err != nil {
+		return nil, err
+	}
+
+	ecs.newBlockChan = newBlockSubChan
 
 	// Prevent go routines from processing events before checkForMissedEvents completes
 	ecs.eventTracker.mu.Lock()

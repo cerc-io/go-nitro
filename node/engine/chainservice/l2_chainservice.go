@@ -94,7 +94,13 @@ func newL2ChainService(chain ethChain, startBlockNum uint64, bridge *Bridge.Brid
 		return nil, err
 	}
 
-	l2cs.newBlockChan = newBlockChan
+	newBlockSubChan := make(chan *ethTypes.Header)
+	_, err = l2cs.chain.SubscribeNewHead(ecs.ctx, newBlockSubChan)
+	if err != nil {
+		return nil, err
+	}
+
+	l2cs.newBlockChan = newBlockSubChan
 
 	// Prevent go routines from processing events before checkForMissedEvents completes
 	l2cs.eventTracker.mu.Lock()

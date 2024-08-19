@@ -29,7 +29,8 @@ async function initializeClients(): Promise<Clients> {
   const clients: Clients = new Map<ClientNames, NitroRpcClient>();
   for (const clientName of clientNames) {
     const client = await NitroRpcClient.CreateHttpNitroClient(
-      getLocalRPCUrl(port)
+      getLocalRPCUrl(port),
+      true
     );
     clients.set(clientName, client);
     port++;

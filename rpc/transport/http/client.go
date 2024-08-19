@@ -19,18 +19,24 @@ type clientHttpTransport struct {
 	notificationChan chan []byte
 	clientWebsocket  *websocket.Conn
 	url              string
+	isSecure         bool
 	wg               *sync.WaitGroup
 }
 
 // NewHttpTransportAsClient creates a transport that can be used to send http requests and a websocket connection for receiving notifications
 // Initialization will block for 10 retries until the server endpoint is ready
-func NewHttpTransportAsClient(url string, retryTimeout time.Duration) (*clientHttpTransport, error) {
-	err := blockUntilHttpServerIsReady(url, retryTimeout)
+func NewHttpTransportAsClient(url string, isSecure bool, retryTimeout time.Duration) (*clientHttpTransport, error) {
+	err := blockUntilHttpServerIsReady(url, isSecure, retryTimeout)
 	if err != nil {
 		return nil, err
 	}
 
-	subscribeUrl, err := urlUtil.JoinPath("wss://", url, "subscribe")
+	wsPrefix := "ws://"
+	if isSecure {
+		wsPrefix = "wss://"
+	}
+
+	subscribeUrl, err := urlUtil.JoinPath(wsPrefix, url, "subscribe")
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +46,7 @@ func NewHttpTransportAsClient(url string, retryTimeout time.Duration) (*clientHt
 		return nil, err
 	}
 
-	t := &clientHttpTransport{notificationChan: make(chan []byte, 10), clientWebsocket: conn, url: url, wg: &sync.WaitGroup{}, logger: slog.Default()}
+	t := &clientHttpTransport{notificationChan: make(chan []byte, 10), clientWebsocket: conn, url: url, isSecure: isSecure, wg: &sync.WaitGroup{}, logger: slog.Default()}
 
 	t.wg.Add(1)
 	go t.readMessages()
@@ -49,7 +55,7 @@ func NewHttpTransportAsClient(url string, retryTimeout time.Duration) (*clientHt
 }
 
 func (t *clientHttpTransport) Request(data []byte) ([]byte, error) {
-	requestUrl, err := httpUrl(t.url)
+	requestUrl, err := httpUrl(t.url, t.isSecure)
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +104,13 @@ func (t *clientHttpTransport) readMessages() {
 }
 
 // httpUrl joins the http prefix with the server url
-func httpUrl(url string) (string, error) {
-	httpUrl, err := urlUtil.JoinPath("https://", url)
+func httpUrl(url string, isSecure bool) (string, error) {
+	prefix := "http://"
+	if isSecure {
+		prefix = "https://"
+	}
+
+	httpUrl, err := urlUtil.JoinPath(prefix, url)
 	if err != nil {
 		return "", err
 	}
@@ -107,12 +118,12 @@ func httpUrl(url string) (string, error) {
 }
 
 // blockUntilHttpServerIsReady pings the health endpoint until the server is ready
-func blockUntilHttpServerIsReady(url string, retryTimeout time.Duration) error {
+func blockUntilHttpServerIsReady(url string, isSecure bool, retryTimeout time.Duration) error {
 	waitForServer := func(iteration int) {
 		time.Sleep(retryTimeout * time.Duration(math.Pow(2, float64(iteration))))
 	}
 
-	httpUrl, err := httpUrl(url)
+	httpUrl, err := httpUrl(url, isSecure)
 	if err != nil {
 		return err
 	}

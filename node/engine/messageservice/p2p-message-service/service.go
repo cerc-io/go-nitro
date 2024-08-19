@@ -18,6 +18,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
+	"github.com/libp2p/go-libp2p/p2p/transport/websocket"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/statechannels/go-nitro/internal/logging"
 	"github.com/statechannels/go-nitro/internal/safesync"
@@ -32,8 +33,9 @@ type basicPeerInfo struct {
 }
 
 const (
-	DHT_PROTOCOL_PREFIX     protocol.ID = "/nitro" // use /nitro/kad/1.0.0 instead of /ipfs/kad/1.0.0
-	GENERAL_MSG_PROTOCOL_ID protocol.ID = "/nitro/msg/1.0.0"
+	DHT_PROTOCOL_PREFIX       protocol.ID = "/nitro" // use /nitro/kad/1.0.0 instead of /ipfs/kad/1.0.0
+	GENERAL_MSG_PROTOCOL_ID   protocol.ID = "/nitro/msg/1.0.0"
+	PEER_EXCHANGE_PROTOCOL_ID protocol.ID = "/nitro/peerinfo/1.0.0"
 
 	DELIMITER                = '\n'
 	BUFFER_SIZE              = 1_000
@@ -44,7 +46,8 @@ const (
 
 type MessageOpts struct {
 	PkBytes   []byte
-	Port      int
+	TcpPort   int
+	WsMsgPort int
 	BootPeers []string
 	PublicIp  string
 	SCAddr    types.Address
@@ -79,7 +82,7 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 	}
 
 	addressFactory := func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
-		extMultiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", opts.PublicIp, opts.Port))
+		extMultiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", opts.PublicIp, opts.TcpPort))
 		if err != nil {
 			ms.logger.Error("failed to create publicIp multiaddress", "err", err)
 			return addrs
@@ -94,10 +97,15 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 	options := []libp2p.Option{
 		libp2p.Identity(privateKey),
 		libp2p.AddrsFactory(addressFactory),
-		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%d", "0.0.0.0", opts.Port)),
+		libp2p.ListenAddrStrings(
+			fmt.Sprintf("/ip4/%s/tcp/%d", opts.PublicIp, opts.TcpPort),
+			fmt.Sprintf("/ip4/%s/tcp/%d/ws", opts.PublicIp, opts.WsMsgPort),
+		),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.NATPortMap(),
 		libp2p.EnableNATService(),
+		libp2p.Transport(websocket.New),
+		// libp2p.NoSecurity, // Use default security options (Noise + TLS)
 		libp2p.DefaultMuxers,
 	}
 	host, err := libp2p.New(options...)
@@ -105,6 +113,7 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 
 	ms.p2pHost = host
 	ms.p2pHost.SetStreamHandler(GENERAL_MSG_PROTOCOL_ID, ms.msgStreamHandler)
+	ms.p2pHost.SetStreamHandler(PEER_EXCHANGE_PROTOCOL_ID, ms.receivePeerInfo)
 
 	// Print out my own peerInfo
 	peerInfo := peer.AddrInfo{
@@ -273,6 +282,39 @@ func (ms *P2PMessageService) msgStreamHandler(stream network.Stream) {
 		return
 	}
 	ms.toEngine <- m
+}
+
+// receivePeerInfo receives peer info from the given stream
+func (ms *P2PMessageService) receivePeerInfo(stream network.Stream) {
+	ms.logger.Info("received peerInfo")
+	defer stream.Close()
+
+	// Create a buffer stream for non blocking read and write.
+	reader := bufio.NewReader(stream)
+	raw, err := reader.ReadString(DELIMITER)
+
+	// An EOF means the stream has been closed by the other side.
+	if errors.Is(err, io.EOF) {
+		return
+	}
+	if err != nil {
+		ms.logger.Error("error", "err", err)
+		return
+	}
+
+	var msg *basicPeerInfo
+	err = json.Unmarshal([]byte(raw), &msg)
+	if err != nil {
+		ms.logger.Error("error in unmarshalling", "err", err)
+		return
+	}
+
+	_, foundPeer := ms.peers.LoadOrStore(msg.Address.String(), msg.Id)
+	if !foundPeer {
+		peerInfo := basicPeerInfo{msg.Id, msg.Address}
+		ms.logger.Info("stored new peer in map", "peerInfo", peerInfo)
+		ms.newPeerInfo <- peerInfo
+	}
 }
 
 func (ms *P2PMessageService) getPeerIdFromDht(scaddr string) (peer.ID, error) {

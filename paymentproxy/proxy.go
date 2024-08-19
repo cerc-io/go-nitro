@@ -1,7 +1,9 @@
 package paymentproxy
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -26,10 +28,19 @@ const (
 	CHANNEL_ID_VOUCHER_PARAM = "channelId"
 	SIGNATURE_VOUCHER_PARAM  = "signature"
 
-	VOUCHER_CONTEXT_ARG contextKey = "voucher"
+	VOUCHER_CONTEXT_ARG    contextKey = "voucher"
+	RPC_METHOD_CONTEXT_ARG contextKey = "rpcMethod"
 
 	ErrPayment = types.ConstError("payment error")
 )
+
+// TODO: Make configurable
+var paidRPCMethods = []string{
+	"eth_getLogs",
+	"eth_getStorageAt",
+	"eth_getBlockByHash",
+	"eth_getBlockByNumber",
+}
 
 // createPaymentError wraps an error with ErrPayment.
 func createPaymentError(err error) error {
@@ -45,13 +56,14 @@ type PaymentProxy struct {
 
 	destinationUrl            *url.URL
 	certFilePath, certKeyPath string
+	enablePaidRpcMethods      bool
 }
 
-// NewPaymentProxy creates a new PaymentProxy.
-func NewPaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL string, costPerByte uint64, certFilePath, certKeyPath string) *PaymentProxy {
+// NewReversePaymentProxy creates a new ReversePaymentProxy.
+func NewPaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL string, costPerByte uint64, certFilePath, certKeyPath string, enablePaidRpcMethods bool) *PaymentProxy {
 	server := &http.Server{Addr: proxyAddress}
 
-	nitroClient, err := rpc.NewHttpRpcClient(nitroEndpoint)
+	nitroClient, err := rpc.NewHttpRpcClient(nitroEndpoint, true)
 	if err != nil {
 		panic(err)
 	}
@@ -61,18 +73,24 @@ func NewPaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL s
 	}
 
 	p := &PaymentProxy{
-		server:         server,
-		nitroClient:    nitroClient,
-		costPerByte:    costPerByte,
-		destinationUrl: destinationUrl,
-		reverseProxy:   &httputil.ReverseProxy{},
-		certFilePath:   certFilePath,
-		certKeyPath:    certKeyPath,
+		server:               server,
+		nitroClient:          nitroClient,
+		costPerByte:          costPerByte,
+		destinationUrl:       destinationUrl,
+		reverseProxy:         &httputil.ReverseProxy{},
+		certFilePath:         certFilePath,
+		certKeyPath:          certKeyPath,
+		enablePaidRpcMethods: enablePaidRpcMethods,
 	}
 	// Wire up our handlers to the reverse proxy
 	p.reverseProxy.Rewrite = func(pr *httputil.ProxyRequest) { pr.SetURL(p.destinationUrl) }
 	p.reverseProxy.ModifyResponse = p.handleDestinationResponse
 	p.reverseProxy.ErrorHandler = p.handleError
+
+	// Setup transport with compression disabled to access content-length header in handleDestinationResponse
+	p.reverseProxy.Transport = http.DefaultTransport
+	p.reverseProxy.Transport.(*http.Transport).DisableCompression = true
+
 	// Wire up our handler to the server
 	p.server.Handler = p
 
@@ -100,16 +118,27 @@ func (p *PaymentProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	v, err := parseVoucher(r.URL.Query())
-	if err != nil {
-		p.handleError(w, r, createPaymentError(fmt.Errorf("could not parse voucher: %w", err)))
-		return
+	queryParams := r.URL.Query()
+	requiresPayment := true
+	var rpcMethod string
+
+	if p.enablePaidRpcMethods {
+		requiresPayment, rpcMethod = isPaymentRequired(r)
 	}
 
-	removeVoucher(r)
+	if requiresPayment {
+		v, err := parseVoucher(queryParams)
+		if err != nil {
+			p.handleError(w, r, createPaymentError(fmt.Errorf("could not parse voucher: %w", err)))
+			return
+		}
 
-	// We add the voucher to the request context so we can access it in the response handler
-	r = r.WithContext(context.WithValue(r.Context(), VOUCHER_CONTEXT_ARG, v))
+		removeVoucher(r)
+
+		// We add the voucher and rpcMethod to the request context so we can access them in the response handler
+		r = r.WithContext(context.WithValue(r.Context(), VOUCHER_CONTEXT_ARG, v))
+		r = r.WithContext(context.WithValue(r.Context(), RPC_METHOD_CONTEXT_ARG, rpcMethod))
+	}
 
 	p.reverseProxy.ServeHTTP(w, r)
 }
@@ -140,11 +169,17 @@ func (p *PaymentProxy) handleDestinationResponse(r *http.Response) error {
 
 	v, ok := r.Request.Context().Value(VOUCHER_CONTEXT_ARG).(payments.Voucher)
 	if !ok {
-		return createPaymentError(fmt.Errorf("could not fetch voucher from context"))
+		// If VOUCHER_CONTEXT_ARG does not exist the request does not need payment
+		return nil
 	}
 	cost := p.costPerByte * contentLength
 
-	slog.Debug("Request cost", "cost-per-byte", p.costPerByte, "response-length", contentLength, "cost", cost)
+	rpcMethod, ok := r.Request.Context().Value(RPC_METHOD_CONTEXT_ARG).(string)
+	if ok {
+		slog.Debug("Request cost", "cost-per-byte", p.costPerByte, "response-length", contentLength, "cost", cost, "method", rpcMethod)
+	} else {
+		slog.Debug("Request cost", "cost-per-byte", p.costPerByte, "response-length", contentLength, "cost", cost)
+	}
 
 	s, err := p.nitroClient.ReceiveVoucher(v)
 	if err != nil {
@@ -202,6 +237,43 @@ func (p *PaymentProxy) Stop() error {
 	}
 
 	return p.nitroClient.Close()
+}
+
+// Helper method to parse request and determine whether it qualifies for a payment
+// Payment is required for a request if:
+//   - "Content-Type" header is set to "application/json"
+//   - Request body has non-empty "jsonrpc" and "method" fields
+func isPaymentRequired(r *http.Request) (bool, string) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		return false, ""
+	}
+
+	var ReqBody struct {
+		JsonRpc string `json:"jsonrpc"`
+		Method  string `json:"method"`
+	}
+	bodyBytes, _ := io.ReadAll(r.Body)
+
+	err := json.Unmarshal(bodyBytes, &ReqBody)
+	if err != nil || ReqBody.JsonRpc == "" || ReqBody.Method == "" {
+		return false, ""
+	}
+
+	slog.Debug("Serving RPC request", "method", ReqBody.Method)
+
+	// Reassign request body as io.ReadAll consumes it
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	rpcMethod := ReqBody.Method
+
+	// Check if payment is required for RPC method
+	for _, paidRPCMethod := range paidRPCMethods {
+		if paidRPCMethod == rpcMethod {
+			return true, rpcMethod
+		}
+	}
+
+	return false, ""
 }
 
 // parseVoucher takes in an a collection of query params and parses out a voucher.

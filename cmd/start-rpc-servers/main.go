@@ -192,9 +192,6 @@ func setupRPCServer(n name, c color, na, vpa, ca types.Address, chainUrl, chainA
 
 	args = append(args, "-durablestorefolder", dataFolder)
 
-	args = append(args, "-tlscertfilepath", "./tls/statechannels.org.pem")
-	args = append(args, "-tlskeyfilepath", "./tls/statechannels.org_key.pem")
-
 	args = append(args, "-config", fmt.Sprintf("./cmd/test-configs/%s.toml", n))
 
 	cmd := exec.Command("go", args...)

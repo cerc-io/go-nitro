@@ -25,7 +25,7 @@
 //	-msgport int
 //	      Specifies the tcp port for the  message service. (default 3005)
 //	-wsmsgport int
-//				Specifies the websocket port for the  message service. (default 5005)
+//				Specifies the websocket port for the  message service. (default 6005)
 //	-naaddress string
 //	      Specifies the address of the nitro adjudicator contract. Default is the address computed by the Create2Deployer contract. (default "0xC6A55E07566416274dBF020b5548eecEdB56290c")
 //	-pk string

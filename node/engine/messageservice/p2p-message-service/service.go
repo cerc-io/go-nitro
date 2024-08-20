@@ -116,7 +116,6 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 		libp2p.NATPortMap(),
 		libp2p.EnableNATService(),
 		libp2p.Transport(websocket.New),
-		// libp2p.NoSecurity, // Use default security options (Noise + TLS)
 		libp2p.DefaultMuxers,
 	}
 	host, err := libp2p.New(options...)

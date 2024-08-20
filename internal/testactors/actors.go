@@ -28,7 +28,7 @@ func (a Actor) Address() types.Address {
 
 const (
 	START_PORT    = 3200
-	WS_START_PORT = 5200
+	WS_START_PORT = 6200
 )
 
 // Alice has the address 0xAAA6628Ec44A8a742987EF3A114dDFE2D4F7aDCE

@@ -59,7 +59,7 @@ type PaymentProxy struct {
 	enablePaidRpcMethods      bool
 }
 
-// NewReversePaymentProxy creates a new ReversePaymentProxy.
+// NewPaymentProxy creates a new PaymentProxy.
 func NewPaymentProxy(proxyAddress string, nitroEndpoint string, destinationURL string, costPerByte uint64, certFilePath, certKeyPath string, enablePaidRpcMethods bool) *PaymentProxy {
 	server := &http.Server{Addr: proxyAddress}
 

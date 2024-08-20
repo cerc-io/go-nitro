@@ -47,15 +47,15 @@ func newNodeRpcServerWithoutNotifications(nitroNode *nitro.Node, trans transport
 	return nrs, nil
 }
 
-func NewNodeRpcServer(node *nitro.Node, paymentManager paymentsmanager.PaymentsManager, trans transport.Responder) (*NodeRpcServer, error) {
+func NewNodeRpcServer(nitroNode *nitro.Node, paymentManager paymentsmanager.PaymentsManager, trans transport.Responder) (*NodeRpcServer, error) {
 	baseRpcServer := NewBaseRpcServer(trans)
 	nrs := &NodeRpcServer{
-		baseRpcServer,
-		node,
-		paymentManager,
+		BaseRpcServer:  baseRpcServer,
+		node:           nitroNode,
+		paymentManager: paymentManager,
 	}
 
-	nrs.logger = logging.LoggerWithAddress(slog.Default(), *node.Address)
+	nrs.logger = logging.LoggerWithAddress(slog.Default(), *nitroNode.Address)
 	ctx, cancel := context.WithCancel(context.Background())
 	nrs.cancel = cancel
 	nrs.wg.Add(1)

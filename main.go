@@ -190,7 +190,7 @@ func main() {
 		altsrc.NewIntFlag(&cli.IntFlag{
 			Name:        WS_MSG_PORT,
 			Usage:       "Specifies the websocket port for the message service.",
-			Value:       5005,
+			Value:       6005,
 			Category:    "Connectivity:",
 			Destination: &wsMsgPort,
 		}),
@@ -225,12 +225,14 @@ func main() {
 		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:        TLS_CERT_FILEPATH,
 			Usage:       "Filepath to the TLS certificate. If not specified, TLS will not be used with the RPC transport.",
+			Value:       "./tls/statechannels.org.pem",
 			Category:    TLS_CATEGORY,
 			Destination: &tlsCertFilepath,
 		}),
 		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:        TLS_KEY_FILEPATH,
 			Usage:       "Filepath to the TLS private key. If not specified, TLS will not be used with the RPC transport.",
+			Value:       "./tls/statechannels.org_key.pem",
 			Category:    TLS_CATEGORY,
 			Destination: &tlsKeyFilepath,
 		}),

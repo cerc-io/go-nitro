@@ -215,13 +215,12 @@ func (e *Engine) run(ctx context.Context) {
 			var block *ethTypes.Block
 
 			block, err = e.chain.GetBlockByNumber(big.NewInt(int64(blockNum)))
+			e.checkError(err)
 
 			chainServiceBlock := chainservice.Block{
 				BlockNum:  block.NumberU64(),
 				Timestamp: block.Time(),
 			}
-
-			e.checkError(err)
 
 			err = e.processStoreChannels(chainServiceBlock)
 		case <-ctx.Done():

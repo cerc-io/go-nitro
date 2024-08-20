@@ -94,9 +94,12 @@ func (sbcs *SimulatedBackendChainService) SendTransaction(tx protocols.ChainTran
 		return err
 	}
 	sbcs.sim.Commit()
-	// Mint two additional blocks to satisfy REQUIRED_BLOCK_CONFIRMATIONS.
-	sbcs.sim.Commit()
-	sbcs.sim.Commit()
+
+	// Mint additional blocks to satisfy REQUIRED_BLOCK_CONFIRMATIONS.
+	for i := 0; i < REQUIRED_BLOCK_CONFIRMATIONS; i++ {
+		sbcs.sim.Commit()
+	}
+
 	return nil
 }
 

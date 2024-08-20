@@ -785,12 +785,6 @@ func (ecs *EthChainService) GetLastConfirmedBlockNum() uint64 {
 	return confirmedBlockNum
 }
 
-func (ecs *EthChainService) GetLatestBlock() Block {
-	ecs.eventTracker.mu.Lock()
-	defer ecs.eventTracker.mu.Unlock()
-	return ecs.eventTracker.latestBlock
-}
-
 func (ecs *EthChainService) GetBlockByNumber(blockNum *big.Int) (*ethTypes.Block, error) {
 	block, err := ecs.chain.BlockByNumber(context.Background(), blockNum)
 	if err != nil {

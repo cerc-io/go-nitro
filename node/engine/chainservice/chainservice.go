@@ -194,9 +194,7 @@ type ChainService interface {
 	GetChainId() (*big.Int, error)
 	// GetLastConfirmedBlockNum returns the highest blockNum that satisfies the chainservice's REQUIRED_BLOCK_CONFIRMATIONS
 	GetLastConfirmedBlockNum() uint64
-	// GetLatestBlock returns the latest block
-	GetLatestBlock() Block
-
+	// GetBlockByNumber returns the block for given block number
 	GetBlockByNumber(blockNum *big.Int) (*ethTypes.Block, error)
 	// Close closes the ChainService
 	Close() error

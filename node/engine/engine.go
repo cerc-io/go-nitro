@@ -72,6 +72,7 @@ type Engine struct {
 	ObjectiveRequestsFromAPI        chan protocols.ObjectiveRequest
 	PaymentRequestsFromAPI          chan PaymentRequest
 	CounterChallengeRequestsFromAPI chan CounterChallengeRequest
+	RetryTxRequestFromAPI           chan types.RetryTxRequest
 
 	fromChain    <-chan chainservice.Event
 	fromMsg      <-chan protocols.Message
@@ -217,6 +218,8 @@ func (e *Engine) run(ctx context.Context) {
 			err = e.handleSignRequest(signReq)
 		case counterChallengeReq := <-e.CounterChallengeRequestsFromAPI:
 			err = e.handleCounterChallengeRequest(counterChallengeReq)
+		case retryTxReq := <-e.RetryTxRequestFromAPI:
+			err = e.handleRetryTxRequest(retryTxReq)
 		case <-blockTicker.C:
 			blockNum := e.chain.GetLastConfirmedBlockNum()
 			err = e.store.SetLastBlockNumSeen(blockNum)
@@ -779,6 +782,57 @@ func (e *Engine) handleCounterChallengeRequest(request CounterChallengeRequest) 
 	_, err := e.attemptProgress(obj)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (e *Engine) handleRetryTxRequest(request types.RetryTxRequest) error {
+	// Get objective from objective id
+	obj, err := e.store.GetObjectiveById(protocols.ObjectiveId(request.ObjectiveId))
+	if err != nil {
+		return err
+	}
+
+	// Based on objective type, send appropriate tx
+	switch objective := obj.(type) {
+	case *directfund.Objective:
+		if objective.FundingComplete() {
+			return nil
+		}
+
+		if !objective.SafeToDeposit() {
+			return fmt.Errorf("Not safe to deposit right now")
+		}
+
+		amountToDeposit := objective.AmountToDeposit()
+		depositTx := protocols.NewDepositTransaction(objective.OwnsChannel(), amountToDeposit)
+		err := e.chain.SendTransaction(depositTx)
+		if err != nil {
+			return err
+		}
+
+	case *directdefund.Objective:
+		if !(objective.C.MyIndex == 0) {
+			return fmt.Errorf("Only first participant can initiate defunding")
+		}
+
+		latestSignedState, err := objective.C.LatestSignedState()
+		if err != nil {
+			return err
+		}
+
+		if !latestSignedState.State().IsFinal || !latestSignedState.HasSignatureForParticipant(objective.C.MyIndex) {
+			return fmt.Errorf("State is supported")
+		}
+
+		if !objective.FullyWithdrawn() {
+			withDrawAllTx := protocols.NewWithdrawAllTransaction(objective.OwnsChannel(), latestSignedState)
+			err := e.chain.SendTransaction(withDrawAllTx)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

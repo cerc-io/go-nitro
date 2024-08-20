@@ -236,6 +236,37 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "retry-tx <objectiveId>",
+    "Retries transaction for given objective",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("objectiveId", {
+        describe: "The id of the objective to send transaction for",
+        type: "string",
+        demandOption: true,
+      });
+    },
+
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+      await rpcClient.RetryTx(yargs.objectiveId);
+
+      // Not using WaitForLedgerChannelStatus method with complete status, as the ledger channel status will be open if a challenge is cleared using checkpoint
+      await rpcClient.WaitForObjectiveToComplete(
+        `DirectDefunding-${yargs.channelId}`
+      );
+      console.log(`Objective Complete ${yargs.channelId}`);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "direct-defund <channelId>",
     "Defunds a directly funded ledger channel",
     (yargsBuilder) => {

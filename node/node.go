@@ -396,3 +396,7 @@ func (n *Node) handleError(err error) {
 func (n *Node) CounterChallenge(id types.Destination, action types.CounterChallengeAction, payload state.SignedState) {
 	n.engine.CounterChallengeRequestsFromAPI <- engine.CounterChallengeRequest{ChannelId: id, Action: action, Payload: payload}
 }
+
+func (n *Node) RetryTx(objectiveId protocols.ObjectiveId) {
+	n.engine.RetryTxRequestFromAPI <- types.RetryTxRequest{ObjectiveId: string(objectiveId)}
+}

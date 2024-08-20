@@ -234,6 +234,11 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 
 				return string(marshalledState), nil
 			})
+		case serde.RetryTxMethod:
+			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.RetryTxRequest) (serde.RetryTxRequest, error) {
+				nrs.node.RetryTx(req.ObjectiveId)
+				return req, nil
+			})
 		default:
 			errRes := serde.NewJsonRpcErrorResponse(jsonrpcReq.Id, serde.MethodNotFoundError)
 			return marshalResponse(errRes)

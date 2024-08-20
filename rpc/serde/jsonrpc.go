@@ -40,6 +40,9 @@ const (
 	GetAllL2ChannelsRequestMethod RequestMethod = "get_all_l2_channels"
 
 	GetSignedStateMethod RequestMethod = "get_signed_state"
+
+	// Chain reorgs workaround methods
+	RetryTxMethod RequestMethod = "retry_tx"
 )
 
 type NotificationMethod string
@@ -91,6 +94,9 @@ type ValidateVoucherRequest struct {
 	Signer      common.Address
 	Value       uint64
 }
+type RetryTxRequest struct {
+	ObjectiveId protocols.ObjectiveId
+}
 
 type (
 	NoPayloadRequest = struct{}
@@ -116,7 +122,8 @@ type RequestPayload interface {
 		payments.Voucher |
 		CounterChallengeRequest |
 		ValidateVoucherRequest |
-		bridgeddefund.ObjectiveRequest
+		bridgeddefund.ObjectiveRequest |
+		RetryTxRequest
 }
 
 type NotificationPayload interface {
@@ -161,7 +168,8 @@ type ResponsePayload interface {
 		string |
 		payments.ReceiveVoucherSummary |
 		CounterChallengeRequest |
-		ValidateVoucherResponse
+		ValidateVoucherResponse |
+		RetryTxRequest
 }
 
 type JsonRpcSuccessResponse[T ResponsePayload] struct {

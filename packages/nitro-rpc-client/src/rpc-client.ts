@@ -18,6 +18,7 @@ import {
   CounterChallengeResult,
   ObjectiveCompleteNotification,
   MirrorBridgedDefundObjectiveRequest,
+  ObjectiveIdResponse,
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -157,6 +158,10 @@ export class NitroRpcClient implements RpcClientApi {
       Nonce: Date.now(),
     };
     return this.sendRequest("create_ledger_channel", payload);
+  }
+
+  public async RetryTx(objectiveId: string): Promise<ObjectiveIdResponse> {
+    return this.sendRequest("retry_tx", { ObjectiveId: objectiveId });
   }
 
   public async CreatePaymentChannel(

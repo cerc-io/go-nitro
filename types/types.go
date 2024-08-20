@@ -39,3 +39,7 @@ const (
 	Checkpoint CounterChallengeAction = iota
 	Challenge
 )
+
+type RetryTxRequest struct {
+	ObjectiveId string
+}

@@ -233,7 +233,7 @@ export class NitroRpcClient implements RpcClientApi {
     const payload = {
       ChannelId: channelId,
       Action: action,
-      Payload: signedState,
+      StringifiedL2SignedState: signedState,
     };
     return this.sendRequest("counter_challenge", payload);
   }

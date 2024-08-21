@@ -70,9 +70,9 @@ type MirrorBridgedDefundRequest struct {
 }
 
 type CounterChallengeRequest struct {
-	ChannelId types.Destination
-	Action    types.CounterChallengeAction
-	Payload   string
+	ChannelId                types.Destination
+	Action                   types.CounterChallengeAction
+	StringifiedL2SignedState string
 }
 
 type GetPaymentChannelRequest struct {

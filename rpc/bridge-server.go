@@ -75,8 +75,8 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 		case serde.CounterChallengeRequestMethod:
 			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.CounterChallengeRequest) (serde.CounterChallengeRequest, error) {
 				var l2SignedState state.SignedState
-				if len(req.Payload) > 0 {
-					err := json.Unmarshal([]byte(req.Payload), &l2SignedState)
+				if len(req.StringifiedL2SignedState) > 0 {
+					err := json.Unmarshal([]byte(req.StringifiedL2SignedState), &l2SignedState)
 					if err != nil {
 						return serde.CounterChallengeRequest{}, fmt.Errorf("error in unmarshalling signed state payload %w", err)
 					}

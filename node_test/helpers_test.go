@@ -225,22 +225,39 @@ func closeLedgerChannel(t *testing.T, alpha node.Node, beta node.Node, channelId
 }
 
 func waitForObjectives(t *testing.T, a, b node.Node, intermediaries []node.Node, objectiveIds []protocols.ObjectiveId) {
-	var ObjectivesToWaitFor []<-chan struct{}
+	type CompletedObjective struct {
+		channnel    <-chan struct{}
+		address     common.Address
+		objectiveId protocols.ObjectiveId
+	}
+
+	var ObjectivesToWaitFor []CompletedObjective
 
 	for _, objectiveId := range objectiveIds {
-		chA := a.ObjectiveCompleteChan(objectiveId)
-		ObjectivesToWaitFor = append(ObjectivesToWaitFor, chA)
-		chB := b.ObjectiveCompleteChan(objectiveId)
-		ObjectivesToWaitFor = append(ObjectivesToWaitFor, chB)
+		ObjectivesToWaitFor = append(ObjectivesToWaitFor, CompletedObjective{
+			channnel:    a.ObjectiveCompleteChan(objectiveId),
+			address:     *a.Address,
+			objectiveId: objectiveId,
+		})
+
+		ObjectivesToWaitFor = append(ObjectivesToWaitFor, CompletedObjective{
+			channnel:    b.ObjectiveCompleteChan(objectiveId),
+			address:     *b.Address,
+			objectiveId: objectiveId,
+		})
 
 		for _, intermediary := range intermediaries {
-			chI := intermediary.ObjectiveCompleteChan(objectiveId)
-			ObjectivesToWaitFor = append(ObjectivesToWaitFor, chI)
+			ObjectivesToWaitFor = append(ObjectivesToWaitFor, CompletedObjective{
+				channnel:    intermediary.ObjectiveCompleteChan(objectiveId),
+				address:     *intermediary.Address,
+				objectiveId: objectiveId,
+			})
 		}
 	}
 
-	for _, ch := range ObjectivesToWaitFor {
-		<-ch
+	for _, obj := range ObjectivesToWaitFor {
+		t.Logf("Node %s waiting for objective %s to complete", obj.address.String(), obj.objectiveId)
+		<-obj.channnel
 	}
 }
 

@@ -275,79 +275,11 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 			if tokenAddress == ethTokenAddress {
 				txOpts.Value = amount
 			} else {
-				token, err := Token.NewToken(tokenAddress, ecs.chain)
+				// If custom token is used instead of ETH, we need to approve token amount to be transferred from
+				err := ecs.handleApproveTx(tokenAddress, amount)
 				if err != nil {
-					return err
-				}
-
-				approvalLogsChan := make(chan *Token.TokenApproval)
-
-				newBlockChan := make(chan *ethTypes.Header)
-				_, err = ecs.chain.SubscribeNewHead(ecs.ctx, newBlockChan)
-				if err != nil {
-					return err
-				}
-
-				approvalSubscription, err := token.WatchApproval(&bind.WatchOpts{Context: ecs.ctx}, approvalLogsChan, []common.Address{ecs.txSigner.From}, []common.Address{ecs.naAddress})
-				if err != nil {
-					return err
-				}
-
-				approveTx, err := token.Approve(ecs.defaultTxOpts(), ecs.naAddress, amount)
-				if err != nil {
-					return err
-				}
-
-				// Get current block
-				currentBlock := <-newBlockChan
-
-				isApproveTxRetried := false
-
-				// Transaction hash of retried Approve transaction
-				var retryApproveTxHash common.Hash
-
-				// Wait for the Approve transaction to be mined before continuing
-			approvalEventListenerLoop:
-				for {
-					select {
-					case log := <-approvalLogsChan:
-						if log.Owner == ecs.txSigner.From {
-							approvalSubscription.Unsubscribe()
-							break approvalEventListenerLoop
-						}
-					case err := <-approvalSubscription.Err():
-						return err
-					case newBlock := <-newBlockChan:
-						if (newBlock.Number.Int64() - currentBlock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
-							if isApproveTxRetried {
-								slog.Error("approve transaction was retried with higher gas and event Approval was not emitted till latest block", "txHash", retryApproveTxHash, "latestBlock", newBlock.Number.String())
-								return nil
-							}
-
-							slog.Error("event Approval was not emitted", "approveTxHash", approveTx.Hash().String())
-
-							// Estimate gas for new Approve transaction
-							estimatedGasLimit, err := ecs.estimateGasForApproveTx(tokenAddress, amount)
-							if err != nil {
-								return err
-							}
-
-							approveTxOpts := ecs.defaultTxOpts()
-
-							// Multiply estimated gas limit with set multiplier
-							approveTxOpts.GasLimit = uint64(float64(estimatedGasLimit) * GAS_LIMIT_MULTIPLIER)
-							reApproveTx, err := token.Approve(approveTxOpts, ecs.naAddress, amount)
-							if err != nil {
-								return err
-							}
-
-							isApproveTxRetried = true
-							currentBlock = newBlock
-							retryApproveTxHash = reApproveTx.Hash()
-
-							slog.Info("Resubmitted transaction with higher gas limit", "gasLimit", approveTxOpts.GasLimit, "approveTxHash", reApproveTx.Hash().String())
-						}
-					}
+					slog.Error(err.Error())
+					return nil
 				}
 			}
 
@@ -837,4 +769,83 @@ func (ecs *EthChainService) estimateGasForApproveTx(tokenAddress common.Address,
 	}
 
 	return estimatedGasLimit, nil
+}
+
+func (ecs *EthChainService) handleApproveTx(tokenAddress common.Address, amount *big.Int) error {
+	token, err := Token.NewToken(tokenAddress, ecs.chain)
+	if err != nil {
+		return err
+	}
+
+	approvalLogsChan := make(chan *Token.TokenApproval)
+
+	newBlockChan := make(chan *ethTypes.Header)
+	_, err = ecs.chain.SubscribeNewHead(ecs.ctx, newBlockChan)
+	if err != nil {
+		return err
+	}
+
+	approvalSubscription, err := token.WatchApproval(&bind.WatchOpts{Context: ecs.ctx}, approvalLogsChan, []common.Address{ecs.txSigner.From}, []common.Address{ecs.naAddress})
+	if err != nil {
+		return err
+	}
+
+	approveTx, err := token.Approve(ecs.defaultTxOpts(), ecs.naAddress, amount)
+	if err != nil {
+		return err
+	}
+
+	// Get current block
+	currentBlock := <-newBlockChan
+
+	isApproveTxRetried := false
+
+	// Transaction hash of retried Approve transaction
+	var retryApproveTxHash common.Hash
+
+	// Wait for the Approve transaction to be mined before continuing
+approvalEventListenerLoop:
+	for {
+		select {
+		case log := <-approvalLogsChan:
+			if log.Owner == ecs.txSigner.From {
+				approvalSubscription.Unsubscribe()
+				break approvalEventListenerLoop
+			}
+		case err := <-approvalSubscription.Err():
+			return err
+		case newBlock := <-newBlockChan:
+			if (newBlock.Number.Int64() - currentBlock.Number.Int64()) > BLOCKS_WITHOUT_EVENT_THRESHOLD {
+				if isApproveTxRetried {
+					err := fmt.Errorf("approve transaction was retried with higher gas and event Approval was not emitted till latest block, txHash: %s, latestBlock: %s", retryApproveTxHash, newBlock.Number.String())
+					return err
+				}
+
+				slog.Error("event Approval was not emitted", "approveTxHash", approveTx.Hash().String())
+
+				// Estimate gas for new Approve transaction
+				estimatedGasLimit, err := ecs.estimateGasForApproveTx(tokenAddress, amount)
+				if err != nil {
+					return err
+				}
+
+				approveTxOpts := ecs.defaultTxOpts()
+
+				// Multiply estimated gas limit with set multiplier
+				approveTxOpts.GasLimit = uint64(float64(estimatedGasLimit) * GAS_LIMIT_MULTIPLIER)
+				reApproveTx, err := token.Approve(approveTxOpts, ecs.naAddress, amount)
+				if err != nil {
+					return err
+				}
+
+				isApproveTxRetried = true
+				currentBlock = newBlock
+				retryApproveTxHash = reApproveTx.Hash()
+
+				slog.Info("Resubmitted transaction with higher gas limit", "gasLimit", approveTxOpts.GasLimit, "approveTxHash", reApproveTx.Hash().String())
+			}
+		}
+	}
+
+	return nil
 }

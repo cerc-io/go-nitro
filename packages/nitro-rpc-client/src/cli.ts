@@ -256,9 +256,9 @@ yargs(hideBin(process.argv))
         isSecure
       );
 
-      const res = await rpcClient.RetryTx(yargs.objectiveId);
+      const id = await rpcClient.RetryTx(yargs.objectiveId);
 
-      console.log(`Transaction retried for objective ${res.ObjectiveId}`);
+      console.log(`Transaction retried for objective ${id}`);
       await rpcClient.Close();
       process.exit(0);
     }

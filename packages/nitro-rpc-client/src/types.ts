@@ -96,9 +96,6 @@ export type ObjectiveResponse = {
   Id: string;
   ChannelId: string;
 };
-export type ObjectiveIdResponse = {
-  ObjectiveId: string;
-};
 export type ReceiveVoucherResult = {
   Total: bigint;
   Delta: bigint;
@@ -193,7 +190,7 @@ export type VirtualFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type VersionResponse = JsonRpcResponse<string>;
 export type GetAddressResponse = JsonRpcResponse<string>;
 export type DirectFundResponse = JsonRpcResponse<ObjectiveResponse>;
-export type RetryTxResponse = JsonRpcResponse<ObjectiveIdResponse>;
+export type RetryTxResponse = JsonRpcResponse<string>;
 export type DirectDefundResponse = JsonRpcResponse<string>;
 export type MirrorBridgedDefundResponse = JsonRpcResponse<string>;
 export type BridgedDefundResponse = JsonRpcResponse<string>;

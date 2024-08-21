@@ -43,13 +43,6 @@ const objectiveSchema = {
 } as const;
 type ObjectiveSchemaType = JTDDataType<typeof objectiveSchema>;
 
-const objectiveIdSchema = {
-  properties: {
-    ObjectiveId: { type: "string" },
-  },
-} as const;
-type ObjectiveIdSchemaType = JTDDataType<typeof objectiveIdSchema>;
-
 const stringSchema = { type: "string" } as const;
 type StringSchemaType = JTDDataType<typeof stringSchema>;
 
@@ -141,7 +134,6 @@ type ReceiveVoucherSchemaType = JTDDataType<typeof receiveVoucherSchema>;
 
 type ResponseSchema =
   | typeof objectiveSchema
-  | typeof objectiveIdSchema
   | typeof stringSchema
   | typeof ledgerChannelSchema
   | typeof ledgerChannelsSchema
@@ -154,7 +146,6 @@ type ResponseSchema =
 
 type ResponseSchemaType =
   | ObjectiveSchemaType
-  | ObjectiveIdSchemaType
   | StringSchemaType
   | LedgerChannelSchemaType
   | LedgerChannelsSchemaType
@@ -188,11 +179,6 @@ export function getAndValidateResult<T extends RequestMethod>(
         (result: ObjectiveSchemaType) => result
       );
     case "retry_tx":
-      return validateAndConvertResult(
-        objectiveIdSchema,
-        result,
-        (result: ObjectiveIdSchemaType) => result
-      );
     case "get_auth_token":
     case "close_ledger_channel":
     case "close_bridge_channel":

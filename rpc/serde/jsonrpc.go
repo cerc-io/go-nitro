@@ -168,8 +168,7 @@ type ResponsePayload interface {
 		string |
 		payments.ReceiveVoucherSummary |
 		CounterChallengeRequest |
-		ValidateVoucherResponse |
-		RetryTxRequest
+		ValidateVoucherResponse
 }
 
 type JsonRpcSuccessResponse[T ResponsePayload] struct {

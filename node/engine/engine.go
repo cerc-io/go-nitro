@@ -798,7 +798,6 @@ func (e *Engine) handleRetryTxRequest(request types.RetryTxRequest) error {
 	// Based on objective type, send appropriate tx
 	switch objective := obj.(type) {
 	case *directfund.Objective:
-
 		objective.ResetTxSubmitted()
 
 		_, err = e.attemptProgress(objective)

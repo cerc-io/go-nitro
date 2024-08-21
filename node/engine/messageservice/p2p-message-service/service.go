@@ -109,8 +109,8 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 		libp2p.Identity(privateKey),
 		libp2p.AddrsFactory(addressFactory),
 		libp2p.ListenAddrStrings(
-			fmt.Sprintf("/ip4/%s/tcp/%d", opts.PublicIp, opts.TcpPort),
-			fmt.Sprintf("/ip4/%s/tcp/%d/ws", opts.PublicIp, opts.WsMsgPort),
+			fmt.Sprintf("/ip4/%s/tcp/%d", "0.0.0.0", opts.TcpPort),
+			fmt.Sprintf("/ip4/%s/tcp/%d/ws", "0.0.0.0", opts.WsMsgPort),
 		),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.NATPortMap(),

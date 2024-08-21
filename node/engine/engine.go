@@ -156,6 +156,7 @@ func New(vm *payments.VoucherManager, msg messageservice.MessageService, chain c
 	e.ObjectiveRequestsFromAPI = make(chan protocols.ObjectiveRequest)
 	e.PaymentRequestsFromAPI = make(chan PaymentRequest)
 	e.CounterChallengeRequestsFromAPI = make(chan CounterChallengeRequest)
+	e.RetryTxRequestFromAPI = make(chan types.RetryTxRequest)
 
 	e.fromChain = chain.EventFeed()
 	e.fromMsg = msg.P2PMessages()

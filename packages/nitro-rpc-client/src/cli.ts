@@ -255,13 +255,10 @@ yargs(hideBin(process.argv))
         getRPCUrl(rpcHost, rpcPort),
         isSecure
       );
-      await rpcClient.RetryTx(yargs.objectiveId);
 
-      // Not using WaitForLedgerChannelStatus method with complete status, as the ledger channel status will be open if a challenge is cleared using checkpoint
-      await rpcClient.WaitForObjectiveToComplete(
-        `DirectDefunding-${yargs.channelId}`
-      );
-      console.log(`Objective Complete ${yargs.channelId}`);
+      const res = await rpcClient.RetryTx(yargs.objectiveId);
+
+      console.log(`Transaction retried for objective ${res.ObjectiveId}`);
       await rpcClient.Close();
       process.exit(0);
     }

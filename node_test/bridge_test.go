@@ -149,68 +149,18 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 	storeA, storeAPrime := utils.storeA, utils.storeAPrime
 	infraL1 := utils.infraL1
 
-	var l1LedgerChannelId types.Destination
-	var l2LedgerChannelId types.Destination
-	var oldL2SignedState state.SignedState
+	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration)
 
-	t.Run("Create ledger channel on L1 and mirror it on L2", func(t *testing.T) {
-		// Alice create ledger channel with bridge
-		outcome := CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{})
-		l1LedgerChannelResponse, err := nodeA.CreateLedgerChannel(bridgeAddress, uint32(tcL1.ChallengeDuration), outcome)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Log("Waiting for direct-fund objective to complete...")
-		l1LedgerChannelId = l1LedgerChannelResponse.ChannelId
-		<-nodeA.ObjectiveCompleteChan(l1LedgerChannelResponse.Id)
-		t.Log("L1 channel created", l1LedgerChannelResponse.Id)
+	cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldL2SignedState := cc.SupportedSignedState()
 
-		// Wait for mirror channel to be created
-		completedMirrorChannel := <-bridge.CompletedMirrorChannels()
-		l2LedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
-
-		cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		oldL2SignedState = cc.SupportedSignedState()
-
-		testhelpers.Assert(t, completedMirrorChannel == l2LedgerChannelId, "Expects mirror channel id to be %v", l2LedgerChannelId)
-		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{}), query.Open, nodeA)
-		checkLedgerChannel(t, l2LedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, types.Address{}), query.Open, nodeAPrime)
-	})
-
-	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
-		// Create virtual channel on mirrored ledger channel on L2
-		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, types.Address{})
-		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{}, bridgeAddress, uint32(tcL2.ChallengeDuration), virtualOutcome)
-		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
-		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeAPrime)
-
-		// APrime pays BPrime
-		err := nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Virtual defund
-		virtualDefundResponse, _ := nodeAPrime.ClosePaymentChannel(virtualResponse.ChannelId)
-		<-nodeAPrime.ObjectiveCompleteChan(virtualDefundResponse)
-
-		ledgerChannelInfo, _ := nodeAPrime.GetLedgerChannel(l2LedgerChannelId)
-		balanceNodeBPrime := ledgerChannelInfo.Balance.TheirBalance.ToInt()
-		balanceNodeAPrime := ledgerChannelInfo.Balance.MyBalance.ToInt()
-		t.Log("Balance of node BPrime", balanceNodeBPrime, "\nBalance of node APrime", balanceNodeAPrime)
-
-		// APrime's balance is determined by subtracting amount paid from it's ledger deposit, while BPrime's balance is calculated by adding the amount received
-		testhelpers.Assert(t, balanceNodeBPrime.Cmp(big.NewInt(payAmount)) == 0, "Balance of node BPrime (%v) should be equal to (%v)", balanceNodeBPrime, ledgerChannelDeposit+payAmount)
-		testhelpers.Assert(t, balanceNodeAPrime.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of node APrime (%v) should be equal to (%v)", balanceNodeAPrime, ledgerChannelDeposit-payAmount)
-	})
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration)
 
 	t.Run("Clear the registered challenge using checkpoint and exit L2 using latest L2 state", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
-		completedObjectiveChannel := nodeA.CompletedObjectives()
 
 		// Alice unilaterally exits from L1 using old L2 signed state
 		_, err := nodeA.MirrorBridgedDefund(l1LedgerChannelId, oldL2SignedState, true)
@@ -226,35 +176,30 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 		// Wait for challenge registered event
 		listenForLedgerUpdates(ledgerUpdatesChannelNodeA, channel.Challenge)
 
+		completedObjectiveChannel := nodeA.CompletedObjectives()
 		// Bridge clears the challenge using new L2 signed state
 		bridge.CounterChallenge(l1LedgerChannelId, types.Checkpoint, newL2signedState)
 
 		// Wait for mirror bridged defund to complete on L1 (objective is completed after the challenge cleared event occurs)
-		for val := range completedObjectiveChannel {
-			if val == protocols.ObjectiveId(mirrorbridgeddefund.ObjectivePrefix+l1LedgerChannelId.String()) {
-				break
-			}
-		}
+		completedObjectiveId := <-completedObjectiveChannel
+		expectedObjectiveId := protocols.ObjectiveId(mirrorbridgeddefund.ObjectivePrefix + l1LedgerChannelId.String())
+		testhelpers.Assert(t, completedObjectiveId == expectedObjectiveId, "Expects objective Id to be %v", expectedObjectiveId)
 
-		// Bridge unilaterally exits from L1 using new L2 signed state
-		_, err = bridge.MirrorBridgedDefund(l1LedgerChannelId, newL2signedState, true)
+		// Alice exits L1
+		_, err = nodeAPrime.CloseBridgeChannel(l2LedgerChannelId)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// Wait for mirror bridged defund to complete on L1
-		for completedObjectiveId := range completedObjectiveChannel {
-			if mirrorbridgeddefund.IsMirrorBridgedDefundObjective(completedObjectiveId) {
-				objective, err := storeA.GetObjectiveById(completedObjectiveId)
-				if err != nil {
-					t.Fatal("mirror bridged defund objective not found", err)
-				}
+		completedObjectiveId = <-completedObjectiveChannel
 
-				if objective.OwnsChannel() == l1LedgerChannelId {
-					break
-				}
-			}
+		testhelpers.Assert(t, mirrorbridgeddefund.IsMirrorBridgedDefundObjective(completedObjectiveId), "Expects objective to be mirror bridged defund objective")
+		objective, err := storeA.GetObjectiveById(completedObjectiveId)
+		if err != nil {
+			t.Fatal("mirror bridged defund objective not found", err)
 		}
+		testhelpers.Assert(t, objective.OwnsChannel() == l1LedgerChannelId, "Expects L1 ledger channel Id to be %v", l1LedgerChannelId)
 
 		balanceNodeA, _ := infraL1.anvilChain.GetAccountBalance(tcL1.Participants[0].Address())
 		balanceBridge, _ := infraL1.anvilChain.GetAccountBalance(tcL1.Participants[1].Address())
@@ -276,68 +221,18 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 	storeA, storeAPrime := utils.storeA, utils.storeAPrime
 	infraL1 := utils.infraL1
 
-	var l1LedgerChannelId types.Destination
-	var l2LedgerChannelId types.Destination
-	var oldL2SignedState state.SignedState
+	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration)
 
-	t.Run("Create ledger channel on L1 and mirror it on L2", func(t *testing.T) {
-		// Alice create ledger channel with bridge
-		outcome := CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{})
-		l1LedgerChannelResponse, err := nodeA.CreateLedgerChannel(bridgeAddress, uint32(tcL1.ChallengeDuration), outcome)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Log("Waiting for direct-fund objective to complete...")
-		l1LedgerChannelId = l1LedgerChannelResponse.ChannelId
-		<-nodeA.ObjectiveCompleteChan(l1LedgerChannelResponse.Id)
-		t.Log("L1 channel created", l1LedgerChannelResponse.Id)
+	cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldL2SignedState := cc.SupportedSignedState()
 
-		// Wait for mirror channel to be created
-		completedMirrorChannel := <-bridge.CompletedMirrorChannels()
-		l2LedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
-
-		cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		oldL2SignedState = cc.SupportedSignedState()
-
-		testhelpers.Assert(t, completedMirrorChannel == l2LedgerChannelId, "Expects mirror channel id to be %v", l2LedgerChannelId)
-		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{}), query.Open, nodeA)
-		checkLedgerChannel(t, l2LedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, types.Address{}), query.Open, nodeAPrime)
-	})
-
-	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
-		// Create virtual channel on mirrored ledger channel on L2
-		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, types.Address{})
-		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{}, bridgeAddress, uint32(tcL2.ChallengeDuration), virtualOutcome)
-		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
-		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeAPrime)
-
-		// APrime pays BPrime
-		err := nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Virtual defund
-		virtualDefundResponse, _ := nodeAPrime.ClosePaymentChannel(virtualResponse.ChannelId)
-		<-nodeAPrime.ObjectiveCompleteChan(virtualDefundResponse)
-
-		ledgerChannelInfo, _ := nodeAPrime.GetLedgerChannel(l2LedgerChannelId)
-		balanceNodeBPrime := ledgerChannelInfo.Balance.TheirBalance.ToInt()
-		balanceNodeAPrime := ledgerChannelInfo.Balance.MyBalance.ToInt()
-		t.Log("Balance of node BPrime", balanceNodeBPrime, "\nBalance of node APrime", balanceNodeAPrime)
-
-		// APrime's balance is determined by subtracting amount paid from it's ledger deposit, while BPrime's balance is calculated by adding the amount received
-		testhelpers.Assert(t, balanceNodeBPrime.Cmp(big.NewInt(payAmount)) == 0, "Balance of node BPrime (%v) should be equal to (%v)", balanceNodeBPrime, ledgerChannelDeposit+payAmount)
-		testhelpers.Assert(t, balanceNodeAPrime.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of node APrime (%v) should be equal to (%v)", balanceNodeAPrime, ledgerChannelDeposit-payAmount)
-	})
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration)
 
 	t.Run("Counter the registered challenge by challenging with new L2 state and exit L2 using the new L2 state", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
-		completedObjectiveChannel := nodeA.CompletedObjectives()
 
 		// Alice unilaterally exits from L1 using old L2 signed state
 		_, err := nodeA.MirrorBridgedDefund(l1LedgerChannelId, oldL2SignedState, true)
@@ -353,22 +248,18 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 		// Wait for Alice's challenge to be registered
 		listenForLedgerUpdates(ledgerUpdatesChannelNodeA, channel.Challenge)
 
+		completedObjectiveChannel := nodeA.CompletedObjectives()
 		// Bridge counters the Alice' challenge using new L2 signed state
 		bridge.CounterChallenge(l1LedgerChannelId, types.Challenge, newL2signedState)
 
 		// Wait for mirror bridged defund to complete on L1
-		for completedObjectiveId := range completedObjectiveChannel {
-			if mirrorbridgeddefund.IsMirrorBridgedDefundObjective(completedObjectiveId) {
-				objective, err := storeA.GetObjectiveById(completedObjectiveId)
-				if err != nil {
-					t.Fatal("mirror bridged defund objective not found", err)
-				}
-
-				if objective.OwnsChannel() == l1LedgerChannelId {
-					break
-				}
-			}
+		completedObjectiveId := <-completedObjectiveChannel
+		testhelpers.Assert(t, mirrorbridgeddefund.IsMirrorBridgedDefundObjective(completedObjectiveId), "Expects objective to be mirror bridged defund objective")
+		objective, err := storeA.GetObjectiveById(completedObjectiveId)
+		if err != nil {
+			t.Fatal("mirror bridged defund objective not found", err)
 		}
+		testhelpers.Assert(t, objective.OwnsChannel() == l1LedgerChannelId, "Expects L1 ledger channel Id to be %v", l1LedgerChannelId)
 
 		balanceNodeA, _ := infraL1.anvilChain.GetAccountBalance(tcL1.Participants[0].Address())
 		balanceBridge, _ := infraL1.anvilChain.GetAccountBalance(tcL1.Participants[1].Address())
@@ -539,55 +430,8 @@ func TestBridgedFundWithChallenge(t *testing.T) {
 	storeA, storeAPrime := utils.storeA, utils.storeAPrime
 	infraL1 := utils.infraL1
 
-	var l1LedgerChannelId types.Destination
-	var l2LedgerChannelId types.Destination
-
-	t.Run("Create ledger channel on L1 and mirror it on L2", func(t *testing.T) {
-		// Alice create ledger channel with bridge
-		outcome := CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{})
-		l1LedgerChannelResponse, err := nodeA.CreateLedgerChannel(bridgeAddress, uint32(tcL1.ChallengeDuration), outcome)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Log("Waiting for direct-fund objective to complete...")
-		l1LedgerChannelId = l1LedgerChannelResponse.ChannelId
-		<-nodeA.ObjectiveCompleteChan(l1LedgerChannelResponse.Id)
-		t.Log("L1 channel created", l1LedgerChannelResponse.Id)
-
-		// Wait for mirror channel to be created
-		completedMirrorChannel := <-bridge.CompletedMirrorChannels()
-		l2LedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
-		testhelpers.Assert(t, completedMirrorChannel == l2LedgerChannelId, "Expects mirror channel id to be %v", l2LedgerChannelId)
-		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, types.Address{}), query.Open, nodeA)
-		checkLedgerChannel(t, l2LedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, types.Address{}), query.Open, nodeAPrime)
-	})
-
-	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
-		// Create virtual channel on mirrored ledger channel on L2
-		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, types.Address{})
-		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{}, bridgeAddress, uint32(tcL2.ChallengeDuration), virtualOutcome)
-		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
-		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeAPrime)
-
-		// APrime pays BPrime
-		err := nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Virtual defund
-		virtualDefundResponse, _ := nodeAPrime.ClosePaymentChannel(virtualResponse.ChannelId)
-		<-nodeAPrime.ObjectiveCompleteChan(virtualDefundResponse)
-
-		ledgerChannelInfo, _ := nodeAPrime.GetLedgerChannel(l2LedgerChannelId)
-		balanceNodeBPrime := ledgerChannelInfo.Balance.TheirBalance.ToInt()
-		balanceNodeAPrime := ledgerChannelInfo.Balance.MyBalance.ToInt()
-		t.Log("Balance of node BPrime", balanceNodeBPrime, "\nBalance of node APrime", balanceNodeAPrime)
-
-		// APrime's balance is determined by subtracting amount paid from it's ledger deposit, while BPrime's balance is calculated by adding the amount received
-		testhelpers.Assert(t, balanceNodeBPrime.Cmp(big.NewInt(payAmount)) == 0, "Balance of node BPrime (%v) should be equal to (%v)", balanceNodeBPrime, ledgerChannelDeposit+payAmount)
-		testhelpers.Assert(t, balanceNodeAPrime.Cmp(big.NewInt(ledgerChannelDeposit-payAmount)) == 0, "Balance of node APrime (%v) should be equal to (%v)", balanceNodeAPrime, ledgerChannelDeposit-payAmount)
-	})
+	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration)
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration)
 
 	t.Run("Unilaterally exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
 		cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
@@ -605,18 +449,13 @@ func TestBridgedFundWithChallenge(t *testing.T) {
 		}
 
 		// Wait for mirror bridged defund to complete on L1
-		for completedObjectiveId := range completedObjectiveChannel {
-			if mirrorbridgeddefund.IsMirrorBridgedDefundObjective(completedObjectiveId) {
-				objective, err := storeA.GetObjectiveById(completedObjectiveId)
-				if err != nil {
-					t.Fatal("mirror bridged defund objective not found", err)
-				}
-
-				if objective.OwnsChannel() == l1LedgerChannelId {
-					break
-				}
-			}
+		completedObjectiveId := <-completedObjectiveChannel
+		testhelpers.Assert(t, mirrorbridgeddefund.IsMirrorBridgedDefundObjective(completedObjectiveId), "Expects objective to be mirror bridged defund objective")
+		objective, err := storeA.GetObjectiveById(completedObjectiveId)
+		if err != nil {
+			t.Fatal("mirror bridged defund objective not found", err)
 		}
+		testhelpers.Assert(t, objective.OwnsChannel() == l1LedgerChannelId, "Expects L1 ledger channel Id to be %v", l1LedgerChannelId)
 
 		balanceNodeA, _ := infraL1.anvilChain.GetAccountBalance(tcL1.Participants[0].Address())
 		balanceBridge, _ := infraL1.anvilChain.GetAccountBalance(tcL1.Participants[1].Address())
@@ -1235,4 +1074,40 @@ func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge,
 	}
 
 	return utils, cleanupUtilsWithBridge
+}
+
+func createMirrorChannel(t *testing.T, node node.Node, bridge *bridge.Bridge, challengeDuration uint) (types.Destination, types.Destination) {
+	outcome := CreateLedgerOutcome(*node.Address, bridge.GetBridgeAddress(), ledgerChannelDeposit, 0, types.Address{})
+	l1LedgerChannelResponse, err := node.CreateLedgerChannel(bridge.GetBridgeAddress(), uint32(challengeDuration), outcome)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("Waiting for direct-fund objective to complete...")
+	l1LedgerChannelId := l1LedgerChannelResponse.ChannelId
+
+	<-node.ObjectiveCompleteChan(l1LedgerChannelResponse.Id)
+	t.Log("L1 channel created", l1LedgerChannelId)
+
+	// Wait for mirror channel to be created
+	l2LedgerChannelId := <-bridge.CompletedMirrorChannels()
+	t.Log("L2 channel created", l2LedgerChannelId)
+
+	return l1LedgerChannelId, l2LedgerChannelId
+}
+
+func createVirtualChannelAndMakePayment(t *testing.T, node node.Node, counterParty common.Address, challengeDuration uint) {
+	// Create virtual channel
+	virtualOutcome := initialPaymentOutcome(*node.Address, counterParty, types.Address{})
+	virtualResponse, _ := node.CreatePaymentChannel([]types.Address{}, counterParty, uint32(challengeDuration), virtualOutcome)
+	<-node.ObjectiveCompleteChan(virtualResponse.Id)
+
+	// Make payment
+	err := node.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Close virtual channel
+	virtualDefundResponse, _ := node.ClosePaymentChannel(virtualResponse.ChannelId)
+	<-node.ObjectiveCompleteChan(virtualDefundResponse)
 }

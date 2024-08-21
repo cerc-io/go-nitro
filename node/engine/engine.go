@@ -455,7 +455,7 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	_, isChallengeCleared := chainEvent.(chainservice.ChallengeClearedEvent)
 
 	if isChallengeRegistered || isChallengeCleared {
-		l1ChannelId, err := e.ProcessL2Channel(chainEvent, isChallengeRegistered)
+		l1ChannelId, err := e.processL2Channel(chainEvent, isChallengeRegistered)
 		if err != nil {
 			return EngineEvent{}, err
 		}
@@ -542,9 +542,9 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	return EngineEvent{}, nil
 }
 
-// ProcessL2Channel checks if the chain event corresponds to an L2 channel and retrieves its L1 channel ID.
+// processL2Channel checks if the chain event corresponds to an L2 channel and retrieves its L1 channel ID.
 // If the L1 channel doesn't exist, it creates a mirror bridged defund objective.
-func (e *Engine) ProcessL2Channel(chainEvent chainservice.Event, isChallengeRegistered bool) (types.Destination, error) {
+func (e *Engine) processL2Channel(chainEvent chainservice.Event, isChallengeRegistered bool) (types.Destination, error) {
 	// Check whether a challenge has been registered / cleared for the L2 channel, and then retrieve its L1 channel using an eth call to NitroAdjudicator contract
 	l1ChannelId, err := e.chain.GetL1ChannelFromL2(chainEvent.ChannelID())
 	if err != nil {
@@ -552,7 +552,6 @@ func (e *Engine) ProcessL2Channel(chainEvent chainservice.Event, isChallengeRegi
 	}
 
 	if !l1ChannelId.IsZero() {
-
 		_, ok := e.store.GetChannelById(l1ChannelId)
 		if ok {
 			return l1ChannelId, nil

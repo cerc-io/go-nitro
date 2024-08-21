@@ -2,11 +2,15 @@ package rpc
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/statechannels/go-nitro/bridge"
+	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/internal/logging"
 	"github.com/statechannels/go-nitro/node/query"
+	"github.com/statechannels/go-nitro/protocols"
+	"github.com/statechannels/go-nitro/protocols/bridgeddefund"
 	"github.com/statechannels/go-nitro/rpc/serde"
 	"github.com/statechannels/go-nitro/rpc/transport"
 )
@@ -67,6 +71,51 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 		case serde.GetAllL2ChannelsRequestMethod:
 			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.NoPayloadRequest) ([]query.LedgerChannelInfo, error) {
 				return brs.bridge.GetAllL2Channels()
+			})
+		case serde.CounterChallengeRequestMethod:
+			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.CounterChallengeRequest) (serde.CounterChallengeRequest, error) {
+				var l2SignedState state.SignedState
+				if len(req.Payload) > 0 {
+					err := json.Unmarshal([]byte(req.Payload), &l2SignedState)
+					if err != nil {
+						return serde.CounterChallengeRequest{}, fmt.Errorf("error in unmarshalling signed state payload %w", err)
+					}
+				}
+
+				brs.bridge.CounterChallenge(req.ChannelId, req.Action, l2SignedState)
+				return req, nil
+			})
+		case serde.GetSignedStateMethod:
+			return processRequest(brs.BaseRpcServer, permRead, requestData, func(req serde.GetSignedStateRequest) (string, error) {
+				if err := serde.ValidateGetSignedStateRequest(req); err != nil {
+					return "", err
+				}
+
+				latestState, err := brs.bridge.GetL2SupportedSignedState(req.Id)
+				if err != nil {
+					return "", err
+				}
+
+				marshalledState, err := json.Marshal(latestState)
+				if err != nil {
+					return "", err
+				}
+
+				return string(marshalledState), nil
+			})
+		case serde.MirrorBridgedDefundRequestMethod:
+			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.MirrorBridgedDefundRequest) (protocols.ObjectiveId, error) {
+				if DISABLE_BRIDGE_DEFUND {
+					return protocols.ObjectiveId(bridgeddefund.ObjectivePrefix + req.ChannelId.String()), fmt.Errorf("brided defund is currently disabled")
+				}
+
+				var l2SignedState state.SignedState
+				err := json.Unmarshal([]byte(req.StringifiedL2SignedState), &l2SignedState)
+				if err != nil {
+					return "", err
+				}
+
+				return brs.bridge.MirrorBridgedDefund(req.ChannelId, l2SignedState, req.IsChallenge)
 			})
 		default:
 			errRes := serde.NewJsonRpcErrorResponse(jsonrpcReq.Id, serde.MethodNotFoundError)

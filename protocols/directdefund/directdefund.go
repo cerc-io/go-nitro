@@ -680,3 +680,7 @@ func (o *Objective) CreateConsensusChannelFromChannel() (*consensus_channel.Cons
 		return &con, nil
 	}
 }
+
+func (o *Objective) ResetWithDrawAllTxSubmitted() {
+	o.withdrawTransactionSubmitted = false
+}

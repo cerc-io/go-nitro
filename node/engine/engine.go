@@ -798,42 +798,20 @@ func (e *Engine) handleRetryTxRequest(request types.RetryTxRequest) error {
 	// Based on objective type, send appropriate tx
 	switch objective := obj.(type) {
 	case *directfund.Objective:
-		if objective.FundingComplete() {
-			return nil
-		}
 
-		// TODO: Only check for safe to deposit
-		if !objective.SafeToDeposit() {
-			return fmt.Errorf("Not safe to deposit right now")
-		}
+		objective.ResetTxSubmitted()
 
-		amountToDeposit := objective.AmountToDeposit()
-		depositTx := protocols.NewDepositTransaction(objective.OwnsChannel(), amountToDeposit)
-		err := e.chain.SendTransaction(depositTx)
+		_, err = e.attemptProgress(objective)
 		if err != nil {
 			return err
 		}
 
 	case *directdefund.Objective:
-		if !(objective.C.MyIndex == 0) {
-			return fmt.Errorf("Only first participant can initiate defunding")
-		}
+		objective.ResetWithDrawAllTxSubmitted()
 
-		latestSignedState, err := objective.C.LatestSignedState()
+		_, err = e.attemptProgress(objective)
 		if err != nil {
 			return err
-		}
-
-		if !latestSignedState.State().IsFinal || !latestSignedState.HasSignatureForParticipant(objective.C.MyIndex) {
-			return fmt.Errorf("State is supported")
-		}
-
-		if !objective.FullyWithdrawn() {
-			withDrawAllTx := protocols.NewWithdrawAllTransaction(objective.OwnsChannel(), latestSignedState)
-			err := e.chain.SendTransaction(withDrawAllTx)
-			if err != nil {
-				return err
-			}
 		}
 	}
 

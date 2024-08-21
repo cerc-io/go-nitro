@@ -313,9 +313,9 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	}
 
 	// Funding
-	fundingComplete := updated.FundingComplete() // note all information stored in state (since there are no real events)
-	amountToDeposit := updated.AmountToDeposit()
-	safeToDeposit := updated.SafeToDeposit()
+	fundingComplete := updated.fundingComplete() // note all information stored in state (since there are no real events)
+	amountToDeposit := updated.amountToDeposit()
+	safeToDeposit := updated.safeToDeposit()
 
 	if !fundingComplete && !safeToDeposit {
 		return &updated, sideEffects, WaitingForMyTurnToFund, nil
@@ -360,8 +360,8 @@ func (o *Objective) Related() []protocols.Storable {
 
 //  Private methods on the DirectFundingObjectiveState
 
-// FundingComplete returns true if the recorded OnChainHoldings are greater than or equal to the threshold for being fully funded.
-func (o *Objective) FundingComplete() bool {
+// fundingComplete returns true if the recorded OnChainHoldings are greater than or equal to the threshold for being fully funded.
+func (o *Objective) fundingComplete() bool {
 	for asset, threshold := range o.fullyFundedThreshold {
 		chainHolding, ok := o.C.OnChain.Holdings[asset]
 
@@ -377,8 +377,8 @@ func (o *Objective) FundingComplete() bool {
 	return true
 }
 
-// SafeToDeposit returns true if the recorded OnChainHoldings are greater than or equal to the threshold for safety.
-func (o *Objective) SafeToDeposit() bool {
+// safeToDeposit returns true if the recorded OnChainHoldings are greater than or equal to the threshold for safety.
+func (o *Objective) safeToDeposit() bool {
 	for asset, safetyThreshold := range o.myDepositSafetyThreshold {
 
 		chainHolding, ok := o.C.OnChain.Holdings[asset]
@@ -395,8 +395,8 @@ func (o *Objective) SafeToDeposit() bool {
 	return true
 }
 
-// AmountToDeposit computes the appropriate amount to deposit given the current recorded OnChainHoldings
-func (o *Objective) AmountToDeposit() types.Funds {
+// amountToDeposit computes the appropriate amount to deposit given the current recorded OnChainHoldings
+func (o *Objective) amountToDeposit() types.Funds {
 	deposits := make(types.Funds, len(o.C.OnChain.Holdings))
 
 	for asset, target := range o.myDepositTarget {
@@ -428,6 +428,10 @@ func (o *Objective) clone() Objective {
 // IsDirectFundObjective inspects a objective id and returns true if the objective id is for a direct fund objective.
 func IsDirectFundObjective(id protocols.ObjectiveId) bool {
 	return strings.HasPrefix(string(id), ObjectivePrefix)
+}
+
+func (o *Objective) ResetTxSubmitted() {
+	o.transactionSubmitted = false
 }
 
 // ObjectiveRequest represents a request to create a new direct funding objective.

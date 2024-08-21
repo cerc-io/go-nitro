@@ -802,6 +802,7 @@ func (e *Engine) handleRetryTxRequest(request types.RetryTxRequest) error {
 			return nil
 		}
 
+		// TODO: Only check for safe to deposit
 		if !objective.SafeToDeposit() {
 			return fmt.Errorf("Not safe to deposit right now")
 		}

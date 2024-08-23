@@ -344,7 +344,9 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 			VariablePart: nitroVariablePart,
 			Sigs:         nitroSignatures,
 		}
-		_, err := ecs.na.ConcludeAndTransferAllAssets(ecs.defaultTxOpts(), nitroFixedPart, candidate)
+
+		withdrawAllTx, err := ecs.na.ConcludeAndTransferAllAssets(ecs.defaultTxOpts(), nitroFixedPart, candidate)
+		ecs.sentTxToChannelId[withdrawAllTx] = tx.ChannelId()
 		return err
 	case protocols.ChallengeTransaction:
 		fp, candidate := NitroAdjudicator.ConvertSignedStateToFixedPartAndSignedVariablePart(tx.Candidate)

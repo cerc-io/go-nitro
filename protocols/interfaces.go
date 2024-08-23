@@ -201,6 +201,12 @@ type Storable interface {
 	json.Unmarshaler
 }
 
+type DroppedTxInfo struct {
+	DroppedTxHash common.Hash
+	ChannelId     types.Destination
+	EventName     string
+}
+
 // Objective is the interface for off-chain protocols.
 // The lifecycle of an objective is as follows:
 //   - It is initialized by a single client (passing in various parameters). It is implicitly approved by that client. It is communicated to the other clients.

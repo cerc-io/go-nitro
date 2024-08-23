@@ -185,7 +185,7 @@ type ChainService interface {
 	// EventFeed returns a chan for receiving events from the chain service.
 	EventFeed() <-chan Event
 	// Dropped event feed returns a chan for catching dropped events from chain service
-	DroppedEventFeed() <-chan DroppedEventInfo
+	DroppedTxFeed() <-chan protocols.DroppedTxInfo
 	// SendTransaction is for sending transactions with the chain service
 	SendTransaction(protocols.ChainTransaction) error
 	// GetConsensusAppAddress returns the address of a deployed ConsensusApp (for ledger channels)

@@ -154,11 +154,11 @@ export type GetPaymentChannelsByLedgerRequest = JsonRpcRequest<
 >;
 
 export type GetDroppedTxRequest = JsonRpcRequest<
-"get_dropped_tx",
-{
-  ObjectiveId: string;
-}
->
+  "get_objective",
+  {
+    ObjectiveId: string;
+  }
+>;
 
 export type VersionRequest = JsonRpcRequest<"version", Record<string, never>>;
 export type DirectDefundRequest = JsonRpcRequest<
@@ -245,7 +245,7 @@ export type RPCRequestAndResponses = {
     GetPaymentChannelsByLedgerRequest,
     GetPaymentChannelsByLedgerResponse
   ];
-  get_dropped_tx: [GetDroppedTxRequest, GetDroppedTxResponse];
+  get_objective: [GetDroppedTxRequest, GetDroppedTxResponse];
   create_voucher: [CreateVoucherRequest, CreateVoucherResponse];
   receive_voucher: [ReceiveVoucherRequest, ReceiveVoucherResponse];
 };

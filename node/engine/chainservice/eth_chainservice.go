@@ -54,6 +54,15 @@ var topicsToWatch = []common.Hash{
 	statusUpdatedTopic,
 }
 
+var topicsToEventName = map[common.Hash]string{
+	concludedTopic:           "Concluded",
+	allocationUpdatedTopic:   "AllocationUpdated",
+	depositedTopic:           "Deposited",
+	challengeRegisteredTopic: "ChallengeRegistered",
+	challengeClearedTopic:    "ChallengeCleared",
+	reclaimedTopic:           "Reclaimed",
+}
+
 const (
 	MIN_BACKOFF_TIME = 1 * time.Second
 	MAX_BACKOFF_TIME = 5 * time.Minute
@@ -67,11 +76,6 @@ type ethChain interface {
 	TransactionSender(ctx context.Context, tx *ethTypes.Transaction, block common.Hash, index uint) (common.Address, error)
 }
 
-type DroppedEventInfo struct {
-	DroppedTxHash common.Hash
-	ChannelId     types.Destination
-}
-
 // eventTracker holds on to events in memory and dispatches an event after required number of confirmations
 type EthChainService struct {
 	chain                    ethChain
@@ -81,7 +85,7 @@ type EthChainService struct {
 	virtualPaymentAppAddress common.Address
 	txSigner                 *bind.TransactOpts
 	out                      chan Event
-	droppedOut               chan DroppedEventInfo
+	droppedTxOut             chan protocols.DroppedTxInfo
 	logger                   *slog.Logger
 	ctx                      context.Context
 	cancel                   context.CancelFunc
@@ -89,7 +93,7 @@ type EthChainService struct {
 	eventTracker             *eventTracker
 	eventSub                 ethereum.Subscription
 	newBlockSub              ethereum.Subscription
-	channelIdToSentTxs       map[types.Destination][]*ethTypes.Transaction
+	sentTxToChannelId        map[*ethTypes.Transaction]types.Destination
 }
 
 // MAX_QUERY_BLOCK_RANGE is the maximum range of blocks we query for events at once.
@@ -165,10 +169,10 @@ func newEthChainService(chain ethChain, startBlockNum uint64, na *NitroAdjudicat
 	}
 	tracker := NewEventTracker(startBlock)
 
-	channelIdToSentTxs := make(map[types.Destination][]*ethTypes.Transaction)
+	sentTxToChannelId := make(map[*ethTypes.Transaction]types.Destination)
 
 	// Use a buffered channel so we don't have to worry about blocking on writing to the channel.
-	ecs := EthChainService{chain, na, naAddress, caAddress, vpaAddress, txSigner, make(chan Event, 10), make(chan DroppedEventInfo, 10), logger, ctx, cancelCtx, &sync.WaitGroup{}, tracker, nil, nil, channelIdToSentTxs}
+	ecs := EthChainService{chain, na, naAddress, caAddress, vpaAddress, txSigner, make(chan Event, 10), make(chan protocols.DroppedTxInfo, 10), logger, ctx, cancelCtx, &sync.WaitGroup{}, tracker, nil, nil, sentTxToChannelId}
 	errChan, newBlockChan, eventChan, eventQuery, err := ecs.subscribeForLogs()
 	if err != nil {
 		return nil, err
@@ -284,6 +288,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 			if tokenAddress == ethTokenAddress {
 				txOpts.Value = amount
 			} else {
+				// TODO: Take out Approve tx in a separate switch case so that Approval event parsing can go through dispatchEvents flow
 				// If custom token is used instead of ETH, we need to approve token amount to be transferred from
 				err := ecs.handleApproveTx(tokenAddress, amount)
 				if err != nil {
@@ -306,7 +311,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				return nil
 			}
 
-			ecs.channelIdToSentTxs[tx.ChannelId()] = append(ecs.channelIdToSentTxs[tx.ChannelId()], depositTx)
+			ecs.sentTxToChannelId[depositTx] = tx.ChannelId()
 		}
 		return nil
 	case protocols.WithdrawAllTransaction:
@@ -665,21 +670,27 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 		}
 
 		if oldBlock.Hash() != chainEvent.BlockHash {
-
 			// Set isTxDropped to true if tx is dropped
-			for channelId, txs := range ecs.channelIdToSentTxs {
-				for _, txDetails := range txs {
-					if txDetails.Hash() == chainEvent.TxHash {
-						ecs.droppedOut <- DroppedEventInfo{
-							chainEvent.TxHash,
-							channelId,
-						}
+			for tx, channelId := range ecs.sentTxToChannelId {
+				if tx.Hash() == chainEvent.TxHash {
+					ecs.droppedTxOut <- protocols.DroppedTxInfo{
+						DroppedTxHash: chainEvent.TxHash,
+						ChannelId:     channelId,
+						EventName:     topicsToEventName[chainEvent.Topics[0]],
 					}
+
+					delete(ecs.sentTxToChannelId, tx)
 				}
 			}
 
 			ecs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)", "blockNumber", chainEvent.BlockNumber, "blockHash", chainEvent.BlockHash)
 			continue
+		}
+
+		for tx := range ecs.sentTxToChannelId {
+			if tx.Hash() == chainEvent.TxHash {
+				delete(ecs.sentTxToChannelId, tx)
+			}
 		}
 
 		eventsToDispatch = append(eventsToDispatch, chainEvent)
@@ -724,8 +735,8 @@ func (ecs *EthChainService) EventFeed() <-chan Event {
 	return ecs.out
 }
 
-func (ecs *EthChainService) DroppedEventFeed() <-chan DroppedEventInfo {
-	return ecs.droppedOut
+func (ecs *EthChainService) DroppedTxFeed() <-chan protocols.DroppedTxInfo {
+	return ecs.droppedTxOut
 }
 
 func (ecs *EthChainService) GetConsensusAppAddress() types.Address {

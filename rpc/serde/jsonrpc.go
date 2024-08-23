@@ -42,7 +42,7 @@ const (
 	GetSignedStateMethod RequestMethod = "get_signed_state"
 
 	// Chain reorgs workaround methods
-	GetDroppedTxMethod RequestMethod = "get_dropped_tx"
+	GetObjectiveMethod RequestMethod = "get_objective"
 	RetryTxMethod      RequestMethod = "retry_tx"
 )
 

@@ -241,18 +241,19 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 				nrs.node.RetryTx(req.ObjectiveId)
 				return req.ObjectiveId, nil
 			})
-		case serde.GetDroppedTxMethod:
+		case serde.GetObjectiveMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.GetDroppedTxRequest) (string, error) {
-				droppedTx, err := nrs.node.GetDroppedTxByObjectiveId(req.ObjectiveId)
+				objective, err := nrs.node.GetObjectiveById(req.ObjectiveId)
 				if err != nil {
-					if err.Error() == droppedTxNotFoundErr {
-						returnMsg := "No events dropped for given objective Id: " + string(req.ObjectiveId)
-						return returnMsg, nil
-					}
 					return "", err
 				}
 
-				return droppedTx.String(), nil
+				marshalledObjective, err := objective.MarshalJSON()
+				if err != nil {
+					return "", err
+				}
+
+				return string(marshalledObjective), nil
 			})
 		default:
 			errRes := serde.NewJsonRpcErrorResponse(jsonrpcReq.Id, serde.MethodNotFoundError)

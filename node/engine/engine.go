@@ -74,11 +74,11 @@ type Engine struct {
 	CounterChallengeRequestsFromAPI chan CounterChallengeRequest
 	RetryTxRequestFromAPI           chan types.RetryTxRequest
 
-	fromChain        <-chan chainservice.Event
-	droppedFromChain <-chan chainservice.DroppedEventInfo
-	fromMsg          <-chan protocols.Message
-	fromLedger       chan consensus_channel.Proposal
-	signRequests     <-chan p2pms.SignatureRequest
+	fromChain          <-chan chainservice.Event
+	droppedTxFromChain <-chan protocols.DroppedTxInfo
+	fromMsg            <-chan protocols.Message
+	fromLedger         chan consensus_channel.Proposal
+	signRequests       <-chan p2pms.SignatureRequest
 
 	eventHandler func(EngineEvent)
 
@@ -160,7 +160,7 @@ func New(vm *payments.VoucherManager, msg messageservice.MessageService, chain c
 	e.RetryTxRequestFromAPI = make(chan types.RetryTxRequest)
 
 	e.fromChain = chain.EventFeed()
-	e.droppedFromChain = chain.DroppedEventFeed()
+	e.droppedTxFromChain = chain.DroppedTxFeed()
 	e.fromMsg = msg.P2PMessages()
 	e.signRequests = msg.SignRequests()
 
@@ -213,8 +213,8 @@ func (e *Engine) run(ctx context.Context) {
 			res, err = e.handlePaymentRequest(pr)
 		case chainEvent := <-e.fromChain:
 			res, err = e.handleChainEvent(chainEvent)
-		case droppedEventTxInfo := <-e.droppedFromChain:
-			err = e.handleDroppedChainEvent(droppedEventTxInfo)
+		case droppedEventTxInfo := <-e.droppedTxFromChain:
+			e.handleDroppedChainTx(droppedEventTxInfo)
 		case message := <-e.fromMsg:
 			res, err = e.handleMessage(message)
 		case proposal := <-e.fromLedger:
@@ -565,14 +565,17 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	return EngineEvent{}, nil
 }
 
-func (e *Engine) handleDroppedChainEvent(droppedEventTxInfo chainservice.DroppedEventInfo) error {
-	objective, ok := e.store.GetObjectiveByChannelId(droppedEventTxInfo.ChannelId)
+func (e *Engine) handleDroppedChainTx(droppedTxInfo protocols.DroppedTxInfo) {
+	obj, ok := e.store.GetObjectiveByChannelId(droppedTxInfo.ChannelId)
 
 	if !ok {
-		slog.Info("Could not find channel with given channel ID", "channelId", droppedEventTxInfo.ChannelId)
+		slog.Info("Could not find objective with given channel ID", "channelId", droppedTxInfo.ChannelId)
 	}
 
-	return e.store.SetObjectiveIdToDroppedTxHash(objective.Id(), droppedEventTxInfo.DroppedTxHash)
+	switch objective := obj.(type) {
+	case *directfund.Objective:
+		objective.SetDroppedTx(droppedTxInfo)
+	}
 }
 
 // checkAndProcessL2Channel checks if the chain event corresponds to an L2 channel and retrieves its L1 channel ID.

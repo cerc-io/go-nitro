@@ -183,11 +183,11 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "get-dropped-tx <objectiveId>",
-    "Get the address of the Nitro RPC server",
+    "get-objective <objectiveId>",
+    "Get current status of objective with given objective ID",
     (yargsBuilder) => {
       return yargsBuilder.positional("objectiveId", {
-        describe: "The id of the channel to get dropped tx for",
+        describe: "Id of the objective",
         type: "string",
         demandOption: true,
       });
@@ -197,14 +197,15 @@ yargs(hideBin(process.argv))
       const rpcHost = yargs.h;
       const isSecure = yargs.s;
 
-      const objectiveId = yargs.objectiveId
+      const objectiveId = yargs.objectiveId;
 
       const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
         getRPCUrl(rpcHost, rpcPort),
         isSecure
       );
-      const droppedTxHash = await rpcClient.GetDroppedTx(objectiveId);
-      console.log(droppedTxHash);
+      const objectiveInfo = await rpcClient.GetObjective(objectiveId);
+      console.log(JSON.stringify(objectiveInfo, null, 2));
+
       await rpcClient.Close();
       process.exit(0);
     }

@@ -290,9 +290,9 @@ export class NitroRpcClient implements RpcClientApi {
     });
   }
 
-  public async GetDroppedTx(objectiveId: string): Promise<string> {
-    return this.sendRequest("get_dropped_tx", {
-      ObjectiveId: objectiveId
+  public async GetObjective(objectiveId: string): Promise<string> {
+    return this.sendRequest("get_objective", {
+      ObjectiveId: objectiveId,
     });
   }
 

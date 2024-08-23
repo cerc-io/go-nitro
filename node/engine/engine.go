@@ -579,6 +579,12 @@ func (e *Engine) handleDroppedChainTx(droppedTxInfo protocols.DroppedTxInfo) err
 		if err != nil {
 			return err
 		}
+	case *directdefund.Objective:
+		objective.SetDroppedTx(droppedTxInfo)
+		err := e.store.SetObjective(objective)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

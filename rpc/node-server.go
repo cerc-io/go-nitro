@@ -32,8 +32,6 @@ type NodeRpcServer struct {
 	paymentManager paymentsmanager.PaymentsManager
 }
 
-const droppedTxNotFoundErr = "not found"
-
 // newNodeRpcServerWithoutNotifications creates a new rpc server without notifications enabled
 func newNodeRpcServerWithoutNotifications(nitroNode *nitro.Node, trans transport.Responder) (*NodeRpcServer, error) {
 	baseRpcServer := NewBaseRpcServer(trans)

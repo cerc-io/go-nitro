@@ -28,13 +28,12 @@ type blockData struct {
 }
 
 type MemStore struct {
-	objectives               safesync.Map[[]byte]
-	channels                 safesync.Map[[]byte]
-	consensusChannels        safesync.Map[[]byte]
-	channelToObjective       safesync.Map[protocols.ObjectiveId]
-	vouchers                 safesync.Map[[]byte]
-	lastBlockSeen            blockData
-	objectiveToDroppedTxHash safesync.Map[common.Hash]
+	objectives         safesync.Map[[]byte]
+	channels           safesync.Map[[]byte]
+	consensusChannels  safesync.Map[[]byte]
+	channelToObjective safesync.Map[protocols.ObjectiveId]
+	vouchers           safesync.Map[[]byte]
+	lastBlockSeen      blockData
 
 	key     string // the signing key of the store's engine
 	address string // the (Ethereum) address associated to the signing key
@@ -51,7 +50,6 @@ func NewMemStore(key []byte) Store {
 	ms.channelToObjective = safesync.Map[protocols.ObjectiveId]{}
 	ms.vouchers = safesync.Map[[]byte]{}
 	ms.lastBlockSeen = blockData{}
-	ms.objectiveToDroppedTxHash = safesync.Map[common.Hash]{}
 	return &ms
 }
 
@@ -152,21 +150,6 @@ func (ms *MemStore) GetLastBlockNumSeen() (uint64, error) {
 	lastBlockNumSeen := ms.lastBlockSeen.blockNum
 	ms.lastBlockSeen.mu.Unlock()
 	return lastBlockNumSeen, nil
-}
-
-func (ms *MemStore) SetObjectiveIdToDroppedTxHash(objectiveId protocols.ObjectiveId, droppedTxHash common.Hash) error {
-	ms.objectiveToDroppedTxHash.Store(string(objectiveId), droppedTxHash)
-
-	return nil
-}
-
-func (ms *MemStore) GetDroppedTxHashByObjectiveId(objectiveId protocols.ObjectiveId) (common.Hash, error) {
-	droppedTxHash, found := ms.objectiveToDroppedTxHash.Load(string(objectiveId))
-	if !found {
-		return common.Hash{}, fmt.Errorf("Failed load dropped tx hash for give objective: %v", objectiveId)
-	}
-
-	return droppedTxHash, nil
 }
 
 // SetChannel sets the channel in the store.

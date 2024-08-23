@@ -169,10 +169,8 @@ func newEthChainService(chain ethChain, startBlockNum uint64, na *NitroAdjudicat
 	}
 	tracker := NewEventTracker(startBlock)
 
-	sentTxToChannelId := make(map[*ethTypes.Transaction]types.Destination)
-
 	// Use a buffered channel so we don't have to worry about blocking on writing to the channel.
-	ecs := EthChainService{chain, na, naAddress, caAddress, vpaAddress, txSigner, make(chan Event, 10), make(chan protocols.DroppedTxInfo, 10), logger, ctx, cancelCtx, &sync.WaitGroup{}, tracker, nil, nil, sentTxToChannelId}
+	ecs := EthChainService{chain, na, naAddress, caAddress, vpaAddress, txSigner, make(chan Event, 10), make(chan protocols.DroppedTxInfo, 10), logger, ctx, cancelCtx, &sync.WaitGroup{}, tracker, nil, nil, make(map[*ethTypes.Transaction]types.Destination)}
 	errChan, newBlockChan, eventChan, eventQuery, err := ecs.subscribeForLogs()
 	if err != nil {
 		return nil, err
@@ -283,6 +281,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 	switch tx := tx.(type) {
 	case protocols.DepositTransaction:
 		var tokenApprovalLogs ethTypes.Log
+
 		for tokenAddress, amount := range tx.Deposit {
 			txOpts := ecs.defaultTxOpts()
 			ethTokenAddress := common.Address{}
@@ -690,7 +689,7 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 		}
 
 		if oldBlock.Hash() != chainEvent.BlockHash {
-			// Send info of droppec tx to engine
+			// Send info of dropped tx to engine
 			for tx, channelId := range ecs.sentTxToChannelId {
 				if tx.Hash() == chainEvent.TxHash {
 					ecs.droppedTxOut <- protocols.DroppedTxInfo{

@@ -26,13 +26,12 @@ import (
 )
 
 type DurableStore struct {
-	objectives               *buntdb.DB
-	channels                 *buntdb.DB
-	consensusChannels        *buntdb.DB
-	channelToObjective       *buntdb.DB
-	vouchers                 *buntdb.DB
-	lastBlockNumSeen         *buntdb.DB
-	objectiveToDroppedTxHash *buntdb.DB
+	objectives         *buntdb.DB
+	channels           *buntdb.DB
+	consensusChannels  *buntdb.DB
+	channelToObjective *buntdb.DB
+	vouchers           *buntdb.DB
+	lastBlockNumSeen   *buntdb.DB
 
 	key     string // the signing key of the store's engine
 	address string // the (Ethereum) address associated to the signing key
@@ -78,11 +77,6 @@ func NewDurableStore(key []byte, folder string, config buntdb.Config) (Store, er
 	}
 
 	ps.lastBlockNumSeen, err = ps.openDB("lastBlockNumSeen", config)
-	if err != nil {
-		return nil, err
-	}
-
-	ps.objectiveToDroppedTxHash, err = ps.openDB("objective_to_dropped_tx_hash", config)
 	if err != nil {
 		return nil, err
 	}
@@ -254,34 +248,6 @@ func (ds *DurableStore) SetLastBlockNumSeen(blockNumber uint64) error {
 		_, _, err := tx.Set(lastBlockNumSeenKey, strconv.FormatUint(blockNumber, 10), nil)
 		return err
 	})
-}
-
-func (ds *DurableStore) SetObjectiveIdToDroppedTxHash(objectiveId protocols.ObjectiveId, droppedTxHash common.Hash) error {
-	err := ds.objectiveToDroppedTxHash.Update(func(tx *buntdb.Tx) error {
-		_, _, err := tx.Set(string(objectiveId), droppedTxHash.String(), nil)
-		return err
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (ds *DurableStore) GetDroppedTxHashByObjectiveId(objectiveId protocols.ObjectiveId) (common.Hash, error) {
-	var hashJSON string
-	err := ds.objectiveToDroppedTxHash.View(func(tx *buntdb.Tx) error {
-		var err error
-		hashJSON, err = tx.Get(string(objectiveId))
-		return err
-	})
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	hashBytes := common.FromHex(hashJSON)
-
-	return common.BytesToHash(hashBytes), nil
 }
 
 // SetChannel sets the channel in the store.

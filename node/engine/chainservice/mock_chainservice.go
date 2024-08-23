@@ -49,8 +49,8 @@ func (mc *MockChainService) EventFeed() <-chan Event {
 	return mc.eventFeed
 }
 
-func (mc *MockChainService) DroppedTxFeed() <-chan protocols.DroppedTxInfo {
-	return make(<-chan protocols.DroppedTxInfo)
+func (mc *MockChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
+	return make(<-chan protocols.DroppedEventInfo)
 }
 
 func (mc *MockChainService) GetChainId() (*big.Int, error) {

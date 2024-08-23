@@ -201,10 +201,10 @@ type Storable interface {
 	json.Unmarshaler
 }
 
-type DroppedTxInfo struct {
-	DroppedTxHash common.Hash
-	ChannelId     types.Destination
-	EventName     string
+type DroppedEventInfo struct {
+	TxHash    common.Hash
+	ChannelId types.Destination
+	EventName string
 }
 
 // Objective is the interface for off-chain protocols.

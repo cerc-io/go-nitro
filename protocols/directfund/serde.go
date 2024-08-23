@@ -18,7 +18,7 @@ type jsonObjective struct {
 	MyDepositTarget          types.Funds
 	FullyFundedThreshold     types.Funds
 	TransactionSumbmitted    bool
-	DroppedTx                protocols.DroppedTxInfo
+	DroppedEvent             protocols.DroppedEventInfo
 }
 
 // MarshalJSON returns a JSON representation of the DirectFundObjective
@@ -32,7 +32,7 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.myDepositTarget,
 		o.fullyFundedThreshold,
 		o.transactionSubmitted,
-		o.droppedTx,
+		o.droppedEvent,
 	}
 	return json.Marshal(jsonDFO)
 }
@@ -60,7 +60,7 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.myDepositTarget = jsonDFO.MyDepositTarget
 	o.myDepositSafetyThreshold = jsonDFO.MyDepositSafetyThreshold
 	o.transactionSubmitted = jsonDFO.TransactionSumbmitted
-	o.droppedTx = jsonDFO.DroppedTx
+	o.droppedEvent = jsonDFO.DroppedEvent
 
 	return nil
 }

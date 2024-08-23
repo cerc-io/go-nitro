@@ -74,11 +74,11 @@ type Engine struct {
 	CounterChallengeRequestsFromAPI chan CounterChallengeRequest
 	RetryTxRequestFromAPI           chan types.RetryTxRequest
 
-	fromChain          <-chan chainservice.Event
-	droppedTxFromChain <-chan protocols.DroppedTxInfo
-	fromMsg            <-chan protocols.Message
-	fromLedger         chan consensus_channel.Proposal
-	signRequests       <-chan p2pms.SignatureRequest
+	fromChain             <-chan chainservice.Event
+	droppedEventFromChain <-chan protocols.DroppedEventInfo
+	fromMsg               <-chan protocols.Message
+	fromLedger            chan consensus_channel.Proposal
+	signRequests          <-chan p2pms.SignatureRequest
 
 	eventHandler func(EngineEvent)
 
@@ -160,7 +160,7 @@ func New(vm *payments.VoucherManager, msg messageservice.MessageService, chain c
 	e.RetryTxRequestFromAPI = make(chan types.RetryTxRequest)
 
 	e.fromChain = chain.EventFeed()
-	e.droppedTxFromChain = chain.DroppedTxFeed()
+	e.droppedEventFromChain = chain.DroppedEventFeed()
 	e.fromMsg = msg.P2PMessages()
 	e.signRequests = msg.SignRequests()
 
@@ -213,8 +213,8 @@ func (e *Engine) run(ctx context.Context) {
 			res, err = e.handlePaymentRequest(pr)
 		case chainEvent := <-e.fromChain:
 			res, err = e.handleChainEvent(chainEvent)
-		case droppedEventTxInfo := <-e.droppedTxFromChain:
-			err = e.handleDroppedChainTx(droppedEventTxInfo)
+		case droppedEventTxInfo := <-e.droppedEventFromChain:
+			err = e.handleDroppedChainEvent(droppedEventTxInfo)
 		case message := <-e.fromMsg:
 			res, err = e.handleMessage(message)
 		case proposal := <-e.fromLedger:
@@ -565,22 +565,22 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	return EngineEvent{}, nil
 }
 
-func (e *Engine) handleDroppedChainTx(droppedTxInfo protocols.DroppedTxInfo) error {
-	obj, ok := e.store.GetObjectiveByChannelId(droppedTxInfo.ChannelId)
+func (e *Engine) handleDroppedChainEvent(droppedEventInfo protocols.DroppedEventInfo) error {
+	obj, ok := e.store.GetObjectiveByChannelId(droppedEventInfo.ChannelId)
 
 	if !ok {
-		slog.Info("Could not find objective with given channel ID", "channelId", droppedTxInfo.ChannelId)
+		slog.Info("Could not find objective with given channel ID", "channelId", droppedEventInfo.ChannelId)
 	}
 
 	switch objective := obj.(type) {
 	case *directfund.Objective:
-		objective.SetDroppedTx(droppedTxInfo)
+		objective.SetDroppedEvent(droppedEventInfo)
 		err := e.store.SetObjective(objective)
 		if err != nil {
 			return err
 		}
 	case *directdefund.Objective:
-		objective.SetDroppedTx(droppedTxInfo)
+		objective.SetDroppedEvent(droppedEventInfo)
 		err := e.store.SetObjective(objective)
 		if err != nil {
 			return err

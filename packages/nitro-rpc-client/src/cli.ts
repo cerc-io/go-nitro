@@ -204,7 +204,7 @@ yargs(hideBin(process.argv))
         isSecure
       );
       const objectiveInfo = await rpcClient.GetObjective(objectiveId);
-      console.log(JSON.stringify(objectiveInfo, null, 2));
+      console.log(objectiveInfo);
 
       await rpcClient.Close();
       process.exit(0);

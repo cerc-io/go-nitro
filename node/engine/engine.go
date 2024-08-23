@@ -214,7 +214,7 @@ func (e *Engine) run(ctx context.Context) {
 		case chainEvent := <-e.fromChain:
 			res, err = e.handleChainEvent(chainEvent)
 		case droppedEventTxInfo := <-e.droppedTxFromChain:
-			e.handleDroppedChainTx(droppedEventTxInfo)
+			err = e.handleDroppedChainTx(droppedEventTxInfo)
 		case message := <-e.fromMsg:
 			res, err = e.handleMessage(message)
 		case proposal := <-e.fromLedger:
@@ -565,7 +565,7 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	return EngineEvent{}, nil
 }
 
-func (e *Engine) handleDroppedChainTx(droppedTxInfo protocols.DroppedTxInfo) {
+func (e *Engine) handleDroppedChainTx(droppedTxInfo protocols.DroppedTxInfo) error {
 	obj, ok := e.store.GetObjectiveByChannelId(droppedTxInfo.ChannelId)
 
 	if !ok {
@@ -575,7 +575,13 @@ func (e *Engine) handleDroppedChainTx(droppedTxInfo protocols.DroppedTxInfo) {
 	switch objective := obj.(type) {
 	case *directfund.Objective:
 		objective.SetDroppedTx(droppedTxInfo)
+		err := e.store.SetObjective(objective)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 // checkAndProcessL2Channel checks if the chain event corresponds to an L2 channel and retrieves its L1 channel ID.

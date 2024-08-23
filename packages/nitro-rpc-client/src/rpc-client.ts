@@ -140,11 +140,12 @@ export class NitroRpcClient implements RpcClientApi {
     counterParty: string,
     assetAddress: string,
     alphaAmount: number,
-    betaAmount: number
+    betaAmount: number,
+    challengeDuration: number
   ): Promise<ObjectiveResponse> {
     const payload: DirectFundPayload = {
       CounterParty: counterParty,
-      ChallengeDuration: 10,
+      ChallengeDuration: challengeDuration,
       Outcome: createOutcome(
         assetAddress,
         await this.GetAddress(),

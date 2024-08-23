@@ -19,7 +19,8 @@ interface ledgerChannelApi {
     counterParty: string,
     assetAddress: string,
     aplhaAmount: number,
-    betaAmount: number
+    betaAmount: number,
+    challengeDuration: number
   ): Promise<ObjectiveResponse>;
   /**
    * CloseLedgerChannel defunds a directly funded ledger channel.

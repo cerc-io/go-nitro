@@ -235,6 +235,12 @@ yargs(hideBin(process.argv))
           describe: "The amount to be funded by beta node",
           type: "number",
           default: 1_000_000,
+        })
+        .option("challengeDuration", {
+          describe:
+            "The duration (in seconds) of the challenge-response window",
+          type: "number",
+          default: 10,
         });
     },
     async (yargs) => {
@@ -252,7 +258,8 @@ yargs(hideBin(process.argv))
         yargs.counterparty,
         yargs.assetAddress,
         yargs.alphaAmount,
-        yargs.betaAmount
+        yargs.betaAmount,
+        yargs.challengeDuration
       );
       const { Id, ChannelId } = dfObjective;
 
@@ -639,9 +646,14 @@ yargs(hideBin(process.argv))
       console.log(
         `Sending ${response.Action} transaction for channel ${response.ChannelId}`
       );
-      await rpcClient.WaitForObjectiveToComplete(
+
+      const waitForDirectDefund = rpcClient.WaitForObjectiveToComplete(
         `DirectDefunding-${yargs.channelId}`
       );
+      const waitForMirrorDefund = rpcClient.WaitForObjectiveToComplete(
+        `mirrorbridgeddefunding-${yargs.channelId}`
+      );
+      await Promise.race([waitForDirectDefund, waitForMirrorDefund]);
       console.log(`Objective Complete ${response.ChannelId}`);
       await rpcClient.Close();
       process.exit(0);

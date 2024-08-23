@@ -13,6 +13,8 @@ import {
 } from "../src/utils";
 import { ZERO_ETHEREUM_ADDRESS } from "../src/constants";
 
+const CHALLENGE_DURATION = 10;
+
 const clientNames = ["alice", "irene", "bob", "ivan"] as const;
 const clientPortMap: Record<ClientNames, number> = {
   alice: 4005,
@@ -174,13 +176,15 @@ yargs(hideBin(process.argv))
           ireneAddress,
           ZERO_ETHEREUM_ADDRESS,
           yargs.ledgerdeposit,
-          yargs.ledgerdeposit
+          yargs.ledgerdeposit,
+          CHALLENGE_DURATION
         );
         const bobLedger = await ireneClient.CreateLedgerChannel(
           bobAddress,
           ZERO_ETHEREUM_ADDRESS,
           yargs.ledgerdeposit,
-          yargs.ledgerdeposit
+          yargs.ledgerdeposit,
+          CHALLENGE_DURATION
         );
 
         await Promise.all([
@@ -274,7 +278,8 @@ yargs(hideBin(process.argv))
         rightAddress,
         ZERO_ETHEREUM_ADDRESS,
         1_000_000,
-        1_000_000
+        1_000_000,
+        CHALLENGE_DURATION
       );
       await leftClient.WaitForLedgerChannelStatus(ledger.ChannelId, "Open");
       console.log(`Ledger channel ${ledger.ChannelId} created`);

@@ -17,6 +17,7 @@ import (
 
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/internal/logging"
+	"github.com/statechannels/go-nitro/internal/safesync"
 	NitroAdjudicator "github.com/statechannels/go-nitro/node/engine/chainservice/adjudicator"
 	Token "github.com/statechannels/go-nitro/node/engine/chainservice/erc20"
 	chainutils "github.com/statechannels/go-nitro/node/engine/chainservice/utils"
@@ -93,7 +94,7 @@ type EthChainService struct {
 	eventTracker             *eventTracker
 	eventSub                 ethereum.Subscription
 	newBlockSub              ethereum.Subscription
-	sentTxToChannelIdMap     map[common.Hash]types.Destination
+	sentTxToChannelIdMap     *safesync.Map[types.Destination]
 }
 
 // MAX_QUERY_BLOCK_RANGE is the maximum range of blocks we query for events at once.
@@ -168,6 +169,7 @@ func newEthChainService(chain ethChain, startBlockNum uint64, na *NitroAdjudicat
 		Timestamp: block.Time(),
 	}
 	tracker := NewEventTracker(startBlock)
+	sentTxToChannelIdMap := safesync.Map[types.Destination]{}
 
 	// Use a buffered channel so we don't have to worry about blocking on writing to the channel.
 	ecs := EthChainService{
@@ -183,7 +185,7 @@ func newEthChainService(chain ethChain, startBlockNum uint64, na *NitroAdjudicat
 		tracker,
 		nil,
 		nil,
-		make(map[common.Hash]types.Destination),
+		&sentTxToChannelIdMap,
 	}
 
 	errChan, newBlockChan, eventChan, eventQuery, err := ecs.subscribeForLogs()
@@ -345,7 +347,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				return nil
 			}
 
-			ecs.sentTxToChannelIdMap[depositTx.Hash()] = tx.ChannelId()
+			ecs.sentTxToChannelIdMap.Store(depositTx.Hash().String(), tx.ChannelId())
 		}
 		return nil
 	case protocols.WithdrawAllTransaction:
@@ -361,7 +363,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 		}
 
 		withdrawAllTx, err := ecs.na.ConcludeAndTransferAllAssets(ecs.defaultTxOpts(), nitroFixedPart, candidate)
-		ecs.sentTxToChannelIdMap[withdrawAllTx.Hash()] = tx.ChannelId()
+		ecs.sentTxToChannelIdMap.Store(withdrawAllTx.Hash().String(), tx.ChannelId())
 		return err
 	case protocols.ChallengeTransaction:
 		fp, candidate := NitroAdjudicator.ConvertSignedStateToFixedPartAndSignedVariablePart(tx.Candidate)
@@ -707,7 +709,7 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 
 		if oldBlock.Hash() != chainEvent.BlockHash {
 			// Send info of dropped event to engine
-			channelId, exists := ecs.sentTxToChannelIdMap[chainEvent.TxHash]
+			channelId, exists := ecs.sentTxToChannelIdMap.Load(chainEvent.TxHash.String())
 			if !exists {
 				continue
 			}
@@ -718,13 +720,13 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 				EventName: topicsToEventName[chainEvent.Topics[0]],
 			}
 
-			delete(ecs.sentTxToChannelIdMap, chainEvent.TxHash)
+			ecs.sentTxToChannelIdMap.Delete(chainEvent.TxHash.String())
 
 			ecs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)", "blockNumber", chainEvent.BlockNumber, "blockHash", chainEvent.BlockHash)
 			continue
 		}
 
-		delete(ecs.sentTxToChannelIdMap, chainEvent.TxHash)
+		ecs.sentTxToChannelIdMap.Delete(chainEvent.TxHash.String())
 		eventsToDispatch = append(eventsToDispatch, chainEvent)
 	}
 	ecs.eventTracker.mu.Unlock()

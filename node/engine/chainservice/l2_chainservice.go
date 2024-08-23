@@ -14,6 +14,7 @@ import (
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/statechannels/go-nitro/internal/logging"
+	"github.com/statechannels/go-nitro/internal/safesync"
 	Bridge "github.com/statechannels/go-nitro/node/engine/chainservice/bridge"
 	chainutils "github.com/statechannels/go-nitro/node/engine/chainservice/utils"
 	"github.com/statechannels/go-nitro/protocols"
@@ -87,6 +88,8 @@ func newL2ChainService(chain ethChain, startBlockNum uint64, bridge *Bridge.Brid
 	}
 	tracker := NewEventTracker(startBlock)
 
+	sentTxToChannelIdMap := safesync.Map[types.Destination]{}
+
 	// Use a buffered channel so we don't have to worry about blocking on writing to the channel.
 	ecs := EthChainService{
 		chain,
@@ -104,7 +107,7 @@ func newL2ChainService(chain ethChain, startBlockNum uint64, bridge *Bridge.Brid
 		tracker,
 		nil,
 		nil,
-		make(map[common.Hash]types.Destination),
+		&sentTxToChannelIdMap,
 	}
 
 	l2cs := L2ChainService{&ecs, bridge, bridgeAddress}

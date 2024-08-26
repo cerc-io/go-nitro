@@ -708,6 +708,8 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 		}
 
 		if oldBlock.Hash() != chainEvent.BlockHash {
+			ecs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)", "blockNumber", chainEvent.BlockNumber, "blockHash", chainEvent.BlockHash)
+
 			// Send info of dropped event to engine
 			channelId, exists := ecs.sentTxToChannelIdMap.Load(chainEvent.TxHash.String())
 			if !exists {
@@ -722,7 +724,6 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 
 			ecs.sentTxToChannelIdMap.Delete(chainEvent.TxHash.String())
 
-			ecs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)", "blockNumber", chainEvent.BlockNumber, "blockHash", chainEvent.BlockHash)
 			continue
 		}
 

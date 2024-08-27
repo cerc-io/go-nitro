@@ -122,3 +122,7 @@ function prettyJson(obj: unknown): string {
 export function compactJson(obj: unknown): string {
   return JSONbig.stringify(obj, null, 0);
 }
+
+export function prettyJsonBig(obj: unknown): string {
+  return JSONbig.stringify(obj, null, 2);
+}

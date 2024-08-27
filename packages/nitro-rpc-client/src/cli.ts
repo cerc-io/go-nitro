@@ -8,7 +8,12 @@ import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 
 import { NitroRpcClient } from "./rpc-client";
-import { compactJson, getRPCUrl, logOutChannelUpdates } from "./utils";
+import {
+  compactJson,
+  getRPCUrl,
+  logOutChannelUpdates,
+  prettyJsonBig,
+} from "./utils";
 import { CounterChallengeAction } from "./types";
 import { ZERO_ETHEREUM_ADDRESS } from "./constants";
 
@@ -108,9 +113,7 @@ yargs(hideBin(process.argv))
         isSecure
       );
       const ledgers = await rpcClient.GetAllL2Channels();
-      for (const ledger of ledgers) {
-        console.log(`${compactJson(ledger)}`);
-      }
+      console.log(prettyJsonBig(ledgers));
       await rpcClient.Close();
       process.exit(0);
     }

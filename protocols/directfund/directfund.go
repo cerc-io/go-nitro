@@ -440,6 +440,10 @@ func (o *Objective) SetDroppedEvent(droppedEventFromChain protocols.DroppedEvent
 	o.droppedEvent = droppedEventFromChain
 }
 
+func (o *Objective) GetDroppedEvent() protocols.DroppedEventInfo {
+	return o.droppedEvent
+}
+
 // ObjectiveRequest represents a request to create a new direct funding objective.
 type ObjectiveRequest struct {
 	CounterParty      types.Address

@@ -369,8 +369,16 @@ func (o *Objective) clone() Objective {
 	return clone
 }
 
+func (o *Objective) ResetTxSubmitted() {
+	o.transactionSubmitted = false
+}
+
 func (o *Objective) SetDroppedEvent(droppedEventFromChain protocols.DroppedEventInfo) {
 	o.droppedEvent = droppedEventFromChain
+}
+
+func (o *Objective) GetDroppedEvent() protocols.DroppedEventInfo {
+	return o.droppedEvent
 }
 
 // IsBridgedFundObjective inspects a objective id and returns true if the objective id is for a bridged fund objective.

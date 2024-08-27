@@ -11,6 +11,7 @@ import (
 // jsonObjective replaces the directfund.Objective's channel pointer with the
 // channel's ID, making jsonObjective suitable for serialization
 type jsonObjective struct {
+	Id     protocols.ObjectiveId
 	Status protocols.ObjectiveStatus
 	C      types.Destination
 
@@ -26,6 +27,7 @@ type jsonObjective struct {
 // (other than Id) from the field C is discarded
 func (o Objective) MarshalJSON() ([]byte, error) {
 	jsonDFO := jsonObjective{
+		o.Id(),
 		o.Status,
 		o.C.Id,
 		o.myDepositSafetyThreshold,

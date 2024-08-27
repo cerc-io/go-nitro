@@ -120,6 +120,11 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 
 				return brs.bridge.MirrorBridgedDefund(req.ChannelId, l2SignedState, req.IsChallenge)
 			})
+		case serde.RetryTxMethod:
+			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.RetryTxRequest) (protocols.ObjectiveId, error) {
+				err := brs.bridge.RetryTx(req.ObjectiveId)
+				return req.ObjectiveId, err
+			})
 		case serde.GetObjectiveMethod:
 			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.GetObjectiveRequest) (string, error) {
 				objective, err := brs.bridge.GetObjectiveById(req.ObjectiveId, req.L2)
@@ -144,6 +149,7 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 				}
 
 				l2Objective, ok := brs.bridge.GetL2ObjectiveByChannelId(l2ChannelId)
+				l2Objective.Id()
 
 				if !ok {
 					return "", fmt.Errorf("Corresponding L2 objective is either complete or does not exist")

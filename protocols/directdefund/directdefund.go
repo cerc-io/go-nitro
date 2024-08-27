@@ -590,6 +590,10 @@ func (o *Objective) SetDroppedEvent(droppedEventFromChain protocols.DroppedEvent
 	o.droppedEvent = droppedEventFromChain
 }
 
+func (o *Objective) GetDroppedEvent() protocols.DroppedEventInfo {
+	return o.droppedEvent
+}
+
 // ObjectiveRequest represents a request to create a new direct defund objective.
 type ObjectiveRequest struct {
 	ChannelId        types.Destination

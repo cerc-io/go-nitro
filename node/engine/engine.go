@@ -833,6 +833,11 @@ func (e *Engine) handleRetryTxRequest(request types.RetryTxRequest) error {
 	// Based on objective type, send appropriate tx
 	switch objective := obj.(type) {
 	case *directfund.Objective:
+		droppedEvent := objective.GetDroppedEvent()
+		if droppedEvent.ChannelId.IsZero() {
+			return nil
+		}
+
 		objective.ResetTxSubmitted()
 
 		_, err = e.attemptProgress(objective)
@@ -841,7 +846,24 @@ func (e *Engine) handleRetryTxRequest(request types.RetryTxRequest) error {
 		}
 
 	case *directdefund.Objective:
+		droppedEvent := objective.GetDroppedEvent()
+		if droppedEvent.ChannelId.IsZero() {
+			return nil
+		}
 		objective.ResetWithDrawAllTxSubmitted()
+
+		_, err = e.attemptProgress(objective)
+		if err != nil {
+			return err
+		}
+
+	case *bridgedfund.Objective:
+		droppedEvent := objective.GetDroppedEvent()
+		if droppedEvent.ChannelId.IsZero() {
+			return nil
+		}
+
+		objective.ResetTxSubmitted()
 
 		_, err = e.attemptProgress(objective)
 		if err != nil {

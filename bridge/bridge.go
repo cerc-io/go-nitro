@@ -444,6 +444,18 @@ func (b *Bridge) CompletedMirrorChannels() <-chan types.Destination {
 	return b.completedMirrorChannels
 }
 
+func (b *Bridge) RetryTx(objectiveId protocols.ObjectiveId) error {
+	if bridgedfund.IsBridgedFundObjective(objectiveId) {
+		b.nodeL2.RetryTx(objectiveId)
+		return nil
+	} else if directfund.IsDirectFundObjective(objectiveId) {
+		b.nodeL1.RetryTx(objectiveId)
+		return nil
+	} else {
+		return fmt.Errorf("Objective with given Id is not supported for retrying")
+	}
+}
+
 func (b *Bridge) Close() error {
 	b.cancel()
 	err := b.nodeL1.Close()

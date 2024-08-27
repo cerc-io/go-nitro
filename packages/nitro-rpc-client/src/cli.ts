@@ -633,6 +633,32 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "get-voucher <channelId>",
+    "Get largest voucher paid/received on the payment channel",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("channelId", {
+        describe: "The channel ID of the payment channel",
+        type: "string",
+        demandOption: true,
+      });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+
+      const voucher = await rpcClient.GetVoucher(yargs.channelId);
+      console.log(voucher);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "counter-challenge <channelId> <action>",
     "Counter challenge the registered challenge",
     (yargsBuilder) => {

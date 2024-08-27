@@ -197,6 +197,10 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 				}
 				return nrs.node.GetPaymentChannelsByLedger(req.LedgerId)
 			})
+		case serde.GetVoucherRequestMethod:
+			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetVoucherRequest) (payments.Voucher, error) {
+				return nrs.node.GetVoucher(req.Id), nil
+			})
 		case serde.CounterChallengeRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.CounterChallengeRequest) (serde.CounterChallengeRequest, error) {
 				var l2SignedState state.SignedState

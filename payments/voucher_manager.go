@@ -66,12 +66,11 @@ func (vm *VoucherManager) Pay(channelId types.Destination, amount *big.Int, pk [
 	newAmount := big.NewInt(0).Add(vInfo.LargestVoucher.Amount, amount)
 	voucher := Voucher{Amount: big.NewInt(0).Set(newAmount), ChannelId: channelId}
 
-	vInfo.LargestVoucher = voucher
-
 	if err := voucher.Sign(pk); err != nil {
 		return voucher, err
 	}
 
+	vInfo.LargestVoucher = voucher
 	err = vm.store.SetVoucherInfo(channelId, *vInfo)
 	if err != nil {
 		return Voucher{}, err

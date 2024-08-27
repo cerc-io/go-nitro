@@ -115,7 +115,7 @@ type PaymentSchemaType = JTDDataType<typeof paymentSchema>;
 const voucherSchema = {
   properties: {
     ChannelId: { type: "string" },
-    Amount: { type: "uint32" },
+    Amount: { type: "uint32", nullable: true },
     Signature: {
       type: "string",
     },
@@ -245,15 +245,17 @@ export function getAndValidateResult<T extends RequestMethod>(
           Delta: BigInt(result.Delta),
         })
       );
+
+    case "get_voucher":
     case "create_voucher":
       return validateAndConvertResult(
         voucherSchema,
         result,
-        (result: VoucherSchemaType) => {
-          return {
-            ...result,
-          };
-        }
+        (result: VoucherSchemaType) => ({
+          Amount: result.Amount ?? 0,
+          ChannelId: result.ChannelId,
+          Signature: result.Signature,
+        })
       );
 
     default:

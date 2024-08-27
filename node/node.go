@@ -337,6 +337,17 @@ func (n *Node) GetPaymentChannelsByLedger(ledgerId types.Destination) ([]query.P
 	return query.GetPaymentChannelsByLedger(ledgerId, n.store, n.vm)
 }
 
+func (n *Node) GetVoucher(id types.Destination) payments.Voucher {
+	var voucher payments.Voucher
+	voucherInfo, voucherFound := n.vm.GetVoucherIfAmountPresent(id)
+
+	if voucherFound {
+		voucher = voucherInfo.LargestVoucher
+	}
+
+	return voucher
+}
+
 // GetAllLedgerChannels returns all ledger channels.
 func (n *Node) GetAllLedgerChannels() ([]query.LedgerChannelInfo, error) {
 	return query.GetAllLedgerChannels(n.store, n.engine.GetConsensusAppAddress())

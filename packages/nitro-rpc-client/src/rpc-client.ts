@@ -199,6 +199,13 @@ export class NitroRpcClient implements RpcClientApi {
     return getAndValidateResult(res, "pay");
   }
 
+  public async GetVoucher(channelId: string): Promise<Voucher> {
+    const payload = {
+      Id: channelId,
+    };
+    return this.sendRequest("get_voucher", payload);
+  }
+
   public async CloseLedgerChannel(
     channelId: string,
     isChallenge: boolean

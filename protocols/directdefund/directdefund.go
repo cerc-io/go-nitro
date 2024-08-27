@@ -529,6 +529,8 @@ func (o *Objective) crank(updated Objective, sideEffects protocols.SideEffects, 
 			withdrawAll := protocols.NewWithdrawAllTransaction(updated.C.Id, latestSignedState)
 			sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, withdrawAll)
 			updated.withdrawTransactionSubmitted = true
+			// Reset dropped event info as new tx is submitted
+			updated.droppedEvent = protocols.DroppedEventInfo{}
 		}
 		// Every participant waits for all channel funds to be distributed, even if the participant has no funds in the channel
 		return &updated, sideEffects, WaitingForWithdraw, nil

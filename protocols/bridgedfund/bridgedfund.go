@@ -336,6 +336,8 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		updateMirroredChannelStateTx := protocols.NewUpdateMirroredChannelStatesTransaction(latestState.ChannelId(), stateHash, latestStateOutcomeBytes, asset, holdingAmount)
 
 		updated.transactionSubmitted = true
+		// Reset dropped event info as new tx is submitted
+		updated.droppedEvent = protocols.DroppedEventInfo{}
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, updateMirroredChannelStateTx)
 	}
 

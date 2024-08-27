@@ -325,6 +325,8 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	if !fundingComplete && safeToDeposit && amountToDeposit.IsNonZero() && !updated.transactionSubmitted {
 		deposit := protocols.NewDepositTransaction(updated.C.Id, amountToDeposit)
 		updated.transactionSubmitted = true
+		// Reset dropped event info as new tx is submitted
+		updated.droppedEvent = protocols.DroppedEventInfo{}
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, deposit)
 	}
 

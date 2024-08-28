@@ -94,6 +94,7 @@ type EthChainService struct {
 	txSigner                 *bind.TransactOpts
 	out                      chan Event
 	droppedEventOut          chan protocols.DroppedEventInfo
+	droppedBridgeEventOut    chan protocols.DroppedEventInfo
 	logger                   *slog.Logger
 	ctx                      context.Context
 	cancel                   context.CancelFunc
@@ -187,6 +188,7 @@ func newEthChainService(chain ethChain, startBlockNum uint64, na *NitroAdjudicat
 		vpaAddress,
 		txSigner,
 		make(chan Event, 10),
+		make(chan protocols.DroppedEventInfo, 10),
 		make(chan protocols.DroppedEventInfo, 10),
 		logger, ctx, cancelCtx, &sync.WaitGroup{},
 		tracker,
@@ -717,8 +719,6 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 		if oldBlock.Hash() != chainEvent.BlockHash {
 			ecs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)", "blockNumber", chainEvent.BlockNumber, "blockHash", chainEvent.BlockHash)
 
-			// TODO: Add new channel and push bridge events to it
-
 			// Send info of dropped event to engine
 			channelId, exists := ecs.sentTxToChannelIdMap.Load(chainEvent.TxHash.String())
 			if !exists {
@@ -729,6 +729,14 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 				TxHash:    chainEvent.TxHash,
 				ChannelId: channelId,
 				EventName: topicsToEventName[chainEvent.Topics[0]],
+			}
+
+			if contains(topicsToEventName[chainEvent.Topics[0]], bridgeEvents) {
+				ecs.droppedBridgeEventOut <- protocols.DroppedEventInfo{
+					TxHash:    chainEvent.TxHash,
+					ChannelId: channelId,
+					EventName: topicsToEventName[chainEvent.Topics[0]],
+				}
 			}
 
 			ecs.sentTxToChannelIdMap.Delete(chainEvent.TxHash.String())
@@ -932,4 +940,8 @@ func (ecs *EthChainService) handleApproveTx(tokenAddress common.Address, amount 
 
 func (ecs *EthChainService) GetChain() ethChain {
 	return ecs.chain
+}
+
+func (ecs *EthChainService) DroppedBridgeEventFeed() <-chan protocols.DroppedEventInfo {
+	return ecs.droppedBridgeEventOut
 }

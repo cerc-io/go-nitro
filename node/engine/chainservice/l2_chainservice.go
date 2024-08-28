@@ -100,6 +100,7 @@ func newL2ChainService(chain ethChain, startBlockNum uint64, bridge *Bridge.Brid
 		txSigner,
 		make(chan Event, 10),
 		make(chan protocols.DroppedEventInfo, 10),
+		make(chan protocols.DroppedEventInfo, 10),
 		logger,
 		ctx,
 		cancelCtx,
@@ -385,6 +386,14 @@ func (l2cs *L2ChainService) updateEventTracker(errorChan chan<- error, block *Bl
 				EventName: topicsToEventName[chainEvent.Topics[0]],
 			}
 
+			if contains(topicsToEventName[chainEvent.Topics[0]], bridgeEvents) {
+				l2cs.droppedBridgeEventOut <- protocols.DroppedEventInfo{
+					TxHash:    chainEvent.TxHash,
+					ChannelId: channelId,
+					EventName: topicsToEventName[chainEvent.Topics[0]],
+				}
+			}
+
 			l2cs.sentTxToChannelIdMap.Delete(chainEvent.TxHash.String())
 
 			continue
@@ -434,4 +443,8 @@ func (l2cs *L2ChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo
 
 func (l2cs *L2ChainService) GetChain() ethChain {
 	return l2cs.chain
+}
+
+func (l2cs *L2ChainService) DroppedBridgeEventFeed() <-chan protocols.DroppedEventInfo {
+	return l2cs.droppedBridgeEventOut
 }

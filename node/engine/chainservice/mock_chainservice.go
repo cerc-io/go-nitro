@@ -53,6 +53,10 @@ func (mc *MockChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo
 	return make(<-chan protocols.DroppedEventInfo)
 }
 
+func (mc *MockChainService) DroppedBridgeEventFeed() <-chan protocols.DroppedEventInfo {
+	return make(<-chan protocols.DroppedEventInfo)
+}
+
 func (mc *MockChainService) GetChainId() (*big.Int, error) {
 	return big.NewInt(TEST_CHAIN_ID), nil
 }

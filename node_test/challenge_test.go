@@ -585,6 +585,7 @@ func TestVirtualPaymentChannelWithObjective(t *testing.T) {
 	defer nodeB.Close()
 
 	// Create ledger channel and virtual fund
+	// TODO: Custom tokens are not being used since reclaim method does not support them
 	ledgerChannel := openLedgerChannel(t, nodeB, nodeA, types.Address{}, uint32(testCase.ChallengeDuration))
 	// Check balance of node
 	balanceNodeA, _ := infra.anvilChain.GetAccountBalance(testCase.Participants[0].Address())

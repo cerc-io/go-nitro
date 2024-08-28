@@ -72,3 +72,7 @@ func (mc *MockChainService) GetBlockByNumber(blockNum *big.Int) (*ethTypes.Block
 func (mc *MockChainService) Close() error {
 	return nil
 }
+
+func (mc *MockChainService) GetChain() ethChain {
+	return nil
+}

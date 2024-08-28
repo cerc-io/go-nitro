@@ -371,6 +371,8 @@ func (l2cs *L2ChainService) updateEventTracker(errorChan chan<- error, block *Bl
 		if oldBlock.Hash() != chainEvent.BlockHash {
 			l2cs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)", "blockNumber", chainEvent.BlockNumber, "blockHash", chainEvent.BlockHash)
 
+			// TODO: Add new channel and push bridge events to it
+
 			// Send info of dropped event to engine
 			channelId, exists := l2cs.sentTxToChannelIdMap.Load(chainEvent.TxHash.String())
 			if !exists {
@@ -428,4 +430,8 @@ func (l2cs *L2ChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 
 func (l2cs *L2ChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
 	return l2cs.droppedEventOut
+}
+
+func (l2cs *L2ChainService) GetChain() ethChain {
+	return l2cs.chain
 }

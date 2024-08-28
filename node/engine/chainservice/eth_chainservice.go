@@ -43,6 +43,8 @@ var (
 	challengeRegisteredTopic = naAbi.Events["ChallengeRegistered"].ID
 	challengeClearedTopic    = naAbi.Events["ChallengeCleared"].ID
 	reclaimedTopic           = naAbi.Events["Reclaimed"].ID
+	channelIdUpdatedTopic    = naAbi.Events["ChannelIdUpdated"].ID
+	assetAddressUpdatedTopic = naAbi.Events["AssetAddressUpdated"].ID
 )
 
 var topicsToWatch = []common.Hash{
@@ -53,6 +55,8 @@ var topicsToWatch = []common.Hash{
 	challengeClearedTopic,
 	reclaimedTopic,
 	statusUpdatedTopic,
+	channelIdUpdatedTopic,
+	assetAddressUpdatedTopic,
 }
 
 var topicsToEventName = map[common.Hash]string{
@@ -63,6 +67,8 @@ var topicsToEventName = map[common.Hash]string{
 	challengeClearedTopic:    "ChallengeCleared",
 	reclaimedTopic:           "Reclaimed",
 	statusUpdatedTopic:       "StatusUpdated",
+	channelIdUpdatedTopic:    "ChannelIdUpdated",
+	assetAddressUpdatedTopic: "AssetAddressUpdated",
 }
 
 const (
@@ -711,6 +717,8 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 		if oldBlock.Hash() != chainEvent.BlockHash {
 			ecs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)", "blockNumber", chainEvent.BlockNumber, "blockHash", chainEvent.BlockHash)
 
+			// TODO: Add new channel and push bridge events to it
+
 			// Send info of dropped event to engine
 			channelId, exists := ecs.sentTxToChannelIdMap.Load(chainEvent.TxHash.String())
 			if !exists {
@@ -920,4 +928,8 @@ func (ecs *EthChainService) handleApproveTx(tokenAddress common.Address, amount 
 			}
 		}
 	}
+}
+
+func (ecs *EthChainService) GetChain() ethChain {
+	return ecs.chain
 }

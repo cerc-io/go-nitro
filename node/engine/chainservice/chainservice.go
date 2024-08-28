@@ -202,6 +202,7 @@ type ChainService interface {
 	// GetL1ChannelFromL2 returns the L1 ledger channel ID from the L2 ledger channel by making a contract call to the l2ToL1 map of the Nitro Adjudicator contract
 	GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error)
 	GetL1AssetAddressFromL2(l2AssetAddress common.Address) (common.Address, error)
+	GetChain() ethChain
 	// Close closes the ChainService
 	Close() error
 }

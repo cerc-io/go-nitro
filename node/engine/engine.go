@@ -36,6 +36,8 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
+var errEmptyDroppedEvent error = errors.New("No dropped events yet")
+
 // ErrUnhandledChainEvent is an engine error when the the engine cannot process a chain event
 type ErrUnhandledChainEvent struct {
 	event   chainservice.Event
@@ -62,6 +64,7 @@ var nonFatalErrors = []error{
 	store.ErrLoadVouchers,
 	directfund.ErrLedgerChannelExists,
 	virtualfund.ErrUpdatingLedgerFunding,
+	errEmptyDroppedEvent,
 }
 
 // Engine is the imperative part of the core business logic of a go-nitro Node
@@ -570,6 +573,7 @@ func (e *Engine) handleDroppedChainEvent(droppedEventInfo protocols.DroppedEvent
 
 	if !ok {
 		slog.Info("Could not find objective with given channel ID", "channelId", droppedEventInfo.ChannelId)
+		return nil
 	}
 
 	switch objective := obj.(type) {
@@ -827,7 +831,7 @@ func (e *Engine) handleRetryTxRequest(request types.RetryTxRequest) error {
 	// Get objective from objective id
 	obj, err := e.store.GetObjectiveById(protocols.ObjectiveId(request.ObjectiveId))
 	if err != nil {
-		return err
+		return &ErrGetObjective{wrappedError: err, objectiveId: protocols.ObjectiveId(request.ObjectiveId)}
 	}
 
 	// Based on objective type, send appropriate tx
@@ -835,40 +839,32 @@ func (e *Engine) handleRetryTxRequest(request types.RetryTxRequest) error {
 	case *directfund.Objective:
 		droppedEvent := objective.GetDroppedEvent()
 		if droppedEvent.ChannelId.IsZero() {
-			return nil
+			return errEmptyDroppedEvent
 		}
 
 		objective.ResetTxSubmitted()
-
 		_, err = e.attemptProgress(objective)
-		if err != nil {
-			return err
-		}
 
 	case *directdefund.Objective:
 		droppedEvent := objective.GetDroppedEvent()
 		if droppedEvent.ChannelId.IsZero() {
-			return nil
+			return errEmptyDroppedEvent
 		}
 		objective.ResetWithDrawAllTxSubmitted()
-
 		_, err = e.attemptProgress(objective)
-		if err != nil {
-			return err
-		}
 
 	case *bridgedfund.Objective:
 		droppedEvent := objective.GetDroppedEvent()
 		if droppedEvent.ChannelId.IsZero() {
-			return nil
+			return errEmptyDroppedEvent
 		}
 
 		objective.ResetTxSubmitted()
-
 		_, err = e.attemptProgress(objective)
-		if err != nil {
-			return err
-		}
+	}
+
+	if err != nil {
+		return err
 	}
 
 	return nil

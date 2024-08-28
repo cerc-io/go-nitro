@@ -424,16 +424,32 @@ func (b Bridge) GetL2ChannelIdByL1ChannelId(l1ChannelId types.Destination) (l2Ch
 	return l2ChannelId, isCreated
 }
 
-func (b Bridge) GetL2ObjectiveByChannelId(l2ChannelId types.Destination) (protocols.Objective, bool) {
-	return b.nodeL2.GetObjectiveByChannelId(l2ChannelId)
+func (b Bridge) GetL2ObjectiveByL1ObjectiveId(l1ObjectiveId protocols.ObjectiveId) (protocols.Objective, error) {
+	l1Objective, err := b.storeL1.GetObjectiveById(l1ObjectiveId)
+	if err != nil {
+		return nil, err
+	}
+
+	l1ChannelId := l1Objective.OwnsChannel()
+	l2ChannelId, _ := b.GetL2ChannelIdByL1ChannelId(l1ChannelId)
+
+	if l2ChannelId.IsZero() {
+		return nil, fmt.Errorf("Could not find L2 channel for given L1 objective ID")
+	}
+
+	l2Objective, ok := b.storeL2.GetObjectiveByChannelId(l2ChannelId)
+	if !ok {
+		return nil, fmt.Errorf("Corresponding L2 objective is either complete or does not exist")
+	}
+
+	return l2Objective, nil
 }
 
 func (b Bridge) GetObjectiveById(objectiveId protocols.ObjectiveId, l2 bool) (protocols.Objective, error) {
 	if l2 {
 		return b.nodeL2.GetObjectiveById(objectiveId)
-	} else {
-		return b.nodeL1.GetObjectiveById(objectiveId)
 	}
+	return b.nodeL1.GetObjectiveById(objectiveId)
 }
 
 func (b Bridge) GetAllL2Channels() ([]query.LedgerChannelInfo, error) {
@@ -448,12 +464,12 @@ func (b *Bridge) RetryTx(objectiveId protocols.ObjectiveId) error {
 	if bridgedfund.IsBridgedFundObjective(objectiveId) {
 		b.nodeL2.RetryTx(objectiveId)
 		return nil
-	} else if directfund.IsDirectFundObjective(objectiveId) {
+	}
+	if directfund.IsDirectFundObjective(objectiveId) {
 		b.nodeL1.RetryTx(objectiveId)
 		return nil
-	} else {
-		return fmt.Errorf("Objective with given Id is not supported for retrying")
 	}
+	return fmt.Errorf("Objective with given Id is not supported for retrying")
 }
 
 func (b *Bridge) Close() error {

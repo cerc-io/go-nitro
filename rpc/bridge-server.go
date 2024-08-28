@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/bridge"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/internal/logging"
@@ -15,7 +13,6 @@ import (
 	"github.com/statechannels/go-nitro/protocols/bridgeddefund"
 	"github.com/statechannels/go-nitro/rpc/serde"
 	"github.com/statechannels/go-nitro/rpc/transport"
-	"github.com/statechannels/go-nitro/types"
 )
 
 type BridgeRpcServer struct {
@@ -99,7 +96,7 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 					return "", err
 				}
 
-				marshalledState, err := json.Marshal(latestState)
+				marshalledState, err := latestState.MarshalJSON()
 				if err != nil {
 					return "", err
 				}
@@ -141,18 +138,9 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 			})
 		case serde.GetL2ObjectiveFromL1Method:
 			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.GetL2ObjectiveFromL1Request) (string, error) {
-				l1ChannelId := strings.Split(string(req.L1ObjectiveId), "-")[1]
-				l2ChannelId, _ := brs.bridge.GetL2ChannelIdByL1ChannelId(types.Destination(common.HexToHash(l1ChannelId)))
-
-				if l2ChannelId.IsZero() {
-					return "", fmt.Errorf("Given objective ID is incorrect")
-				}
-
-				l2Objective, ok := brs.bridge.GetL2ObjectiveByChannelId(l2ChannelId)
-				l2Objective.Id()
-
-				if !ok {
-					return "", fmt.Errorf("Corresponding L2 objective is either complete or does not exist")
+				l2Objective, err := brs.bridge.GetL2ObjectiveByL1ObjectiveId(req.L1ObjectiveId)
+				if err != nil {
+					return "", err
 				}
 
 				marshalledObjective, err := l2Objective.MarshalJSON()

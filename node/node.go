@@ -366,10 +366,6 @@ func (n *Node) GetObjectiveById(objectiveId protocols.ObjectiveId) (protocols.Ob
 	return n.store.GetObjectiveById(objectiveId)
 }
 
-func (n *Node) GetObjectiveByChannelId(channelId types.Destination) (protocols.Objective, bool) {
-	return n.store.GetObjectiveByChannelId(channelId)
-}
-
 // Close stops the node from responding to any input.
 func (n *Node) Close() error {
 	if err := n.engine.Close(); err != nil {

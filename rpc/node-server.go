@@ -227,7 +227,7 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 					return "", err
 				}
 
-				marshalledState, err := json.Marshal(latestState)
+				marshalledState, err := latestState.MarshalJSON()
 				if err != nil {
 					return "", err
 				}

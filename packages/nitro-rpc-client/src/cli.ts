@@ -245,6 +245,7 @@ yargs(hideBin(process.argv))
       process.exit(0);
     }
   )
+
   .command(
     "direct-fund <counterparty>",
     "Creates a directly funded ledger channel",
@@ -300,34 +301,6 @@ yargs(hideBin(process.argv))
       console.log(`Objective started ${Id}`);
       await rpcClient.WaitForLedgerChannelStatus(ChannelId, "Open");
       console.log(`Channel Open ${ChannelId}`);
-      await rpcClient.Close();
-      process.exit(0);
-    }
-  )
-  .command(
-    "retry-tx <objectiveId>",
-    "Retries transaction for given objective",
-    (yargsBuilder) => {
-      return yargsBuilder.positional("objectiveId", {
-        describe: "The id of the objective to send transaction for",
-        type: "string",
-        demandOption: true,
-      });
-    },
-
-    async (yargs) => {
-      const rpcPort = yargs.p;
-      const rpcHost = yargs.h;
-      const isSecure = yargs.s;
-
-      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
-        getRPCUrl(rpcHost, rpcPort),
-        isSecure
-      );
-
-      const id = await rpcClient.RetryTx(yargs.objectiveId);
-
-      console.log(`Transaction retried for objective ${id}`);
       await rpcClient.Close();
       process.exit(0);
     }
@@ -627,6 +600,34 @@ yargs(hideBin(process.argv))
         yargs.amount
       );
       console.log(paymentChannelInfo);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
+    "retry-tx <objectiveId>",
+    "Retries transaction for given objective",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("objectiveId", {
+        describe: "The id of the objective to send transaction for",
+        type: "string",
+        demandOption: true,
+      });
+    },
+
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+
+      const id = await rpcClient.RetryTx(yargs.objectiveId);
+
+      console.log(`Transaction retried for objective ${id}`);
       await rpcClient.Close();
       process.exit(0);
     }

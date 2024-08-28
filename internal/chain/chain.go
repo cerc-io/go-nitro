@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
+	Token "github.com/statechannels/go-nitro/node/engine/chainservice/erc20"
 	chainutils "github.com/statechannels/go-nitro/node/engine/chainservice/utils"
 )
 
@@ -33,4 +34,13 @@ func DeployL2Contract(ctx context.Context, chainUrl, chainAuthToken, chainPk str
 		return common.Address{}, err
 	}
 	return chainutils.DeployL2Contract(ctx, ethClient, txSubmitter)
+}
+
+func DeployAndTransferToken(ctx context.Context, chainUrl, chainAuthToken, chainPk string, transferTo []common.Address) (common.Address, *Token.Token, error) {
+	ethClient, txSubmitter, err := chainutils.ConnectToChain(context.Background(), chainUrl, chainAuthToken, common.Hex2Bytes(chainPk))
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+
+	return chainutils.DeployAndTransferToken(ethClient, txSubmitter, transferTo)
 }

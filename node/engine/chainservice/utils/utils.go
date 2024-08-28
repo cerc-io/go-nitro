@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -14,8 +15,16 @@ import (
 	NitroAdjudicator "github.com/statechannels/go-nitro/node/engine/chainservice/adjudicator"
 	Bridge "github.com/statechannels/go-nitro/node/engine/chainservice/bridge"
 	ConsensusApp "github.com/statechannels/go-nitro/node/engine/chainservice/consensusapp"
+	Token "github.com/statechannels/go-nitro/node/engine/chainservice/erc20"
 	VirtualPaymentApp "github.com/statechannels/go-nitro/node/engine/chainservice/virtualpaymentapp"
 	"github.com/statechannels/go-nitro/types"
+)
+
+const (
+	TEST_TOKEN_NAME       = "TestToken"
+	TEST_TOKEN_SYMBOL     = "TEST"
+	TEST_INITIAL_SUPPLY   = 100_000_000
+	INITIAL_TOKEN_BALANCE = 10_000_000
 )
 
 type ContractAddresses struct {
@@ -84,6 +93,22 @@ func DeployContracts(ctx context.Context, ethClient *ethclient.Client, txSubmitt
 		VpaAddress: vpa,
 		CaAddress:  ca,
 	}, nil
+}
+
+func DeployAndTransferToken(ethClient *ethclient.Client, txSubmitter *bind.TransactOpts, transferTo []common.Address) (common.Address, *Token.Token, error) {
+	tokenAddress, _, tokenBinding, err := Token.DeployToken(txSubmitter, ethClient, TEST_TOKEN_NAME, TEST_TOKEN_SYMBOL, txSubmitter.From, big.NewInt(TEST_INITIAL_SUPPLY))
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+
+	for _, account := range transferTo {
+		_, err := tokenBinding.Transfer(txSubmitter, account, big.NewInt(INITIAL_TOKEN_BALANCE))
+		if err != nil {
+			return common.Address{}, nil, err
+		}
+	}
+
+	return tokenAddress, tokenBinding, nil
 }
 
 func DeployL2Contract(ctx context.Context, ethClient *ethclient.Client, txSubmitter *bind.TransactOpts) (common.Address, error) {

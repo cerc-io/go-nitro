@@ -23,8 +23,9 @@ func NewMockChainService(chain *MockChain, address common.Address) *MockChainSer
 }
 
 // SendTransaction responds to the given tx.
-func (mc *MockChainService) SendTransaction(tx protocols.ChainTransaction) error {
-	return mc.chain.SubmitTransaction(tx)
+func (mc *MockChainService) SendTransaction(tx protocols.ChainTransaction) (*ethTypes.Transaction, error) {
+	err := mc.chain.SubmitTransaction(tx)
+	return nil, err
 }
 
 // GetConsensusAppAddress returns the zero address, since the mock chain will not run any application logic.

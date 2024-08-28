@@ -12,6 +12,7 @@ import (
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	nodeutils "github.com/statechannels/go-nitro/internal/node"
+	"github.com/statechannels/go-nitro/internal/safesync"
 	"github.com/statechannels/go-nitro/node"
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/node/query"
@@ -31,6 +32,8 @@ const (
 	L1_DURABLE_STORE_SUB_DIR = "l1-node"
 	L2_DURABLE_STORE_SUB_DIR = "l2-node"
 )
+
+var bridgeEvents = []string{"StatusUpdated", "ChannelIdUpdated", "AssetAddressUpdated"}
 
 type Asset struct {
 	L1AssetAddress string `toml:"l1AssetAddress"`
@@ -56,6 +59,7 @@ type Bridge struct {
 	L1ToL2AssetAddressMap   map[common.Address]common.Address
 	mirrorChannelMap        map[types.Destination]MirrorChannelDetails
 	completedMirrorChannels chan types.Destination
+	sentTxs                 safesync.Map[protocols.ChainTransaction]
 }
 
 type BridgeConfig struct {
@@ -174,6 +178,7 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 	b.bridgeStore = ds
 
 	go b.run(ctx)
+	go b.listenForDroppedEvents(ctx)
 
 	return nodeL1, nodeL2, msgServiceL1.MultiAddr, msgServiceL2.MultiAddr, nil
 }
@@ -290,10 +295,12 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 
 		// Node B calls contract method to store L2ChannelId => L1ChannelId
 		setL2ToL1Tx := protocols.NewSetL2ToL1Transaction(mirrorChannelDetails.L1ChannelId, l2channelId)
-		err = b.chainServiceL1.SendTransaction(setL2ToL1Tx)
+		l2ToL1Tx, err := b.chainServiceL1.SendTransaction(setL2ToL1Tx)
 		if err != nil {
 			return fmt.Errorf("error in send transaction %w", err)
 		}
+
+		b.sentTxs.Store(l2ToL1Tx.Hash().String(), setL2ToL1Tx)
 
 		// use a nonblocking send in case no one is listening
 		select {
@@ -319,10 +326,12 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 				return err
 			}
 
-			err = b.chainServiceL2.SendTransaction(tx)
+			updateStatesAfterVf, err := b.chainServiceL2.SendTransaction(tx)
 			if err != nil {
 				return fmt.Errorf("error in send transaction %w", err)
 			}
+
+			b.sentTxs.Store(updateStatesAfterVf.Hash().String(), tx)
 		}
 
 	case *bridgeddefund.Objective:
@@ -387,10 +396,12 @@ func (b *Bridge) updateOnchainAssetAddressMap() error {
 
 		if l1OnchainAssetAddress != l1AssetAddress {
 			setL2ToL1AssetAddressTx := protocols.NewSetL2ToL1AssetAddressTransaction(l1AssetAddress, l2AssetAddress)
-			err = b.chainServiceL1.SendTransaction(setL2ToL1AssetAddressTx)
+			l2ToL1AssetAddressTx, err := b.chainServiceL1.SendTransaction(setL2ToL1AssetAddressTx)
 			if err != nil {
 				return fmt.Errorf("error in send transaction %w", err)
 			}
+
+			b.sentTxs.Store(l2ToL1AssetAddressTx.Hash().String(), setL2ToL1AssetAddressTx)
 		}
 	}
 
@@ -398,23 +409,23 @@ func (b *Bridge) updateOnchainAssetAddressMap() error {
 }
 
 // Since bridge node addresses are same
-func (b Bridge) GetBridgeAddress() common.Address {
+func (b *Bridge) GetBridgeAddress() common.Address {
 	return *b.nodeL1.Address
 }
 
-func (b Bridge) GetL2SupportedSignedState(id types.Destination) (state.SignedState, error) {
+func (b *Bridge) GetL2SupportedSignedState(id types.Destination) (state.SignedState, error) {
 	return b.nodeL2.GetSignedState(id)
 }
 
-func (b Bridge) MirrorBridgedDefund(l1ChannelId types.Destination, l2SignedState state.SignedState, isChallenge bool) (protocols.ObjectiveId, error) {
+func (b *Bridge) MirrorBridgedDefund(l1ChannelId types.Destination, l2SignedState state.SignedState, isChallenge bool) (protocols.ObjectiveId, error) {
 	return b.nodeL1.MirrorBridgedDefund(l1ChannelId, l2SignedState, isChallenge)
 }
 
-func (b Bridge) CounterChallenge(id types.Destination, action types.CounterChallengeAction, payload state.SignedState) {
+func (b *Bridge) CounterChallenge(id types.Destination, action types.CounterChallengeAction, payload state.SignedState) {
 	b.nodeL1.CounterChallenge(id, action, payload)
 }
 
-func (b Bridge) GetL2ChannelIdByL1ChannelId(l1ChannelId types.Destination) (l2ChannelId types.Destination, isCreated bool) {
+func (b *Bridge) GetL2ChannelIdByL1ChannelId(l1ChannelId types.Destination) (l2ChannelId types.Destination, isCreated bool) {
 	var err error
 	l2ChannelId, isCreated, err = b.bridgeStore.GetMirrorChannelDetailsByL1Channel(l1ChannelId)
 	if err != nil {
@@ -424,7 +435,7 @@ func (b Bridge) GetL2ChannelIdByL1ChannelId(l1ChannelId types.Destination) (l2Ch
 	return l2ChannelId, isCreated
 }
 
-func (b Bridge) GetL2ObjectiveByL1ObjectiveId(l1ObjectiveId protocols.ObjectiveId) (protocols.Objective, error) {
+func (b *Bridge) GetL2ObjectiveByL1ObjectiveId(l1ObjectiveId protocols.ObjectiveId) (protocols.Objective, error) {
 	l1Objective, err := b.storeL1.GetObjectiveById(l1ObjectiveId)
 	if err != nil {
 		return nil, err
@@ -445,14 +456,14 @@ func (b Bridge) GetL2ObjectiveByL1ObjectiveId(l1ObjectiveId protocols.ObjectiveI
 	return l2Objective, nil
 }
 
-func (b Bridge) GetObjectiveById(objectiveId protocols.ObjectiveId, l2 bool) (protocols.Objective, error) {
+func (b *Bridge) GetObjectiveById(objectiveId protocols.ObjectiveId, l2 bool) (protocols.Objective, error) {
 	if l2 {
 		return b.nodeL2.GetObjectiveById(objectiveId)
 	}
 	return b.nodeL1.GetObjectiveById(objectiveId)
 }
 
-func (b Bridge) GetAllL2Channels() ([]query.LedgerChannelInfo, error) {
+func (b *Bridge) GetAllL2Channels() ([]query.LedgerChannelInfo, error) {
 	return b.nodeL2.GetAllLedgerChannels()
 }
 
@@ -491,4 +502,45 @@ func (b *Bridge) checkError(err error) {
 	if err != nil {
 		slog.Error("error in run loop", "error", err)
 	}
+}
+
+func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
+	var err error
+	// TODO: Add tx retry limit
+	// TODO: Remove entry from `sentTxs` map if tx is successful
+	for {
+		select {
+		case l1DroppedEvent := <-b.chainServiceL1.DroppedBridgeEventFeed():
+			if contains(l1DroppedEvent.EventName, bridgeEvents) {
+				txToRetry, ok := b.sentTxs.Load(l1DroppedEvent.TxHash.String())
+				if !ok {
+					return
+				}
+
+				_, err = b.chainServiceL1.SendTransaction(txToRetry)
+			}
+		case l2DroppedEvent := <-b.chainServiceL2.DroppedBridgeEventFeed():
+			if contains(l2DroppedEvent.EventName, bridgeEvents) {
+				txToRetry, ok := b.sentTxs.Load(l2DroppedEvent.TxHash.String())
+				if !ok {
+					return
+				}
+
+				_, err = b.chainServiceL2.SendTransaction(txToRetry)
+			}
+		case <-ctx.Done():
+			return
+		}
+
+		b.checkError(err)
+	}
+}
+
+func contains(event string, events []string) bool {
+	for _, e := range events {
+		if e == event {
+			return true
+		}
+	}
+	return false
 }

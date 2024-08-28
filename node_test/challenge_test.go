@@ -426,7 +426,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	// Bob calls challenge method on virtual channel
 	virtualChallengerSig, _ := NitroAdjudicator.SignChallengeMessage(signedVirtualState.State(), tc.Participants[1].PrivateKey)
 	virtualChallengeTx := protocols.NewChallengeTransaction(virtualResponse.ChannelId, signedVirtualState, []state.SignedState{signedPostFundState}, virtualChallengerSig)
-	err = chainServiceB.SendTransaction(virtualChallengeTx)
+	_, err = chainServiceB.SendTransaction(virtualChallengeTx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -444,7 +444,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	// Bob calls challenge method on ledger channel
 	challengerSig, _ := NitroAdjudicator.SignChallengeMessage(signedLedgerState.State(), tc.Participants[1].PrivateKey)
 	challengeTx := protocols.NewChallengeTransaction(ledgerChannel, signedLedgerState, make([]state.SignedState, 0), challengerSig)
-	err = chainServiceB.SendTransaction(challengeTx)
+	_, err = chainServiceB.SendTransaction(challengeTx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -481,7 +481,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	}
 
 	reclaimTx := protocols.NewReclaimTransaction(ledgerChannel, reclaimArgs)
-	err = chainServiceB.SendTransaction(reclaimTx)
+	_, err = chainServiceB.SendTransaction(reclaimTx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -522,7 +522,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 
 	// Bob calls transferAllAssets method
 	transferTx := protocols.NewTransferAllTransaction(ledgerChannel, signedConstructedState)
-	err = chainServiceB.SendTransaction(transferTx)
+	_, err = chainServiceB.SendTransaction(transferTx)
 
 	testhelpers.Assert(t, err == nil, "Expected assets liquidated")
 

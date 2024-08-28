@@ -895,7 +895,7 @@ func (e *Engine) executeSideEffects(sideEffects protocols.SideEffects) error {
 	for _, tx := range sideEffects.TransactionsToSubmit {
 		e.logger.Info("Sending chain transaction", "channel", tx.ChannelId().String())
 
-		err := e.chain.SendTransaction(tx)
+		_, err := e.chain.SendTransaction(tx)
 		if err != nil {
 			return err
 		}

@@ -93,8 +93,8 @@ type EthChainService struct {
 	virtualPaymentAppAddress common.Address
 	txSigner                 *bind.TransactOpts
 	out                      chan Event
+	droppedEventEngineOut    chan protocols.DroppedEventInfo
 	droppedEventOut          chan protocols.DroppedEventInfo
-	droppedBridgeEventOut    chan protocols.DroppedEventInfo
 	logger                   *slog.Logger
 	ctx                      context.Context
 	cancel                   context.CancelFunc
@@ -303,7 +303,7 @@ func (ecs *EthChainService) defaultCallOpts() *bind.CallOpts {
 }
 
 // SendTransaction sends the transaction and blocks until it has been submitted.
-func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error {
+func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*ethTypes.Transaction, error) {
 	switch tx := tx.(type) {
 	case protocols.DepositTransaction:
 		var tokenApprovalLog ethTypes.Log
@@ -319,7 +319,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 				approvalLog, err := ecs.handleApproveTx(tokenAddress, amount)
 				if err != nil {
 					slog.Error(err.Error())
-					return nil
+					return nil, nil
 				}
 
 				tokenApprovalLog = approvalLog
@@ -329,36 +329,38 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 			ecs.logger.Debug("existing holdings", "holdings", holdings)
 
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			depositTx, err := ecs.na.Deposit(txOpts, tokenAddress, tx.ChannelId(), holdings, amount)
 			if err != nil {
 				slog.Error("error sending Deposit transaction", "error", err)
 				if tokenApprovalLog.BlockNumber == 0 {
-					return nil
+					return nil, nil
 				}
 
 				approvalBlock, err := ecs.GetBlockByNumber(big.NewInt(int64(tokenApprovalLog.BlockNumber)))
 				if err != nil {
 					slog.Error(err.Error())
-					return nil
+					return nil, nil
 				}
 
 				if approvalBlock.Hash() != tokenApprovalLog.BlockHash {
-					ecs.droppedEventOut <- protocols.DroppedEventInfo{
+					ecs.droppedEventEngineOut <- protocols.DroppedEventInfo{
 						TxHash:    tokenApprovalLog.TxHash,
 						ChannelId: tx.ChannelId(),
 						EventName: "Approval",
 					}
 				}
 				// Return nil to not panic the node and log the error instead
-				return nil
+				return nil, nil
 			}
 
 			ecs.sentTxToChannelIdMap.Store(depositTx.Hash().String(), tx.ChannelId())
 		}
-		return nil
+
+		// TODO: Handle multiple depositTx
+		return nil, nil
 	case protocols.WithdrawAllTransaction:
 		signedState := tx.SignedState.State()
 		signatures := tx.SignedState.Signatures()
@@ -373,51 +375,51 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 
 		withdrawAllTx, err := ecs.na.ConcludeAndTransferAllAssets(ecs.defaultTxOpts(), nitroFixedPart, candidate)
 		ecs.sentTxToChannelIdMap.Store(withdrawAllTx.Hash().String(), tx.ChannelId())
-		return err
+		return withdrawAllTx, err
 	case protocols.ChallengeTransaction:
 		fp, candidate := NitroAdjudicator.ConvertSignedStateToFixedPartAndSignedVariablePart(tx.Candidate)
 		proof := NitroAdjudicator.ConvertSignedStatesToProof(tx.Proof)
 		challengerSig := NitroAdjudicator.ConvertSignature(tx.ChallengerSig)
-		_, err := ecs.na.Challenge(ecs.defaultTxOpts(), fp, proof, candidate, challengerSig)
-		return err
+		challengeTx, err := ecs.na.Challenge(ecs.defaultTxOpts(), fp, proof, candidate, challengerSig)
+		return challengeTx, err
 	case protocols.CheckpointTransaction:
 		fp, candidate := NitroAdjudicator.ConvertSignedStateToFixedPartAndSignedVariablePart(tx.Candidate)
 		proof := NitroAdjudicator.ConvertSignedStatesToProof(tx.Proof)
-		_, err := ecs.na.Checkpoint(ecs.defaultTxOpts(), fp, proof, candidate)
-		return err
+		checkpointTx, err := ecs.na.Checkpoint(ecs.defaultTxOpts(), fp, proof, candidate)
+		return checkpointTx, err
 	case protocols.TransferAllTransaction:
 		transferState := tx.TransferState.State()
 		channelId := transferState.ChannelId()
 		stateHash, err := transferState.Hash()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		nitroVariablePart := NitroAdjudicator.ConvertVariablePart(transferState.VariablePart())
 
-		_, er := ecs.na.TransferAllAssets(ecs.defaultTxOpts(), channelId, nitroVariablePart.Outcome, stateHash)
-		return er
+		transferAllTx, er := ecs.na.TransferAllAssets(ecs.defaultTxOpts(), channelId, nitroVariablePart.Outcome, stateHash)
+		return transferAllTx, er
 	case protocols.ReclaimTransaction:
-		_, err := ecs.na.Reclaim(ecs.defaultTxOpts(), tx.ReclaimArgs)
-		return err
+		reclaimTx, err := ecs.na.Reclaim(ecs.defaultTxOpts(), tx.ReclaimArgs)
+		return reclaimTx, err
 	case protocols.MirrorTransferAllTransaction:
 		transferState := tx.TransferState.State()
 		channelId := transferState.ChannelId()
 		stateHash, err := transferState.Hash()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		nitroVariablePart := NitroAdjudicator.ConvertVariablePart(transferState.VariablePart())
 
-		_, er := ecs.na.MirrorTransferAllAssets(ecs.defaultTxOpts(), channelId, nitroVariablePart.Outcome, stateHash)
-		return er
+		mirrorTransferAllTx, er := ecs.na.MirrorTransferAllAssets(ecs.defaultTxOpts(), channelId, nitroVariablePart.Outcome, stateHash)
+		return mirrorTransferAllTx, er
 	case protocols.SetL2ToL1Transaction:
-		_, err := ecs.na.SetL2ToL1(ecs.defaultTxOpts(), tx.ChannelId(), tx.MirrorChannelId)
-		return err
+		setL2ToL1Tx, err := ecs.na.SetL2ToL1(ecs.defaultTxOpts(), tx.ChannelId(), tx.MirrorChannelId)
+		return setL2ToL1Tx, err
 	case protocols.SetL2ToL1AssetAddressTransaction:
-		_, err := ecs.na.SetL2ToL1AssetAddress(ecs.defaultTxOpts(), tx.L1AssetAddress, tx.L2AssetAddress)
-		return err
+		setL2ToL1AssetAddressTx, err := ecs.na.SetL2ToL1AssetAddress(ecs.defaultTxOpts(), tx.L1AssetAddress, tx.L2AssetAddress)
+		return setL2ToL1AssetAddressTx, err
 	case protocols.MirrorWithdrawAllTransaction:
 		signedState := tx.SignedState.State()
 		signatures := tx.SignedState.Signatures()
@@ -429,10 +431,10 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) error
 			VariablePart: nitroVariablePart,
 			Sigs:         nitroSignatures,
 		}
-		_, err := ecs.na.MirrorConcludeAndTransferAllAssets(ecs.defaultTxOpts(), nitroFixedPart, candidate)
-		return err
+		MirrorWithdrawAllTx, err := ecs.na.MirrorConcludeAndTransferAllAssets(ecs.defaultTxOpts(), nitroFixedPart, candidate)
+		return MirrorWithdrawAllTx, err
 	default:
-		return fmt.Errorf("unexpected transaction type %T", tx)
+		return nil, fmt.Errorf("unexpected transaction type %T", tx)
 	}
 }
 
@@ -725,18 +727,16 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 				continue
 			}
 
-			ecs.droppedEventOut <- protocols.DroppedEventInfo{
+			ecs.droppedEventEngineOut <- protocols.DroppedEventInfo{
 				TxHash:    chainEvent.TxHash,
 				ChannelId: channelId,
 				EventName: topicsToEventName[chainEvent.Topics[0]],
 			}
 
-			if contains(topicsToEventName[chainEvent.Topics[0]], bridgeEvents) {
-				ecs.droppedBridgeEventOut <- protocols.DroppedEventInfo{
-					TxHash:    chainEvent.TxHash,
-					ChannelId: channelId,
-					EventName: topicsToEventName[chainEvent.Topics[0]],
-				}
+			ecs.droppedEventOut <- protocols.DroppedEventInfo{
+				TxHash:    chainEvent.TxHash,
+				ChannelId: channelId,
+				EventName: topicsToEventName[chainEvent.Topics[0]],
 			}
 
 			ecs.sentTxToChannelIdMap.Delete(chainEvent.TxHash.String())
@@ -788,7 +788,7 @@ func (ecs *EthChainService) EventFeed() <-chan Event {
 }
 
 func (ecs *EthChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
-	return ecs.droppedEventOut
+	return ecs.droppedEventEngineOut
 }
 
 func (ecs *EthChainService) GetConsensusAppAddress() types.Address {
@@ -943,5 +943,5 @@ func (ecs *EthChainService) GetChain() ethChain {
 }
 
 func (ecs *EthChainService) DroppedBridgeEventFeed() <-chan protocols.DroppedEventInfo {
-	return ecs.droppedBridgeEventOut
+	return ecs.droppedEventOut
 }

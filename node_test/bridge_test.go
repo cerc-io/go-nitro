@@ -560,7 +560,7 @@ func TestExitL2WithVirtualChannelStateUnilaterally(t *testing.T) {
 		// Node A calls modified `challenge` with L2 virtual channel state
 		virtualChallengerSig, _ := NitroAdjudicator.SignChallengeMessage(signedVirtualState.State(), tcL1.Participants[0].PrivateKey)
 		mirrroVirtualChallengeTx := protocols.NewChallengeTransaction(virtualChannelId, signedVirtualState, []state.SignedState{signedPostFundState}, virtualChallengerSig)
-		err = testChainService.SendTransaction(mirrroVirtualChallengeTx)
+		_, err = testChainService.SendTransaction(mirrroVirtualChallengeTx)
 		if err != nil {
 			t.Error(err)
 		}
@@ -580,7 +580,7 @@ func TestExitL2WithVirtualChannelStateUnilaterally(t *testing.T) {
 		// Node A calls modified `challenge` with L2 ledger channel state
 		challengerSig, _ := NitroAdjudicator.SignChallengeMessage(l2SignedState.State(), tcL1.Participants[0].PrivateKey)
 		challengeTx := protocols.NewChallengeTransaction(l1ChannelId, l2SignedState, []state.SignedState{}, challengerSig)
-		err = testChainService.SendTransaction(challengeTx)
+		_, err = testChainService.SendTransaction(challengeTx)
 		if err != nil {
 			t.Error(err)
 		}
@@ -620,7 +620,7 @@ func TestExitL2WithVirtualChannelStateUnilaterally(t *testing.T) {
 		}
 
 		reclaimTx := protocols.NewReclaimTransaction(l1ChannelId, reclaimArgs)
-		err = testChainService.SendTransaction(reclaimTx)
+		_, err = testChainService.SendTransaction(reclaimTx)
 		if err != nil {
 			t.Error(err)
 		}
@@ -661,7 +661,7 @@ func TestExitL2WithVirtualChannelStateUnilaterally(t *testing.T) {
 		signedConstructedState := state.NewSignedState(latestState)
 
 		mirrorTransferAllTx := protocols.NewMirrorTransferAllTransaction(l1ChannelId, signedConstructedState)
-		err = testChainService.SendTransaction(mirrorTransferAllTx)
+		_, err = testChainService.SendTransaction(mirrorTransferAllTx)
 		if err != nil {
 			t.Error(err)
 		}
@@ -716,7 +716,7 @@ func createL1L2Channels(t *testing.T, nodeA node.Node, nodeB node.Node, nodeAPri
 
 	// Node B calls contract method to store L2ChannelId => L1ChannelId
 	setL2ToL1Tx := protocols.NewSetL2ToL1Transaction(l1LedgerChannelId, response.ChannelId)
-	err = bridgeChainService.SendTransaction(setL2ToL1Tx)
+	_, err = bridgeChainService.SendTransaction(setL2ToL1Tx)
 	if err != nil {
 		t.Error(err)
 	}

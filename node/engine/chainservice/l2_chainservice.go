@@ -129,14 +129,14 @@ func newL2ChainService(chain ethChain, startBlockNum uint64, bridge *Bridge.Brid
 	return &l2cs, nil
 }
 
-func (l2cs *L2ChainService) SendTransaction(tx protocols.ChainTransaction) error {
+func (l2cs *L2ChainService) SendTransaction(tx protocols.ChainTransaction) (*ethTypes.Transaction, error) {
 	switch tx := tx.(type) {
 	case protocols.UpdateMirroredChannelStatesTransaction:
 		updateMirroredChannelStatesTx, err := l2cs.bridge.UpdateMirroredChannelStates(l2cs.defaultTxOpts(), tx.ChannelId(), tx.StateHash, tx.OutcomeBytes, tx.Amount, tx.Asset)
 		l2cs.sentTxToChannelIdMap.Store(updateMirroredChannelStatesTx.Hash().String(), tx.ChannelId())
-		return err
+		return nil, err
 	default:
-		return fmt.Errorf("unexpected transaction type %T", tx)
+		return nil, fmt.Errorf("unexpected transaction type %T", tx)
 	}
 }
 
@@ -372,26 +372,22 @@ func (l2cs *L2ChainService) updateEventTracker(errorChan chan<- error, block *Bl
 		if oldBlock.Hash() != chainEvent.BlockHash {
 			l2cs.logger.Warn("dropping event because its block is no longer in the chain (possible re-org)", "blockNumber", chainEvent.BlockNumber, "blockHash", chainEvent.BlockHash)
 
-			// TODO: Add new channel and push bridge events to it
-
 			// Send info of dropped event to engine
 			channelId, exists := l2cs.sentTxToChannelIdMap.Load(chainEvent.TxHash.String())
 			if !exists {
 				continue
 			}
 
-			l2cs.droppedEventOut <- protocols.DroppedEventInfo{
+			l2cs.droppedEventEngineOut <- protocols.DroppedEventInfo{
 				TxHash:    chainEvent.TxHash,
 				ChannelId: channelId,
 				EventName: topicsToEventName[chainEvent.Topics[0]],
 			}
 
-			if contains(topicsToEventName[chainEvent.Topics[0]], bridgeEvents) {
-				l2cs.droppedBridgeEventOut <- protocols.DroppedEventInfo{
-					TxHash:    chainEvent.TxHash,
-					ChannelId: channelId,
-					EventName: topicsToEventName[chainEvent.Topics[0]],
-				}
+			l2cs.droppedEventOut <- protocols.DroppedEventInfo{
+				TxHash:    chainEvent.TxHash,
+				ChannelId: channelId,
+				EventName: topicsToEventName[chainEvent.Topics[0]],
 			}
 
 			l2cs.sentTxToChannelIdMap.Delete(chainEvent.TxHash.String())
@@ -438,7 +434,7 @@ func (l2cs *L2ChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 }
 
 func (l2cs *L2ChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
-	return l2cs.droppedEventOut
+	return l2cs.droppedEventEngineOut
 }
 
 func (l2cs *L2ChainService) GetChain() ethChain {
@@ -446,5 +442,5 @@ func (l2cs *L2ChainService) GetChain() ethChain {
 }
 
 func (l2cs *L2ChainService) DroppedBridgeEventFeed() <-chan protocols.DroppedEventInfo {
-	return l2cs.droppedBridgeEventOut
+	return l2cs.droppedEventOut
 }

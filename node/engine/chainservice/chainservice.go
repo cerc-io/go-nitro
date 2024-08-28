@@ -13,8 +13,6 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
-var bridgeEvents = []string{"StatusUpdated", "ChannelIdUpdated", "AssetAddressUpdated"}
-
 // Event dictates which methods all chain events must implement
 type Event interface {
 	ChannelID() types.Destination
@@ -191,7 +189,7 @@ type ChainService interface {
 	// TODO: Add comment
 	DroppedBridgeEventFeed() <-chan protocols.DroppedEventInfo
 	// SendTransaction is for sending transactions with the chain service
-	SendTransaction(protocols.ChainTransaction) error
+	SendTransaction(protocols.ChainTransaction) (*ethTypes.Transaction, error)
 	// GetConsensusAppAddress returns the address of a deployed ConsensusApp (for ledger channels)
 	GetConsensusAppAddress() types.Address
 	// GetVirtualPaymentAppAddress returns the address of a deployed VirtualPaymentApp
@@ -209,13 +207,4 @@ type ChainService interface {
 	GetChain() ethChain
 	// Close closes the ChainService
 	Close() error
-}
-
-func contains(event string, events []string) bool {
-	for _, e := range events {
-		if e == event {
-			return true
-		}
-	}
-	return false
 }

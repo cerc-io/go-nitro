@@ -97,7 +97,7 @@ func TestSimulatedBackendChainService(t *testing.T) {
 	challengeTx := protocols.NewChallengeTransaction(concludeState.ChannelId(), concludeSignedState, make([]state.SignedState, 0), challengerSig)
 
 	out := cs.EventFeed()
-	err = cs.SendTransaction(challengeTx)
+	_, err = cs.SendTransaction(challengeTx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestSimulatedBackendChainService(t *testing.T) {
 	depositTx := protocols.NewDepositTransaction(concludeState.ChannelId(), testDeposit)
 
 	// Submit transaction
-	err = cs.SendTransaction(depositTx)
+	_, err = cs.SendTransaction(depositTx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestSimulatedBackendChainService(t *testing.T) {
 	}
 
 	concludeTx := protocols.NewWithdrawAllTransaction(cId, signedConcludeState)
-	err = cs.SendTransaction(concludeTx)
+	_, err = cs.SendTransaction(concludeTx)
 	if err != nil {
 		t.Fatal(err)
 	}

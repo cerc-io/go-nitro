@@ -29,7 +29,7 @@ func TestDeposit(t *testing.T) {
 	testTx := protocols.NewDepositTransaction(types.Destination(common.HexToHash(`4ebd366d014a173765ba1e50f284c179ade31f20441bec41664712aac6cc461d`)), testDeposit)
 
 	// Send one transaction and receive one event from it.
-	err := chainServiceA.SendTransaction(testTx)
+	_, err := chainServiceA.SendTransaction(testTx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestDeposit(t *testing.T) {
 	checkReceivedEventIsValid(t, event, testTx.Deposit, testTx.ChannelId())
 
 	// Send the transaction again and receive another event
-	err = chainServiceB.SendTransaction(testTx)
+	_, err = chainServiceB.SendTransaction(testTx)
 	if err != nil {
 		t.Fatal(err)
 	}

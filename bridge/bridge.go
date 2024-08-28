@@ -434,12 +434,12 @@ func (b Bridge) GetL2ObjectiveByL1ObjectiveId(l1ObjectiveId protocols.ObjectiveI
 	l2ChannelId, _ := b.GetL2ChannelIdByL1ChannelId(l1ChannelId)
 
 	if l2ChannelId.IsZero() {
-		return nil, fmt.Errorf("Could not find L2 channel for given L1 objective ID")
+		return nil, fmt.Errorf("could not find L2 channel for given L1 objective ID")
 	}
 
 	l2Objective, ok := b.storeL2.GetObjectiveByChannelId(l2ChannelId)
 	if !ok {
-		return nil, fmt.Errorf("Corresponding L2 objective is either complete or does not exist")
+		return nil, fmt.Errorf("corresponding L2 objective is either complete or does not exist")
 	}
 
 	return l2Objective, nil
@@ -469,7 +469,7 @@ func (b *Bridge) RetryTx(objectiveId protocols.ObjectiveId) error {
 		b.nodeL1.RetryTx(objectiveId)
 		return nil
 	}
-	return fmt.Errorf("Objective with given Id is not supported for retrying")
+	return fmt.Errorf("objective with given Id is not supported for retrying")
 }
 
 func (b *Bridge) Close() error {

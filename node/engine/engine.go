@@ -36,7 +36,7 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
-var errEmptyDroppedEvent error = errors.New("No dropped events yet")
+var errEmptyDroppedEvent error = errors.New("no dropped events yet")
 
 // ErrUnhandledChainEvent is an engine error when the the engine cannot process a chain event
 type ErrUnhandledChainEvent struct {

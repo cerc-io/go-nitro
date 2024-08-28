@@ -384,10 +384,14 @@ func (l2cs *L2ChainService) updateEventTracker(errorChan chan<- error, block *Bl
 				EventName: topicsToEventName[chainEvent.Topics[0]],
 			}
 
-			l2cs.droppedEventOut <- protocols.DroppedEventInfo{
+			// Use non-blocking send incase no-one is listening
+			select {
+			case l2cs.droppedEventOut <- protocols.DroppedEventInfo{
 				TxHash:    chainEvent.TxHash,
 				ChannelId: channelId,
 				EventName: topicsToEventName[chainEvent.Topics[0]],
+			}:
+			default:
 			}
 
 			l2cs.sentTxToChannelIdMap.Delete(chainEvent.TxHash.String())

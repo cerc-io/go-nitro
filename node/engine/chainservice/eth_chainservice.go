@@ -733,10 +733,14 @@ func (ecs *EthChainService) updateEventTracker(errorChan chan<- error, block *Bl
 				EventName: topicsToEventName[chainEvent.Topics[0]],
 			}
 
-			ecs.droppedEventOut <- protocols.DroppedEventInfo{
+			// Use non-blocking send incase no-one is listening
+			select {
+			case ecs.droppedEventOut <- protocols.DroppedEventInfo{
 				TxHash:    chainEvent.TxHash,
 				ChannelId: channelId,
 				EventName: topicsToEventName[chainEvent.Topics[0]],
+			}:
+			default:
 			}
 
 			ecs.sentTxToChannelIdMap.Delete(chainEvent.TxHash.String())

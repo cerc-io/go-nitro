@@ -132,8 +132,7 @@ func TestBridgedFund(t *testing.T) {
 			}
 		}
 
-		// TODO: Fix asset address mismatch in get ledger channel query after mirror bridged defund
-		checkLedgerChannel(t, l1LedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit-payAmount, payAmount, utils.l2TokenAddress), query.Complete, nodeA)
+		checkLedgerChannel(t, l1LedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit-payAmount, payAmount, utils.l1TokenAddress), query.Complete, nodeA)
 
 		balanceNodeA, _ := utils.l1TokenBinding.BalanceOf(nil, tcL1.Participants[0].Address())
 		balanceBridge, _ := utils.l1TokenBinding.BalanceOf(nil, tcL1.Participants[1].Address())
@@ -389,8 +388,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 			}
 		}
 
-		// TODO: Fix asset address mismatch in get ledger channel query after mirror bridged defund
-		checkLedgerChannel(t, l1AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, utils.l2TokenAddress), query.Complete, nodeA)
+		checkLedgerChannel(t, l1AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, utils.l1TokenAddress), query.Complete, nodeA)
 
 		completedObjectiveChannel = nodeC.CompletedObjectives()
 		// Charlie exits
@@ -413,8 +411,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 			}
 		}
 
-		// TODO: Fix asset address mismatch in get ledger channel query after mirror bridged defund
-		checkLedgerChannel(t, l1CharlieBridgeLedgerChannelId, CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit+payAmount, ledgerChannelDeposit-payAmount, utils.l2TokenAddress), query.Complete, nodeC)
+		checkLedgerChannel(t, l1CharlieBridgeLedgerChannelId, CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit+payAmount, ledgerChannelDeposit-payAmount, utils.l1TokenAddress), query.Complete, nodeC)
 
 		balanceNodeA, _ := utils.l1TokenBinding.BalanceOf(nil, tcL1.Participants[0].Address())
 		balanceNodeC, _ := utils.l1TokenBinding.BalanceOf(nil, tcL1.Participants[2].Address())

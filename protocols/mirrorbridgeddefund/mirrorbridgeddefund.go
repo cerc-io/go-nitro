@@ -314,6 +314,7 @@ func (o *Objective) CreateL1StateBasedOnL2() (state.State, error) {
 	tempAllocation := l1OutcomeBasedOnL2[0].Allocations[0]
 	l1OutcomeBasedOnL2[0].Allocations[0] = l1OutcomeBasedOnL2[0].Allocations[1]
 	l1OutcomeBasedOnL2[0].Allocations[1] = tempAllocation
+	l1OutcomeBasedOnL2[0].Asset = l1State.VariablePart().Outcome[0].Asset
 	l1VariablePartBasedOnL2.Outcome = l1OutcomeBasedOnL2
 
 	l1VariablePartBasedOnL2.TurnNum++

@@ -37,8 +37,6 @@ const (
 
 const RETRY_TX_LIMIT = 1
 
-var bridgeEvents = []string{"StatusUpdated", "ChannelIdUpdated", "AssetAddressUpdated"}
-
 type Asset struct {
 	L1AssetAddress string `toml:"l1AssetAddress"`
 	L2AssetAddress string `toml:"l2AssetAddress"`
@@ -523,20 +521,16 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 	for {
 		select {
 		case l1DroppedEvent := <-b.chainServiceL1.DroppedEventFeed():
-			if contains(l1DroppedEvent.EventName, bridgeEvents) {
-				txToRetry, ok := b.sentTxs.Load(l1DroppedEvent.TxHash.String())
-				if ok && txToRetry.numOfRetries < RETRY_TX_LIMIT {
-					retriedTx, err = b.chainServiceL1.SendTransaction(txToRetry.tx)
-					b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
-				}
+			txToRetry, ok := b.sentTxs.Load(l1DroppedEvent.TxHash.String())
+			if ok && txToRetry.numOfRetries < RETRY_TX_LIMIT {
+				retriedTx, err = b.chainServiceL1.SendTransaction(txToRetry.tx)
+				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
 			}
 		case l2DroppedEvent := <-b.chainServiceL2.DroppedEventFeed():
-			if contains(l2DroppedEvent.EventName, bridgeEvents) {
-				txToRetry, ok := b.sentTxs.Load(l2DroppedEvent.TxHash.String())
-				if ok && txToRetry.numOfRetries < RETRY_TX_LIMIT {
-					retriedTx, err = b.chainServiceL2.SendTransaction(txToRetry.tx)
-					b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
-				}
+			txToRetry, ok := b.sentTxs.Load(l2DroppedEvent.TxHash.String())
+			if ok && txToRetry.numOfRetries < RETRY_TX_LIMIT {
+				retriedTx, err = b.chainServiceL2.SendTransaction(txToRetry.tx)
+				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
 			}
 		case <-ctx.Done():
 			return
@@ -544,13 +538,4 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 
 		b.checkError(err)
 	}
-}
-
-func contains(event string, events []string) bool {
-	for _, e := range events {
-		if e == event {
-			return true
-		}
-	}
-	return false
 }

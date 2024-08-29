@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"path/filepath"
 
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
 	"github.com/statechannels/go-nitro/channel/state"
@@ -33,6 +35,8 @@ const (
 	L2_DURABLE_STORE_SUB_DIR = "l2-node"
 )
 
+const RETRY_TX_LIMIT = 1
+
 var bridgeEvents = []string{"StatusUpdated", "ChannelIdUpdated", "AssetAddressUpdated"}
 
 type Asset struct {
@@ -42,6 +46,11 @@ type Asset struct {
 
 type L1ToL2AssetConfig struct {
 	Assets []Asset `toml:"assets"`
+}
+
+type sentTx struct {
+	tx           protocols.ChainTransaction
+	numOfRetries uint
 }
 
 type Bridge struct {
@@ -59,7 +68,7 @@ type Bridge struct {
 	L1ToL2AssetAddressMap   map[common.Address]common.Address
 	mirrorChannelMap        map[types.Destination]MirrorChannelDetails
 	completedMirrorChannels chan types.Destination
-	sentTxs                 safesync.Map[protocols.ChainTransaction]
+	sentTxs                 safesync.Map[sentTx]
 }
 
 type BridgeConfig struct {
@@ -301,7 +310,7 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 			return fmt.Errorf("error in send transaction %w", err)
 		}
 
-		b.sentTxs.Store(l2ToL1Tx.Hash().String(), setL2ToL1Tx)
+		b.sentTxs.Store(l2ToL1Tx.Hash().String(), sentTx{setL2ToL1Tx, 0})
 
 		// use a nonblocking send in case no one is listening
 		select {
@@ -332,7 +341,7 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 				return fmt.Errorf("error in send transaction %w", err)
 			}
 
-			b.sentTxs.Store(updateStatesAfterVf.Hash().String(), tx)
+			b.sentTxs.Store(updateStatesAfterVf.Hash().String(), sentTx{tx, 0})
 		}
 
 	case *bridgeddefund.Objective:
@@ -403,7 +412,7 @@ func (b *Bridge) updateOnchainAssetAddressMap() error {
 				return fmt.Errorf("error in send transaction %w", err)
 			}
 
-			b.sentTxs.Store(l2ToL1AssetAddressTx.Hash().String(), setL2ToL1AssetAddressTx)
+			b.sentTxs.Store(l2ToL1AssetAddressTx.Hash().String(), sentTx{setL2ToL1AssetAddressTx, 0})
 		}
 	}
 
@@ -508,6 +517,7 @@ func (b *Bridge) checkError(err error) {
 
 func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 	var err error
+	var retriedTx *ethTypes.Transaction
 	// TODO: Add tx retry limit
 	// TODO: Remove entry from `sentTxs` map if tx is successful
 	for {
@@ -515,15 +525,17 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 		case l1DroppedEvent := <-b.chainServiceL1.DroppedEventFeed():
 			if contains(l1DroppedEvent.EventName, bridgeEvents) {
 				txToRetry, ok := b.sentTxs.Load(l1DroppedEvent.TxHash.String())
-				if ok {
-					_, err = b.chainServiceL1.SendTransaction(txToRetry)
+				if ok && txToRetry.numOfRetries < RETRY_TX_LIMIT {
+					retriedTx, err = b.chainServiceL1.SendTransaction(txToRetry.tx)
+					b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
 				}
 			}
 		case l2DroppedEvent := <-b.chainServiceL2.DroppedEventFeed():
 			if contains(l2DroppedEvent.EventName, bridgeEvents) {
 				txToRetry, ok := b.sentTxs.Load(l2DroppedEvent.TxHash.String())
-				if ok {
-					_, err = b.chainServiceL2.SendTransaction(txToRetry)
+				if ok && txToRetry.numOfRetries < RETRY_TX_LIMIT {
+					retriedTx, err = b.chainServiceL2.SendTransaction(txToRetry.tx)
+					b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
 				}
 			}
 		case <-ctx.Done():

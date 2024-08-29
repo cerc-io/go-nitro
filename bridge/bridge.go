@@ -47,8 +47,8 @@ type L1ToL2AssetConfig struct {
 }
 
 type sentTx struct {
-	tx           protocols.ChainTransaction
-	numOfRetries uint
+	Tx           protocols.ChainTransaction `json:"tx"`
+	NumOfRetries uint                       `json:"num_of_retries"`
 }
 
 type Bridge struct {
@@ -524,23 +524,27 @@ func (b *Bridge) checkError(err error) {
 func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 	var err error
 	var retriedTx *ethTypes.Transaction
-	// TODO: Add tx retry limit
+	// TODO: Add `isDropped` key to sentTx map
 	for {
 		select {
 		case l1DroppedEvent := <-b.chainServiceL1.DroppedEventFeed():
 			txToRetry, ok := b.sentTxs.Load(l1DroppedEvent.TxHash.String())
-			if ok && txToRetry.numOfRetries < RETRY_TX_LIMIT {
-				retriedTx, err = b.chainServiceL1.SendTransaction(txToRetry.tx)
+
+			if ok && txToRetry.NumOfRetries < RETRY_TX_LIMIT {
+				retriedTx, err = b.chainServiceL1.SendTransaction(txToRetry.Tx)
 				b.sentTxs.Delete(l1DroppedEvent.TxHash.String())
-				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
+				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.Tx, txToRetry.NumOfRetries + 1})
 			}
+
 		case l2DroppedEvent := <-b.chainServiceL2.DroppedEventFeed():
 			txToRetry, ok := b.sentTxs.Load(l2DroppedEvent.TxHash.String())
-			if ok && txToRetry.numOfRetries < RETRY_TX_LIMIT {
-				retriedTx, err = b.chainServiceL2.SendTransaction(txToRetry.tx)
+
+			if ok && txToRetry.NumOfRetries < RETRY_TX_LIMIT {
+				retriedTx, err = b.chainServiceL2.SendTransaction(txToRetry.Tx)
 				b.sentTxs.Delete(l2DroppedEvent.TxHash.String())
-				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
+				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.Tx, txToRetry.NumOfRetries + 1})
 			}
+
 		case l1ConfirmedEvent := <-b.chainServiceL1.BridgeEventFeed():
 			b.sentTxs.Delete(l1ConfirmedEvent.TxHash().String())
 
@@ -556,9 +560,10 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 }
 
 func (b *Bridge) GetBridgeEvents(channelId types.Destination) []sentTx {
+	// TODO: Send tx hash along with sentTxs info
 	var foundSentTx []sentTx
 	b.sentTxs.Range(func(txHash string, sentTxInfo sentTx) bool {
-		if sentTxInfo.tx.ChannelId() == channelId {
+		if sentTxInfo.Tx.ChannelId() == channelId {
 			foundSentTx = append(foundSentTx, sentTxInfo)
 		}
 		return true

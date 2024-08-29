@@ -12,6 +12,7 @@ import (
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/statechannels/go-nitro/crypto"
 	NitroAdjudicator "github.com/statechannels/go-nitro/node/engine/chainservice/adjudicator"
 	Bridge "github.com/statechannels/go-nitro/node/engine/chainservice/bridge"
 	ConsensusApp "github.com/statechannels/go-nitro/node/engine/chainservice/consensusapp"
@@ -20,18 +21,12 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
-const (
-	TEST_TOKEN_NAME       = "TestToken"
-	TEST_TOKEN_SYMBOL     = "TEST"
-	TEST_INITIAL_SUPPLY   = 100_000_000
-	INITIAL_TOKEN_BALANCE = 10_000_000
-)
-
 type ContractAddresses struct {
 	NaAddress     common.Address
 	VpaAddress    common.Address
 	CaAddress     common.Address
 	BridgeAddress common.Address
+	TokenAddress  common.Address
 }
 
 // ConnectToChain connects to the chain at the given url and returns a client and a transactor.
@@ -95,20 +90,16 @@ func DeployContracts(ctx context.Context, ethClient *ethclient.Client, txSubmitt
 	}, nil
 }
 
-func DeployAndTransferToken(ethClient *ethclient.Client, txSubmitter *bind.TransactOpts, transferTo []common.Address) (common.Address, *Token.Token, error) {
-	tokenAddress, _, tokenBinding, err := Token.DeployToken(txSubmitter, ethClient, TEST_TOKEN_NAME, TEST_TOKEN_SYMBOL, txSubmitter.From, big.NewInt(TEST_INITIAL_SUPPLY))
-	if err != nil {
-		return common.Address{}, nil, err
-	}
-
-	for _, account := range transferTo {
-		_, err := tokenBinding.Transfer(txSubmitter, account, big.NewInt(INITIAL_TOKEN_BALANCE))
+func TransferToken(ethClient *ethclient.Client, tokenBinding *Token.Token, txSubmitter *bind.TransactOpts, transferAccounts []string, initialTokenBalance int64) error {
+	for _, chainPk := range transferAccounts {
+		account := crypto.GetAddressFromSecretKeyBytes(common.Hex2Bytes(chainPk))
+		_, err := tokenBinding.Transfer(txSubmitter, account, big.NewInt(initialTokenBalance))
 		if err != nil {
-			return common.Address{}, nil, err
+			return err
 		}
 	}
 
-	return tokenAddress, tokenBinding, nil
+	return nil
 }
 
 func DeployL2Contract(ctx context.Context, ethClient *ethclient.Client, txSubmitter *bind.TransactOpts) (common.Address, error) {

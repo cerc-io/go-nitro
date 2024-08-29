@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	Token "github.com/statechannels/go-nitro/node/engine/chainservice/erc20"
 	chainutils "github.com/statechannels/go-nitro/node/engine/chainservice/utils"
 )
 
@@ -17,6 +18,7 @@ const (
 	CHAIN_AUTH_TOKEN       = ""
 	CHAIN_URL_WITHOUT_PORT = "ws://127.0.0.1"
 	DEFAULT_CHAIN_PORT     = "8545"
+	INITIAL_TOKEN_BALANCE  = 10_000_000
 )
 
 // Funded accounts in anvil chain
@@ -32,7 +34,7 @@ type AnvilChain struct {
 	ChainAuthToken    string
 	ChainPks          []string
 	AnvilCmd          *exec.Cmd
-	ethClient         *ethclient.Client
+	EthClient         *ethclient.Client
 	ContractAddresses chainutils.ContractAddresses
 }
 
@@ -55,13 +57,26 @@ func NewAnvilChain(chainPort string, l2 bool, ethAccountIndex uint) (*AnvilChain
 	if err != nil {
 		return nil, err
 	}
-	anvilChain.ethClient = ethClient
+	anvilChain.EthClient = ethClient
+
+	// Deploy custom token
+	tokenAddress, _, tokenBinding, err := Token.DeployToken(txSubmitter, ethClient, TEST_TOKEN_NAME, TEST_TOKEN_SYMBOL, txSubmitter.From, big.NewInt(TEST_INITIAL_SUPPLY))
+	if err != nil {
+		return nil, err
+	}
 
 	if l2 {
 		anvilChain.ContractAddresses.BridgeAddress, err = chainutils.DeployL2Contract(context.Background(), ethClient, txSubmitter)
 	} else {
 		anvilChain.ContractAddresses, err = chainutils.DeployContracts(context.Background(), ethClient, txSubmitter)
+
+		// Transfer token
+		err := chainutils.TransferToken(ethClient, tokenBinding, txSubmitter, ChainPks, INITIAL_TOKEN_BALANCE)
+		if err != nil {
+			return nil, err
+		}
 	}
+	anvilChain.ContractAddresses.TokenAddress = tokenAddress
 
 	if err != nil {
 		return nil, err
@@ -72,11 +87,11 @@ func NewAnvilChain(chainPort string, l2 bool, ethAccountIndex uint) (*AnvilChain
 
 func (chain AnvilChain) GetAccountBalance(accountAddress common.Address) (*big.Int, error) {
 	latestBlock, _ := chain.GetLatestBlock()
-	return chain.ethClient.BalanceAt(context.Background(), accountAddress, latestBlock.Header().Number)
+	return chain.EthClient.BalanceAt(context.Background(), accountAddress, latestBlock.Header().Number)
 }
 
 func (chain AnvilChain) GetLatestBlock() (*ethTypes.Block, error) {
-	return chain.ethClient.BlockByNumber(context.Background(), nil)
+	return chain.EthClient.BlockByNumber(context.Background(), nil)
 }
 
 func StartAnvil(chainPort string) (AnvilChain, error) {

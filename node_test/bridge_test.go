@@ -1,7 +1,6 @@
 package node_test
 
 import (
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -870,9 +869,6 @@ func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge,
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(">>>>>>>l1 l2 token ", infraL1.anvilChain.ContractAddresses.TokenAddress, infraL2.anvilChain.ContractAddresses.TokenAddress)
-
-	fmt.Println(">>>>>>>infraL2.anvilChain.EthClient ", infraL1.anvilChain.EthClient, infraL2.anvilChain.EthClient)
 
 	bridgeConfig := bridge.BridgeConfig{
 		L1ChainUrl:        infraL1.anvilChain.ChainUrl,

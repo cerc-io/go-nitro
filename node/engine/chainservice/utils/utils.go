@@ -90,10 +90,10 @@ func DeployContracts(ctx context.Context, ethClient *ethclient.Client, txSubmitt
 	}, nil
 }
 
-func TransferToken(ethClient *ethclient.Client, tokenBinding *Token.Token, txSubmitter *bind.TransactOpts, transferAccounts []string, initialTokenBalance int64) error {
-	for _, chainPk := range transferAccounts {
-		account := crypto.GetAddressFromSecretKeyBytes(common.Hex2Bytes(chainPk))
-		_, err := tokenBinding.Transfer(txSubmitter, account, big.NewInt(initialTokenBalance))
+func TransferToken(ethClient *ethclient.Client, tokenBinding *Token.Token, txSubmitter *bind.TransactOpts, recipientAccountPks []string, initialTokenBalance int64) error {
+	for _, chainPk := range recipientAccountPks {
+		accountAddress := crypto.GetAddressFromSecretKeyBytes(common.Hex2Bytes(chainPk))
+		_, err := tokenBinding.Transfer(txSubmitter, accountAddress, big.NewInt(initialTokenBalance))
 		if err != nil {
 			return err
 		}

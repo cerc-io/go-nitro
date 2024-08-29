@@ -430,7 +430,6 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 			return nil, err
 		}
 
-		ecs.sentTxToChannelIdMap.Store(setL2ToL1AssetAddressTx.Hash().String(), types.Destination{})
 		return setL2ToL1AssetAddressTx, nil
 	case protocols.MirrorWithdrawAllTransaction:
 		signedState := tx.SignedState.State()

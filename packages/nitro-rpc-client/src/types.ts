@@ -165,6 +165,13 @@ export type GetObjectiveRequest = JsonRpcRequest<
   }
 >;
 
+export type GetBridgeEventsRequest = JsonRpcRequest<
+  "get_bridge_events",
+  {
+    ChannelId: string;
+  }
+>;
+
 export type GetL2ObjectiveFromL1Request = JsonRpcRequest<
   "get_l2_objective_from_l1",
   {
@@ -222,6 +229,7 @@ export type GetPaymentChannelsByLedgerResponse = JsonRpcResponse<
 >;
 export type GetObjectiveResponse = JsonRpcResponse<string>;
 export type GetL2ObjectiveFromL1Response = JsonRpcResponse<string>;
+export type GetBridgeEventsResponse = JsonRpcResponse<string>;
 export type CreateVoucherResponse = JsonRpcResponse<Voucher>;
 export type ReceiveVoucherResponse = JsonRpcResponse<ReceiveVoucherResult>;
 /**
@@ -265,6 +273,7 @@ export type RPCRequestAndResponses = {
     GetL2ObjectiveFromL1Request,
     GetL2ObjectiveFromL1Response
   ];
+  get_bridge_events: [GetBridgeEventsRequest, GetBridgeEventsResponse];
   create_voucher: [CreateVoucherRequest, CreateVoucherResponse];
   receive_voucher: [ReceiveVoucherRequest, ReceiveVoucherResponse];
 };

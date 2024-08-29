@@ -150,6 +150,20 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 
 				return string(marshalledObjective), nil
 			})
+		case serde.GetBridgeEventsMethod:
+			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.GetBridgeEventsRequest) (string, error) {
+				bridgeEvents := brs.bridge.GetBridgeEvents(req.ChannelId)
+				if err != nil {
+					return "", err
+				}
+
+				marshalledEvents, err := json.Marshal(bridgeEvents)
+				if err != nil {
+					return "", err
+				}
+
+				return string(marshalledEvents), nil
+			})
 		default:
 			errRes := serde.NewJsonRpcErrorResponse(jsonrpcReq.Id, serde.MethodNotFoundError)
 			return marshalResponse(errRes)

@@ -406,13 +406,11 @@ func (b *Bridge) updateOnchainAssetAddressMap() error {
 
 		if l1OnchainAssetAddress != l1AssetAddress {
 			setL2ToL1AssetAddressTx := protocols.NewSetL2ToL1AssetAddressTransaction(l1AssetAddress, l2AssetAddress)
-			l2ToL1AssetAddressTx, err := b.chainServiceL1.SendTransaction(setL2ToL1AssetAddressTx)
+			_, err := b.chainServiceL1.SendTransaction(setL2ToL1AssetAddressTx)
 			if err != nil {
 				return fmt.Errorf("error in send transaction %w", err)
 			}
 			listenForAssetAddressUpdateEvent = true
-
-			b.sentTxs.Store(l2ToL1AssetAddressTx.Hash().String(), sentTx{setL2ToL1AssetAddressTx, 0})
 		}
 	}
 
@@ -534,12 +532,14 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 			txToRetry, ok := b.sentTxs.Load(l1DroppedEvent.TxHash.String())
 			if ok && txToRetry.numOfRetries < RETRY_TX_LIMIT {
 				retriedTx, err = b.chainServiceL1.SendTransaction(txToRetry.tx)
+				b.sentTxs.Delete(l1DroppedEvent.TxHash.String())
 				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
 			}
 		case l2DroppedEvent := <-b.chainServiceL2.DroppedEventFeed():
 			txToRetry, ok := b.sentTxs.Load(l2DroppedEvent.TxHash.String())
 			if ok && txToRetry.numOfRetries < RETRY_TX_LIMIT {
 				retriedTx, err = b.chainServiceL2.SendTransaction(txToRetry.tx)
+				b.sentTxs.Delete(l2DroppedEvent.TxHash.String())
 				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
 			}
 		case <-ctx.Done():
@@ -548,4 +548,16 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 
 		b.checkError(err)
 	}
+}
+
+func (b *Bridge) GetBridgeEvents(channelId types.Destination) []sentTx {
+	var foundSentTx []sentTx
+	b.sentTxs.Range(func(txHash string, sentTxInfo sentTx) bool {
+		if sentTxInfo.tx.ChannelId() == channelId {
+			foundSentTx = append(foundSentTx, sentTxInfo)
+		}
+		return true
+	})
+
+	return foundSentTx
 }

@@ -178,6 +178,7 @@ export function getAndValidateResult<T extends RequestMethod>(
         result,
         (result: ObjectiveSchemaType) => result
       );
+    case "get_bridge_events":
     case "get_l2_objective_from_l1":
     case "retry_tx":
     case "get_objective":

@@ -311,6 +311,12 @@ export class NitroRpcClient implements RpcClientApi {
     });
   }
 
+  public async GetBridgeEvents(channelId: string): Promise<string> {
+    return this.sendRequest("get_bridge_events", {
+      ChannelId: channelId,
+    });
+  }
+
   private async getAuthToken(): Promise<string> {
     return this.sendRequest("get_auth_token", {});
   }

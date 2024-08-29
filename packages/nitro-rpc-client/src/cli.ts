@@ -246,6 +246,34 @@ yargs(hideBin(process.argv))
       process.exit(0);
     }
   )
+  .command(
+    "get-bridge-events <channelId>",
+    "Get current status of objective with given objective ID",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("channelId", {
+        describe: "Channel ID to get events for",
+        type: "string",
+        demandOption: true,
+      });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const channelId = yargs.channelId;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+      const bridgeEvents = await rpcClient.GetBridgeEvents(channelId);
+      console.log(bridgeEvents);
+
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
 
   .command(
     "direct-fund <counterparty>",

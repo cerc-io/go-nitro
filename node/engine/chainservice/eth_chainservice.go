@@ -416,9 +416,11 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 		return mirrorTransferAllTx, er
 	case protocols.SetL2ToL1Transaction:
 		setL2ToL1Tx, err := ecs.na.SetL2ToL1(ecs.defaultTxOpts(), tx.ChannelId(), tx.MirrorChannelId)
+		ecs.sentTxToChannelIdMap.Store(setL2ToL1Tx.Hash().String(), tx.ChannelId())
 		return setL2ToL1Tx, err
 	case protocols.SetL2ToL1AssetAddressTransaction:
 		setL2ToL1AssetAddressTx, err := ecs.na.SetL2ToL1AssetAddress(ecs.defaultTxOpts(), tx.L1AssetAddress, tx.L2AssetAddress)
+		ecs.sentTxToChannelIdMap.Store(setL2ToL1AssetAddressTx.Hash().String(), tx.ChannelId())
 		return setL2ToL1AssetAddressTx, err
 	case protocols.MirrorWithdrawAllTransaction:
 		signedState := tx.SignedState.State()
@@ -791,7 +793,7 @@ func (ecs *EthChainService) EventFeed() <-chan Event {
 	return ecs.out
 }
 
-func (ecs *EthChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
+func (ecs *EthChainService) DroppedEventEngineFeed() <-chan protocols.DroppedEventInfo {
 	return ecs.droppedEventEngineOut
 }
 
@@ -946,6 +948,6 @@ func (ecs *EthChainService) GetChain() ethChain {
 	return ecs.chain
 }
 
-func (ecs *EthChainService) DroppedBridgeEventFeed() <-chan protocols.DroppedEventInfo {
+func (ecs *EthChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
 	return ecs.droppedEventOut
 }

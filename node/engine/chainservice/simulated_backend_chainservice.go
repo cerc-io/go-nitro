@@ -188,6 +188,6 @@ func (sbcs *SimulatedBackendChainService) GetVirtualPaymentAppAddress() types.Ad
 	return sbcs.virtualPaymentAppAddress
 }
 
-func (sbcs *SimulatedBackendChainService) DroppedBridgeEventFeed() <-chan protocols.DroppedEventInfo {
+func (sbcs *SimulatedBackendChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
 	return nil
 }

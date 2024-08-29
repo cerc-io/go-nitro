@@ -50,11 +50,11 @@ func (mc *MockChainService) EventFeed() <-chan Event {
 	return mc.eventFeed
 }
 
-func (mc *MockChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
+func (mc *MockChainService) DroppedEventEngineFeed() <-chan protocols.DroppedEventInfo {
 	return make(<-chan protocols.DroppedEventInfo)
 }
 
-func (mc *MockChainService) DroppedBridgeEventFeed() <-chan protocols.DroppedEventInfo {
+func (mc *MockChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
 	return make(<-chan protocols.DroppedEventInfo)
 }
 

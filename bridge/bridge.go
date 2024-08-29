@@ -165,6 +165,8 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	b.cancel = cancelFunc
 
+	go b.listenForDroppedEvents(ctx)
+
 	err = b.updateOnchainAssetAddressMap()
 	if err != nil {
 		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
@@ -178,7 +180,6 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 	b.bridgeStore = ds
 
 	go b.run(ctx)
-	go b.listenForDroppedEvents(ctx)
 
 	return nodeL1, nodeL2, msgServiceL1.MultiAddr, msgServiceL2.MultiAddr, nil
 }
@@ -387,6 +388,7 @@ func (b *Bridge) getUpdateMirrorChannelStateTransaction(con *consensus_channel.C
 }
 
 // Set L2AssetAddress => L1AssetAddress if it doesn't already exist on L1 chain
+// TODO: Wait for tx to be mined
 func (b *Bridge) updateOnchainAssetAddressMap() error {
 	for l1AssetAddress, l2AssetAddress := range b.L1ToL2AssetAddressMap {
 		l1OnchainAssetAddress, err := b.chainServiceL1.GetL1AssetAddressFromL2(l2AssetAddress)
@@ -510,23 +512,19 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 	// TODO: Remove entry from `sentTxs` map if tx is successful
 	for {
 		select {
-		case l1DroppedEvent := <-b.chainServiceL1.DroppedBridgeEventFeed():
+		case l1DroppedEvent := <-b.chainServiceL1.DroppedEventFeed():
 			if contains(l1DroppedEvent.EventName, bridgeEvents) {
 				txToRetry, ok := b.sentTxs.Load(l1DroppedEvent.TxHash.String())
-				if !ok {
-					return
+				if ok {
+					_, err = b.chainServiceL1.SendTransaction(txToRetry)
 				}
-
-				_, err = b.chainServiceL1.SendTransaction(txToRetry)
 			}
-		case l2DroppedEvent := <-b.chainServiceL2.DroppedBridgeEventFeed():
+		case l2DroppedEvent := <-b.chainServiceL2.DroppedEventFeed():
 			if contains(l2DroppedEvent.EventName, bridgeEvents) {
 				txToRetry, ok := b.sentTxs.Load(l2DroppedEvent.TxHash.String())
-				if !ok {
-					return
+				if ok {
+					_, err = b.chainServiceL2.SendTransaction(txToRetry)
 				}
-
-				_, err = b.chainServiceL2.SendTransaction(txToRetry)
 			}
 		case <-ctx.Done():
 			return

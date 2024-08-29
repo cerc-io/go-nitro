@@ -399,6 +399,7 @@ func (l2cs *L2ChainService) updateEventTracker(errorChan chan<- error, block *Bl
 			continue
 		}
 
+		l2cs.sentTxToChannelIdMap.Delete(chainEvent.TxHash.String())
 		eventsToDispatch = append(eventsToDispatch, chainEvent)
 	}
 	l2cs.eventTracker.mu.Unlock()
@@ -437,7 +438,7 @@ func (l2cs *L2ChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 	return nil
 }
 
-func (l2cs *L2ChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
+func (l2cs *L2ChainService) DroppedEventEngineFeed() <-chan protocols.DroppedEventInfo {
 	return l2cs.droppedEventEngineOut
 }
 
@@ -445,6 +446,6 @@ func (l2cs *L2ChainService) GetChain() ethChain {
 	return l2cs.chain
 }
 
-func (l2cs *L2ChainService) DroppedBridgeEventFeed() <-chan protocols.DroppedEventInfo {
+func (l2cs *L2ChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
 	return l2cs.droppedEventOut
 }

@@ -93,6 +93,7 @@ type EthChainService struct {
 	virtualPaymentAppAddress common.Address
 	txSigner                 *bind.TransactOpts
 	out                      chan Event
+	bridgeEventOut           chan Event
 	droppedEventEngineOut    chan protocols.DroppedEventInfo
 	droppedEventOut          chan protocols.DroppedEventInfo
 	logger                   *slog.Logger
@@ -188,6 +189,7 @@ func newEthChainService(chain ethChain, startBlockNum uint64, na *NitroAdjudicat
 		vpaAddress,
 		txSigner,
 		make(chan Event, 10),
+		make(chan Event),
 		make(chan protocols.DroppedEventInfo, 10),
 		make(chan protocols.DroppedEventInfo, 10),
 		logger, ctx, cancelCtx, &sync.WaitGroup{},
@@ -416,12 +418,20 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 		return mirrorTransferAllTx, er
 	case protocols.SetL2ToL1Transaction:
 		setL2ToL1Tx, err := ecs.na.SetL2ToL1(ecs.defaultTxOpts(), tx.ChannelId(), tx.MirrorChannelId)
+		if err != nil {
+			return nil, err
+		}
+
 		ecs.sentTxToChannelIdMap.Store(setL2ToL1Tx.Hash().String(), tx.ChannelId())
-		return setL2ToL1Tx, err
+		return setL2ToL1Tx, nil
 	case protocols.SetL2ToL1AssetAddressTransaction:
 		setL2ToL1AssetAddressTx, err := ecs.na.SetL2ToL1AssetAddress(ecs.defaultTxOpts(), tx.L1AssetAddress, tx.L2AssetAddress)
-		ecs.sentTxToChannelIdMap.Store(setL2ToL1AssetAddressTx.Hash().String(), tx.ChannelId())
-		return setL2ToL1AssetAddressTx, err
+		if err != nil {
+			return nil, err
+		}
+
+		ecs.sentTxToChannelIdMap.Store(setL2ToL1AssetAddressTx.Hash().String(), types.Destination{})
+		return setL2ToL1AssetAddressTx, nil
 	case protocols.MirrorWithdrawAllTransaction:
 		signedState := tx.SignedState.State()
 		signatures := tx.SignedState.Signatures()
@@ -551,6 +561,16 @@ func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 
 			event := ReclaimedEvent{commonEvent: commonEvent{channelID: ce.ChannelId, block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex}}
 			ecs.out <- event
+
+		case assetAddressUpdatedTopic:
+			ecs.logger.Debug("Processing asset address updated event")
+			event := AssetAddressUpdatedEvent{commonEvent: commonEvent{block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex}}
+
+			// Use non-blocking send incase no-one is listening
+			select {
+			case ecs.bridgeEventOut <- event:
+			default:
+			}
 
 		default:
 			ecs.logger.Info("Ignoring unknown chain event topic", "topic", l.Topics[0].String())
@@ -950,4 +970,8 @@ func (ecs *EthChainService) GetChain() ethChain {
 
 func (ecs *EthChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {
 	return ecs.droppedEventOut
+}
+
+func (ecs *EthChainService) BridgeEventFeed() <-chan Event {
+	return ecs.bridgeEventOut
 }

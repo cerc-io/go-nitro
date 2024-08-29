@@ -176,14 +176,24 @@ func (re ReclaimedEvent) String() string {
 	return "Reclaim event for Channel " + re.channelID.String() + " at Block " + fmt.Sprint(re.block.BlockNum)
 }
 
+type AssetAddressUpdatedEvent struct {
+	commonEvent
+}
+
+func (aaue AssetAddressUpdatedEvent) String() string {
+	return "Asset address updated event at Block " + fmt.Sprint(aaue.block.BlockNum)
+}
+
 // ChainEventHandler describes an objective that can handle chain events
 type ChainEventHandler interface {
 	UpdateWithChainEvent(event Event) (protocols.Objective, error)
 }
 
 type ChainService interface {
-	// EventFeed returns a chan for receiving events from the chain service.
+	// EventFeed returns a chan for receiving events from the chain service
 	EventFeed() <-chan Event
+	// BridgeEventFeed returns a chan for receiving bridge events from the chain service
+	BridgeEventFeed() <-chan Event
 	// Dropped event engine feed returns a chan for catching dropped events from chain service used by engine
 	DroppedEventEngineFeed() <-chan protocols.DroppedEventInfo
 	// TODO: Add comment

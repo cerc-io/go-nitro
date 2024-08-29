@@ -395,8 +395,9 @@ func (b *Bridge) getUpdateMirrorChannelStateTransaction(con *consensus_channel.C
 }
 
 // Set L2AssetAddress => L1AssetAddress if it doesn't already exist on L1 chain
-// TODO: Wait for tx to be mined
 func (b *Bridge) updateOnchainAssetAddressMap() error {
+	var listenForAssetAddressUpdateEvent bool
+
 	for l1AssetAddress, l2AssetAddress := range b.L1ToL2AssetAddressMap {
 		l1OnchainAssetAddress, err := b.chainServiceL1.GetL1AssetAddressFromL2(l2AssetAddress)
 		if err != nil {
@@ -409,8 +410,17 @@ func (b *Bridge) updateOnchainAssetAddressMap() error {
 			if err != nil {
 				return fmt.Errorf("error in send transaction %w", err)
 			}
+			listenForAssetAddressUpdateEvent = true
 
 			b.sentTxs.Store(l2ToL1AssetAddressTx.Hash().String(), sentTx{setL2ToL1AssetAddressTx, 0})
+		}
+	}
+
+	if listenForAssetAddressUpdateEvent {
+		event := <-b.chainServiceL1.BridgeEventFeed()
+		_, ok := event.(chainservice.AssetAddressUpdatedEvent)
+		if !ok {
+			return fmt.Errorf("event mismatch on updation of asset address")
 		}
 	}
 

@@ -99,6 +99,7 @@ func newL2ChainService(chain ethChain, startBlockNum uint64, bridge *Bridge.Brid
 		vpaAddress,
 		txSigner,
 		make(chan Event, 10),
+		make(chan Event, 10),
 		make(chan protocols.DroppedEventInfo, 10),
 		make(chan protocols.DroppedEventInfo, 10),
 		logger,

@@ -58,7 +58,7 @@ func (mc *MockChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo
 	return make(<-chan protocols.DroppedEventInfo)
 }
 
-func (mc *MockChainService) BridgeEventFeed() <-chan Event {
+func (mc *MockChainService) BridgeEventFeed() <-chan BridgeEvent {
 	return nil
 }
 

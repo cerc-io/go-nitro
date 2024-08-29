@@ -192,6 +192,6 @@ func (sbcs *SimulatedBackendChainService) DroppedEventFeed() <-chan protocols.Dr
 	return nil
 }
 
-func (sbcs *SimulatedBackendChainService) BridgeEventFeed() <-chan Event {
+func (sbcs *SimulatedBackendChainService) BridgeEventFeed() <-chan BridgeEvent {
 	return nil
 }

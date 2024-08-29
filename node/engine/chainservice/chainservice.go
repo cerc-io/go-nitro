@@ -20,6 +20,11 @@ type Event interface {
 	TxIndex() uint
 }
 
+type BridgeEvent interface {
+	Event
+	TxHash() common.Hash
+}
+
 // commonEvent declares fields shared by all chain events
 type commonEvent struct {
 	channelID types.Destination
@@ -178,10 +183,15 @@ func (re ReclaimedEvent) String() string {
 
 type AssetAddressUpdatedEvent struct {
 	commonEvent
+	txHash common.Hash
 }
 
 func (aaue AssetAddressUpdatedEvent) String() string {
 	return "Asset address updated event at Block " + fmt.Sprint(aaue.block.BlockNum)
+}
+
+func (aaue AssetAddressUpdatedEvent) TxHash() common.Hash {
+	return aaue.txHash
 }
 
 // ChainEventHandler describes an objective that can handle chain events
@@ -193,7 +203,7 @@ type ChainService interface {
 	// EventFeed returns a chan for receiving events from the chain service
 	EventFeed() <-chan Event
 	// BridgeEventFeed returns a chan for receiving bridge events from the chain service
-	BridgeEventFeed() <-chan Event
+	BridgeEventFeed() <-chan BridgeEvent
 	// Dropped event engine feed returns a chan for catching dropped events from chain service used by engine
 	DroppedEventEngineFeed() <-chan protocols.DroppedEventInfo
 	// TODO: Add comment

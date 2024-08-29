@@ -525,7 +525,6 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 	var err error
 	var retriedTx *ethTypes.Transaction
 	// TODO: Add tx retry limit
-	// TODO: Remove entry from `sentTxs` map if tx is successful
 	for {
 		select {
 		case l1DroppedEvent := <-b.chainServiceL1.DroppedEventFeed():
@@ -542,6 +541,12 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 				b.sentTxs.Delete(l2DroppedEvent.TxHash.String())
 				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.tx, txToRetry.numOfRetries + 1})
 			}
+		case l1ConfirmedEvent := <-b.chainServiceL1.BridgeEventFeed():
+			b.sentTxs.Delete(l1ConfirmedEvent.TxHash().String())
+
+		case l2ConfirmedEvent := <-b.chainServiceL2.BridgeEventFeed():
+			b.sentTxs.Delete(l2ConfirmedEvent.TxHash().String())
+
 		case <-ctx.Done():
 			return
 		}

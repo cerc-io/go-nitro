@@ -93,7 +93,7 @@ type EthChainService struct {
 	virtualPaymentAppAddress common.Address
 	txSigner                 *bind.TransactOpts
 	out                      chan Event
-	bridgeEventOut           chan Event
+	bridgeEventOut           chan BridgeEvent
 	droppedEventEngineOut    chan protocols.DroppedEventInfo
 	droppedEventOut          chan protocols.DroppedEventInfo
 	logger                   *slog.Logger
@@ -189,7 +189,7 @@ func newEthChainService(chain ethChain, startBlockNum uint64, na *NitroAdjudicat
 		vpaAddress,
 		txSigner,
 		make(chan Event, 10),
-		make(chan Event),
+		make(chan BridgeEvent),
 		make(chan protocols.DroppedEventInfo, 10),
 		make(chan protocols.DroppedEventInfo, 10),
 		logger, ctx, cancelCtx, &sync.WaitGroup{},
@@ -563,7 +563,7 @@ func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 
 		case assetAddressUpdatedTopic:
 			ecs.logger.Debug("Processing asset address updated event")
-			event := AssetAddressUpdatedEvent{commonEvent: commonEvent{block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex}}
+			event := AssetAddressUpdatedEvent{commonEvent: commonEvent{block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex}, txHash: l.TxHash}
 
 			// Use non-blocking send incase no-one is listening
 			select {
@@ -971,6 +971,6 @@ func (ecs *EthChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo
 	return ecs.droppedEventOut
 }
 
-func (ecs *EthChainService) BridgeEventFeed() <-chan Event {
+func (ecs *EthChainService) BridgeEventFeed() <-chan BridgeEvent {
 	return ecs.bridgeEventOut
 }

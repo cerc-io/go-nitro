@@ -515,25 +515,24 @@ func (b *Bridge) RetryObjectiveTx(objectiveId protocols.ObjectiveId) error {
 }
 
 func (b *Bridge) RetryTx(txHash common.Hash) error {
+	var chainService chainservice.ChainService
+
 	txToRetry, ok := b.sentTxs.Load(txHash.String())
 	if !ok {
-		return fmt.Errorf("Tx with given hash %s was either complete or cannot be found", txHash)
+		return fmt.Errorf("tx with given hash %s was either complete or cannot be found", txHash)
 	}
 
 	if !txToRetry.IsDropped {
-		return fmt.Errorf("Tx with given hash %s is pending confirmation and connot be retried", txHash)
+		return fmt.Errorf("tx with given hash %s is pending confirmation and connot be retried", txHash)
 	}
 
 	if txToRetry.IsL2 {
-		_, err := b.chainServiceL2.SendTransaction(txToRetry.Tx)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		chainService = b.chainServiceL2
+	} else {
+		chainService = b.chainServiceL1
 	}
 
-	_, err := b.chainServiceL1.SendTransaction(txToRetry.Tx)
+	_, err := chainService.SendTransaction(txToRetry.Tx)
 	if err != nil {
 		return err
 	}

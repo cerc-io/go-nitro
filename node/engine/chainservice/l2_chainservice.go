@@ -99,7 +99,7 @@ func newL2ChainService(chain ethChain, startBlockNum uint64, bridge *Bridge.Brid
 		vpaAddress,
 		txSigner,
 		make(chan Event, 10),
-		make(chan Event),
+		make(chan Event, 10),
 		make(chan protocols.DroppedEventInfo, 10),
 		make(chan protocols.DroppedEventInfo, 10),
 		logger,
@@ -134,8 +134,12 @@ func (l2cs *L2ChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 	switch tx := tx.(type) {
 	case protocols.UpdateMirroredChannelStatesTransaction:
 		updateMirroredChannelStatesTx, err := l2cs.bridge.UpdateMirroredChannelStates(l2cs.defaultTxOpts(), tx.ChannelId(), tx.StateHash, tx.OutcomeBytes, tx.Amount, tx.Asset)
+		if err != nil {
+			return nil, err
+		}
+
 		l2cs.sentTxToChannelIdMap.Store(updateMirroredChannelStatesTx.Hash().String(), tx.ChannelId())
-		return nil, err
+		return updateMirroredChannelStatesTx, nil
 	default:
 		return nil, fmt.Errorf("unexpected transaction type %T", tx)
 	}

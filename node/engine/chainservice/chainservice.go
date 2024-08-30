@@ -188,8 +188,8 @@ type AssetMapUpdatedEvent struct {
 	L1AssetAddress, L2AssetAddress common.Address
 }
 
-func (aaue AssetMapUpdatedEvent) String() string {
-	return "Asset map updated event at Block " + fmt.Sprint(aaue.block.BlockNum)
+func (amue AssetMapUpdatedEvent) String() string {
+	return "Asset map updated event at Block " + fmt.Sprint(amue.block.BlockNum)
 }
 
 type L2ToL1MapUpdated struct {
@@ -197,8 +197,8 @@ type L2ToL1MapUpdated struct {
 	l1ChannelId, l2ChannelId types.Destination
 }
 
-func (aaue L2ToL1MapUpdated) String() string {
-	return "L2ToL1 map updated event at Block " + fmt.Sprint(aaue.block.BlockNum)
+func (l2l1mue L2ToL1MapUpdated) String() string {
+	return "L2ToL1 map updated event at Block " + fmt.Sprint(l2l1mue.block.BlockNum)
 }
 
 // ChainEventHandler describes an objective that can handle chain events

@@ -189,7 +189,7 @@ func newEthChainService(chain ethChain, startBlockNum uint64, na *NitroAdjudicat
 		vpaAddress,
 		txSigner,
 		make(chan Event, 10),
-		make(chan Event),
+		make(chan Event, 10),
 		make(chan protocols.DroppedEventInfo, 10),
 		make(chan protocols.DroppedEventInfo, 10),
 		logger, ctx, cancelCtx, &sync.WaitGroup{},
@@ -340,10 +340,9 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 					return nil, err
 				}
 
-				approvalBlock, er := ecs.GetBlockByNumber(big.NewInt(int64(tokenApprovalLog.BlockNumber)))
-				if er != nil {
-					slog.Error(er.Error())
-					return nil, nil
+				approvalBlock, err := ecs.GetBlockByNumber(big.NewInt(int64(tokenApprovalLog.BlockNumber)))
+				if err != nil {
+					return nil, err
 				}
 
 				if approvalBlock.Hash() != tokenApprovalLog.BlockHash {
@@ -415,8 +414,8 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 
 		nitroVariablePart := NitroAdjudicator.ConvertVariablePart(transferState.VariablePart())
 
-		mirrorTransferAllTx, er := ecs.na.MirrorTransferAllAssets(ecs.defaultTxOpts(), channelId, nitroVariablePart.Outcome, stateHash)
-		return mirrorTransferAllTx, er
+		mirrorTransferAllTx, err := ecs.na.MirrorTransferAllAssets(ecs.defaultTxOpts(), channelId, nitroVariablePart.Outcome, stateHash)
+		return mirrorTransferAllTx, err
 	case protocols.SetL2ToL1Transaction:
 		setL2ToL1Tx, err := ecs.na.SetL2ToL1(ecs.defaultTxOpts(), tx.ChannelId(), tx.MirrorChannelId)
 		if err != nil {

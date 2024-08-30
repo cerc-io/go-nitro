@@ -320,8 +320,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 				// If custom token is used instead of ETH, we need to approve token amount to be transferred from
 				approvalLog, err := ecs.handleApproveTx(tokenAddress, amount)
 				if err != nil {
-					slog.Error(err.Error())
-					return nil, nil
+					return nil, err
 				}
 
 				tokenApprovalLog = approvalLog
@@ -336,14 +335,14 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 
 			depositTx, err := ecs.na.Deposit(txOpts, tokenAddress, tx.ChannelId(), holdings, amount)
 			if err != nil {
-				slog.Error("error sending Deposit transaction", "error", err)
-				if tokenApprovalLog.BlockNumber == 0 {
-					return nil, nil
+				// Check if `Approve` tx was confirmed when custom token is used
+				if tokenAddress != ethTokenAddress {
+					return nil, err
 				}
 
-				approvalBlock, err := ecs.GetBlockByNumber(big.NewInt(int64(tokenApprovalLog.BlockNumber)))
-				if err != nil {
-					slog.Error(err.Error())
+				approvalBlock, er := ecs.GetBlockByNumber(big.NewInt(int64(tokenApprovalLog.BlockNumber)))
+				if er != nil {
+					slog.Error(er.Error())
 					return nil, nil
 				}
 
@@ -353,9 +352,11 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 						ChannelId: tx.ChannelId(),
 						EventName: "Approval",
 					}
+
+					return nil, nil
 				}
 				// Return nil to not panic the node and log the error instead
-				return nil, nil
+				return nil, err
 			}
 
 			ecs.sentTxToChannelIdMap.Store(depositTx.Hash().String(), tx.ChannelId())

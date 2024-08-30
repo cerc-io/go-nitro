@@ -247,7 +247,7 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "get-bridge-events <channelId>",
+    "get-pending-bridge-txs <channelId>",
     "Get current status of objective with given objective ID",
     (yargsBuilder) => {
       return yargsBuilder.positional("channelId", {
@@ -267,8 +267,8 @@ yargs(hideBin(process.argv))
         getRPCUrl(rpcHost, rpcPort),
         isSecure
       );
-      const bridgeEvents = await rpcClient.GetBridgeEvents(channelId);
-      console.log(bridgeEvents);
+      const pendingBridgeTxs = await rpcClient.GetPendingBridgeTxs(channelId);
+      console.log(pendingBridgeTxs);
 
       await rpcClient.Close();
       process.exit(0);

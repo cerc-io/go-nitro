@@ -7,8 +7,6 @@ import (
 	"math/big"
 	"path/filepath"
 
-	ethTypes "github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
 	"github.com/statechannels/go-nitro/channel/state"
@@ -46,9 +44,15 @@ type L1ToL2AssetConfig struct {
 	Assets []Asset `toml:"assets"`
 }
 
-type sentTx struct {
+type SentTx struct {
 	Tx           protocols.ChainTransaction `json:"tx"`
 	NumOfRetries uint                       `json:"num_of_retries"`
+	IsDropped    bool                       `json:"is_dropped"`
+}
+
+type PendingTx struct {
+	SentTx
+	TxHash string `json:"tx_hash"`
 }
 
 type Bridge struct {
@@ -66,7 +70,7 @@ type Bridge struct {
 	L1ToL2AssetAddressMap   map[common.Address]common.Address
 	mirrorChannelMap        map[types.Destination]MirrorChannelDetails
 	completedMirrorChannels chan types.Destination
-	sentTxs                 safesync.Map[sentTx]
+	sentTxs                 safesync.Map[SentTx]
 }
 
 type BridgeConfig struct {
@@ -172,8 +176,6 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	b.cancel = cancelFunc
 
-	go b.listenForDroppedEvents(ctx)
-
 	err = b.updateOnchainAssetAddressMap()
 	if err != nil {
 		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
@@ -186,6 +188,7 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 
 	b.bridgeStore = ds
 
+	go b.listenForDroppedEvents(ctx)
 	go b.run(ctx)
 
 	return nodeL1, nodeL2, msgServiceL1.MultiAddr, msgServiceL2.MultiAddr, nil
@@ -302,13 +305,13 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 		}
 
 		// Node B calls contract method to store L2ChannelId => L1ChannelId
-		setL2ToL1Tx := protocols.NewSetL2ToL1Transaction(mirrorChannelDetails.L1ChannelId, l2channelId)
-		l2ToL1Tx, err := b.chainServiceL1.SendTransaction(setL2ToL1Tx)
+		setL2ToL1TxToSubmit := protocols.NewSetL2ToL1Transaction(mirrorChannelDetails.L1ChannelId, l2channelId)
+		setL2ToL1Tx, err := b.chainServiceL1.SendTransaction(setL2ToL1TxToSubmit)
 		if err != nil {
 			return fmt.Errorf("error in send transaction %w", err)
 		}
 
-		b.sentTxs.Store(l2ToL1Tx.Hash().String(), sentTx{setL2ToL1Tx, 0})
+		b.sentTxs.Store(setL2ToL1Tx.Hash().String(), SentTx{setL2ToL1TxToSubmit, 0, false})
 
 		// use a nonblocking send in case no one is listening
 		select {
@@ -329,17 +332,17 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 
 		// Updates the bridge contract with the latest state of ledger channels
 		for _, ch := range ledgerChannels {
-			tx, err := b.getUpdateMirrorChannelStateTransaction(ch)
+			txToSubmit, err := b.getUpdateMirrorChannelStateTransaction(ch)
 			if err != nil {
 				return err
 			}
 
-			updateStatesAfterVf, err := b.chainServiceL2.SendTransaction(tx)
+			tx, err := b.chainServiceL2.SendTransaction(txToSubmit)
 			if err != nil {
 				return fmt.Errorf("error in send transaction %w", err)
 			}
 
-			b.sentTxs.Store(updateStatesAfterVf.Hash().String(), sentTx{tx, 0})
+			b.sentTxs.Store(tx.Hash().String(), SentTx{txToSubmit, 0, false})
 		}
 
 	case *bridgeddefund.Objective:
@@ -405,8 +408,8 @@ func (b *Bridge) updateOnchainAssetAddressMap() error {
 		}
 
 		if l1OnchainAssetAddress != l1AssetAddress {
-			setL2ToL1AssetAddressTx := protocols.NewSetL2ToL1AssetAddressTransaction(l1AssetAddress, l2AssetAddress)
-			_, err := b.chainServiceL1.SendTransaction(setL2ToL1AssetAddressTx)
+			setL2ToL1AssetAddressTxToSubmit := protocols.NewSetL2ToL1AssetAddressTransaction(l1AssetAddress, l2AssetAddress)
+			_, err := b.chainServiceL1.SendTransaction(setL2ToL1AssetAddressTxToSubmit)
 			if err != nil {
 				return fmt.Errorf("error in send transaction %w", err)
 			}
@@ -523,27 +526,13 @@ func (b *Bridge) checkError(err error) {
 
 func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 	var err error
-	var retriedTx *ethTypes.Transaction
-	// TODO: Add `isDropped` key to sentTx map
 	for {
 		select {
 		case l1DroppedEvent := <-b.chainServiceL1.DroppedEventFeed():
-			txToRetry, ok := b.sentTxs.Load(l1DroppedEvent.TxHash.String())
-
-			if ok && txToRetry.NumOfRetries < RETRY_TX_LIMIT {
-				retriedTx, err = b.chainServiceL1.SendTransaction(txToRetry.Tx)
-				b.sentTxs.Delete(l1DroppedEvent.TxHash.String())
-				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.Tx, txToRetry.NumOfRetries + 1})
-			}
+			err = b.checkAndRetryDroppedTxs(l1DroppedEvent, b.chainServiceL1)
 
 		case l2DroppedEvent := <-b.chainServiceL2.DroppedEventFeed():
-			txToRetry, ok := b.sentTxs.Load(l2DroppedEvent.TxHash.String())
-
-			if ok && txToRetry.NumOfRetries < RETRY_TX_LIMIT {
-				retriedTx, err = b.chainServiceL2.SendTransaction(txToRetry.Tx)
-				b.sentTxs.Delete(l2DroppedEvent.TxHash.String())
-				b.sentTxs.Store(retriedTx.Hash().String(), sentTx{txToRetry.Tx, txToRetry.NumOfRetries + 1})
-			}
+			err = b.checkAndRetryDroppedTxs(l2DroppedEvent, b.chainServiceL2)
 
 		case l1ConfirmedEvent := <-b.chainServiceL1.BridgeEventFeed():
 			b.sentTxs.Delete(l1ConfirmedEvent.TxHash().String())
@@ -559,15 +548,35 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 	}
 }
 
-func (b *Bridge) GetBridgeEvents(channelId types.Destination) []sentTx {
-	// TODO: Send tx hash along with sentTxs info
-	var foundSentTx []sentTx
-	b.sentTxs.Range(func(txHash string, sentTxInfo sentTx) bool {
+func (b *Bridge) checkAndRetryDroppedTxs(droppedEvent protocols.DroppedEventInfo, chainservice chainservice.ChainService) error {
+	txToRetry, ok := b.sentTxs.Load(droppedEvent.TxHash.String())
+
+	if ok {
+		txToRetry.IsDropped = true
+		b.sentTxs.Store(droppedEvent.TxHash.String(), txToRetry)
+	}
+
+	if ok && txToRetry.NumOfRetries < RETRY_TX_LIMIT {
+		retriedTx, err := chainservice.SendTransaction(txToRetry.Tx)
+		if err != nil {
+			return err
+		}
+
+		b.sentTxs.Delete(droppedEvent.TxHash.String())
+		b.sentTxs.Store(retriedTx.Hash().String(), SentTx{txToRetry.Tx, txToRetry.NumOfRetries + 1, false})
+	}
+
+	return nil
+}
+
+func (b *Bridge) GetPendingBridgeTxs(channelId types.Destination) []PendingTx {
+	var foundPendingTx []PendingTx
+	b.sentTxs.Range(func(txHash string, sentTxInfo SentTx) bool {
 		if sentTxInfo.Tx.ChannelId() == channelId {
-			foundSentTx = append(foundSentTx, sentTxInfo)
+			foundPendingTx = append(foundPendingTx, PendingTx{sentTxInfo, txHash})
 		}
 		return true
 	})
 
-	return foundSentTx
+	return foundPendingTx
 }

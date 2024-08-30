@@ -150,19 +150,19 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 
 				return string(marshalledObjective), nil
 			})
-		case serde.GetBridgeEventsMethod:
-			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.GetBridgeEventsRequest) (string, error) {
-				bridgeEvents := brs.bridge.GetBridgeEvents(req.ChannelId)
+		case serde.GetPendingBridgeTxsMethod:
+			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.GetPendingBridgeTxsRequest) (string, error) {
+				pendingBridgeTxs := brs.bridge.GetPendingBridgeTxs(req.ChannelId)
 				if err != nil {
 					return "", err
 				}
 
-				marshalledEvents, err := json.Marshal(bridgeEvents)
+				marshalledPendingBridgeTxs, err := json.Marshal(pendingBridgeTxs)
 				if err != nil {
 					return "", err
 				}
 
-				return string(marshalledEvents), nil
+				return string(marshalledPendingBridgeTxs), nil
 			})
 		default:
 			errRes := serde.NewJsonRpcErrorResponse(jsonrpcReq.Id, serde.MethodNotFoundError)

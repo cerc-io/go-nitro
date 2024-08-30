@@ -48,6 +48,7 @@ type SentTx struct {
 	Tx           protocols.ChainTransaction `json:"tx"`
 	NumOfRetries uint                       `json:"num_of_retries"`
 	IsDropped    bool                       `json:"is_dropped"`
+	IsL2         bool                       `json:"is_l2"`
 }
 
 type PendingTx struct {
@@ -311,7 +312,7 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 			return fmt.Errorf("error in send transaction %w", err)
 		}
 
-		b.sentTxs.Store(setL2ToL1Tx.Hash().String(), SentTx{setL2ToL1TxToSubmit, 0, false})
+		b.sentTxs.Store(setL2ToL1Tx.Hash().String(), SentTx{setL2ToL1TxToSubmit, 0, false, false})
 
 		// use a nonblocking send in case no one is listening
 		select {
@@ -342,7 +343,7 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 				return fmt.Errorf("error in send transaction %w", err)
 			}
 
-			b.sentTxs.Store(tx.Hash().String(), SentTx{txToSubmit, 0, false})
+			b.sentTxs.Store(tx.Hash().String(), SentTx{txToSubmit, 0, false, true})
 		}
 
 	case *bridgeddefund.Objective:
@@ -513,6 +514,33 @@ func (b *Bridge) RetryTx(objectiveId protocols.ObjectiveId) error {
 	return fmt.Errorf("objective with given Id is not supported for retrying")
 }
 
+func (b *Bridge) RetryBridgeTx(txHash common.Hash) error {
+	txToRetry, ok := b.sentTxs.Load(txHash.String())
+	if !ok {
+		return fmt.Errorf("Tx with given hash %s was either complete or cannot be found", txHash)
+	}
+
+	if !txToRetry.IsDropped {
+		return fmt.Errorf("Tx with given hash %s is pending confirmation and connot be retried", txHash)
+	}
+
+	if txToRetry.IsL2 {
+		_, err := b.chainServiceL2.SendTransaction(txToRetry.Tx)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	_, err := b.chainServiceL1.SendTransaction(txToRetry.Tx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (b *Bridge) Close() error {
 	b.cancel()
 	err := b.nodeL1.Close()
@@ -539,10 +567,10 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 	for {
 		select {
 		case l1DroppedEvent := <-b.chainServiceL1.DroppedEventFeed():
-			err = b.checkAndRetryDroppedTxs(l1DroppedEvent, b.chainServiceL1)
+			err = b.checkAndRetryDroppedTxs(l1DroppedEvent, b.chainServiceL1, false)
 
 		case l2DroppedEvent := <-b.chainServiceL2.DroppedEventFeed():
-			err = b.checkAndRetryDroppedTxs(l2DroppedEvent, b.chainServiceL2)
+			err = b.checkAndRetryDroppedTxs(l2DroppedEvent, b.chainServiceL2, true)
 
 		case l1ConfirmedEvent := <-b.chainServiceL1.EventFeed():
 			b.sentTxs.Delete(l1ConfirmedEvent.TxHash().String())
@@ -558,7 +586,7 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 	}
 }
 
-func (b *Bridge) checkAndRetryDroppedTxs(droppedEvent protocols.DroppedEventInfo, chainservice chainservice.ChainService) error {
+func (b *Bridge) checkAndRetryDroppedTxs(droppedEvent protocols.DroppedEventInfo, chainservice chainservice.ChainService, isL2 bool) error {
 	txToRetry, ok := b.sentTxs.Load(droppedEvent.TxHash.String())
 
 	if ok {
@@ -573,7 +601,7 @@ func (b *Bridge) checkAndRetryDroppedTxs(droppedEvent protocols.DroppedEventInfo
 		}
 
 		b.sentTxs.Delete(droppedEvent.TxHash.String())
-		b.sentTxs.Store(retriedTx.Hash().String(), SentTx{txToRetry.Tx, txToRetry.NumOfRetries + 1, false})
+		b.sentTxs.Store(retriedTx.Hash().String(), SentTx{txToRetry.Tx, txToRetry.NumOfRetries + 1, false, isL2})
 	}
 
 	return nil

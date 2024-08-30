@@ -662,6 +662,34 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "retry-bridge-txs <txHash>",
+    "Retries transaction for given objective",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("txHash", {
+        describe: "The id of the objective to send transaction for",
+        type: "string",
+        demandOption: true,
+      });
+    },
+
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+
+      const txHash = await rpcClient.RetryBridgeTx(yargs.txHash);
+
+      console.log(`Transaction with hash ${txHash} retried`);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "get-voucher <channelId>",
     "Get largest voucher paid/received on the payment channel",
     (yargsBuilder) => {

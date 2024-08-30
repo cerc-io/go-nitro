@@ -122,6 +122,11 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 				err := brs.bridge.RetryTx(req.ObjectiveId)
 				return req.ObjectiveId, err
 			})
+		case serde.RetryBridgeTxMethod:
+			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.RetryBridgeTxRequest) (string, error) {
+				err := brs.bridge.RetryBridgeTx(req.TxHash)
+				return req.TxHash.String(), err
+			})
 		case serde.GetObjectiveMethod:
 			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.GetObjectiveRequest) (string, error) {
 				objective, err := brs.bridge.GetObjectiveById(req.ObjectiveId, req.L2)

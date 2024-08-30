@@ -181,6 +181,7 @@ export function getAndValidateResult<T extends RequestMethod>(
     case "get_pending_bridge_txs":
     case "get_l2_objective_from_l1":
     case "retry_tx":
+    case "retry_bridge_tx":
     case "get_objective":
     case "get_auth_token":
     case "close_ledger_channel":

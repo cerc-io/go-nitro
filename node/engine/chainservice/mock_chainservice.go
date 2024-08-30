@@ -46,7 +46,7 @@ func (mc *MockChainService) GetL1AssetAddressFromL2(l2AssetAddress common.Addres
 	return common.Address{}, nil
 }
 
-func (mc *MockChainService) EventFeed() <-chan Event {
+func (mc *MockChainService) EventEngineFeed() <-chan Event {
 	return mc.eventFeed
 }
 
@@ -58,7 +58,7 @@ func (mc *MockChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo
 	return make(<-chan protocols.DroppedEventInfo)
 }
 
-func (mc *MockChainService) BridgeEventFeed() <-chan BridgeEvent {
+func (mc *MockChainService) EventFeed() <-chan Event {
 	return nil
 }
 
@@ -79,9 +79,5 @@ func (mc *MockChainService) GetBlockByNumber(blockNum *big.Int) (*ethTypes.Block
 }
 
 func (mc *MockChainService) Close() error {
-	return nil
-}
-
-func (mc *MockChainService) GetChain() ethChain {
 	return nil
 }

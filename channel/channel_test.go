@@ -287,7 +287,7 @@ func TestChannel(t *testing.T) {
 		}
 	}
 	testUpdateWithChallengeRegisteredEvent := func(t *testing.T) {
-		event := chainservice.NewChallengeRegisteredEvent(c.ChannelId(), chainservice.Block{BlockNum: 99999}, 0, state.TestState.VariablePart(), []state.Signature{sigA, sigB}, nil, false)
+		event := chainservice.NewChallengeRegisteredEvent(c.ChannelId(), chainservice.Block{BlockNum: 99999}, 0, state.TestState.VariablePart(), []state.Signature{sigA, sigB}, nil, false, common.Hash{})
 
 		_, err := c.UpdateWithChainEvent(event)
 		if err != nil {
@@ -313,7 +313,7 @@ func TestChannel(t *testing.T) {
 	}
 
 	testUpdateWithChainEventRejected := func(t *testing.T) {
-		event := chainservice.NewChallengeRegisteredEvent(c.ChannelId(), chainservice.Block{BlockNum: 99999}, 0, state.TestState.VariablePart(), []state.Signature{sigA, sigB}, nil, false)
+		event := chainservice.NewChallengeRegisteredEvent(c.ChannelId(), chainservice.Block{BlockNum: 99999}, 0, state.TestState.VariablePart(), []state.Signature{sigA, sigB}, nil, false, common.Hash{})
 		_, err := c.UpdateWithChainEvent(event)
 		if err == nil {
 			t.Fatal("chain event should be rejected when blockNum/txIndex is not higher than last update")

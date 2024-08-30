@@ -52,7 +52,7 @@ interface INitroAdjudicator is IMultiAssetHolder, IForceMove {
     // Function to set map from l2AssetAddress to l1AssetAddress
     function setL2ToL1AssetAddress(address l1AssetAddress, address l2AssetAddress) external;
 
-    event ChannelIdUpdated();
+    event L2ToL1MapUpdated(bytes32 l1ChannelId, bytes32 l2ChannelId);
 
-    event AssetAddressUpdated();
+    event AssetsMapUpdated(address l1AssetAddress, address l2AssetAddress);
 }

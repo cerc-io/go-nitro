@@ -162,7 +162,7 @@ func New(vm *payments.VoucherManager, msg messageservice.MessageService, chain c
 	e.CounterChallengeRequestsFromAPI = make(chan CounterChallengeRequest)
 	e.RetryTxRequestFromAPI = make(chan types.RetryTxRequest)
 
-	e.fromChain = chain.EventFeed()
+	e.fromChain = chain.EventEngineFeed()
 	e.droppedEventFromChain = chain.DroppedEventEngineFeed()
 	e.fromMsg = msg.P2PMessages()
 	e.signRequests = msg.SignRequests()

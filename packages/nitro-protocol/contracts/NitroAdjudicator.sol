@@ -20,7 +20,7 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
     function setL2ToL1(bytes32 l1ChannelId, bytes32 l2ChannelId) public onlyOwner {
         l2Tol1[l2ChannelId] = l1ChannelId;
 
-        emit ChannelIdUpdated();
+        emit L2ToL1MapUpdated(l1ChannelId, l2ChannelId);
     }
 
     // Function to set map from l2AssetAddress to l1AssetAddress
@@ -30,7 +30,7 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
     ) public onlyOwner {
         l2Tol1AssetAddress[l2AssetAddress] = l1AssetAddress;
 
-        emit AssetAddressUpdated();
+        emit AssetsMapUpdated(l1AssetAddress, l2AssetAddress);
     }
 
     /**

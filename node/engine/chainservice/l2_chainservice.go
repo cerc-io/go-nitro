@@ -99,7 +99,7 @@ func newL2ChainService(chain ethChain, startBlockNum uint64, bridge *Bridge.Brid
 		vpaAddress,
 		txSigner,
 		make(chan Event, 10),
-		make(chan BridgeEvent),
+		make(chan Event),
 		make(chan protocols.DroppedEventInfo, 10),
 		make(chan protocols.DroppedEventInfo, 10),
 		logger,
@@ -429,8 +429,8 @@ func (l2cs *L2ChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 				return fmt.Errorf("error in ParseStatusUpdated: %w", err)
 			}
 
-			event := StatusUpdatedEvent{StateHash: sue.StateHash, commonEvent: commonEvent{channelID: sue.ChannelId, block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex}}
-			l2cs.out <- event
+			event := StatusUpdatedEvent{StateHash: sue.StateHash, commonEvent: commonEvent{channelID: sue.ChannelId, block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex, txHash: l.TxHash}}
+			l2cs.eventEngineOut <- event
 		default:
 			l2cs.logger.Info("Ignoring unknown chain event topic", "topic", l.Topics[0].String())
 
@@ -441,10 +441,6 @@ func (l2cs *L2ChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 
 func (l2cs *L2ChainService) DroppedEventEngineFeed() <-chan protocols.DroppedEventInfo {
 	return l2cs.droppedEventEngineOut
-}
-
-func (l2cs *L2ChainService) GetChain() ethChain {
-	return l2cs.chain
 }
 
 func (l2cs *L2ChainService) DroppedEventFeed() <-chan protocols.DroppedEventInfo {

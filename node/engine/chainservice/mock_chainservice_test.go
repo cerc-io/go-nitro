@@ -19,8 +19,8 @@ func TestDeposit(t *testing.T) {
 	chainServiceA := NewMockChainService(chain, a)
 	chainServiceB := NewMockChainService(chain, b)
 
-	eventFeedA := chainServiceA.EventFeed()
-	eventFeedB := chainServiceB.EventFeed()
+	eventFeedA := chainServiceA.EventEngineFeed()
+	eventFeedB := chainServiceB.EventEngineFeed()
 
 	// Prepare test data to trigger MockChainService
 	testDeposit := types.Funds{

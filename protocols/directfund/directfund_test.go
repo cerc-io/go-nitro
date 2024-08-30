@@ -158,7 +158,7 @@ func TestUpdate(t *testing.T) {
 	highBlockNum := uint64(200)
 	_, err = updated.C.UpdateWithChainEvent(
 		chainservice.NewDepositedEvent(
-			types.Destination{}, chainservice.Block{BlockNum: highBlockNum}, 0, common.Address{}, big.NewInt(3),
+			types.Destination{}, chainservice.Block{BlockNum: highBlockNum}, 0, common.Address{}, big.NewInt(3), common.Hash{},
 		),
 	)
 	if err != nil {

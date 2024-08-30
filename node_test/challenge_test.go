@@ -432,7 +432,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	}
 
 	// Listen for challenge registered event
-	event := waitForEvent(t, testChainService.EventFeed(), chainservice.ChallengeRegisteredEvent{})
+	event := waitForEvent(t, testChainService.EventEngineFeed(), chainservice.ChallengeRegisteredEvent{})
 	t.Log("Challenge registed event received", event)
 	challengeRegisteredEvent, ok := event.(chainservice.ChallengeRegisteredEvent)
 	testhelpers.Assert(t, ok, "Expected challenge registered event")
@@ -450,7 +450,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	}
 
 	// Listen for challenge registered event
-	event = waitForEvent(t, testChainService.EventFeed(), chainservice.ChallengeRegisteredEvent{})
+	event = waitForEvent(t, testChainService.EventEngineFeed(), chainservice.ChallengeRegisteredEvent{})
 	t.Log("Challenge registed event received", event)
 	challengeRegisteredEvent, ok = event.(chainservice.ChallengeRegisteredEvent)
 	testhelpers.Assert(t, ok, "Expected challenge registered event")
@@ -487,7 +487,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	}
 
 	// Listen for reclaimed event
-	event = waitForEvent(t, testChainService.EventFeed(), chainservice.ReclaimedEvent{})
+	event = waitForEvent(t, testChainService.EventEngineFeed(), chainservice.ReclaimedEvent{})
 	_, ok = event.(chainservice.ReclaimedEvent)
 	testhelpers.Assert(t, ok, "Expected reclaimed event")
 
@@ -527,7 +527,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 	testhelpers.Assert(t, err == nil, "Expected assets liquidated")
 
 	// Listen for allocation updated event
-	event = waitForEvent(t, testChainService.EventFeed(), chainservice.AllocationUpdatedEvent{})
+	event = waitForEvent(t, testChainService.EventEngineFeed(), chainservice.AllocationUpdatedEvent{})
 	_, ok = event.(chainservice.AllocationUpdatedEvent)
 	testhelpers.Assert(t, ok, "Expected allocation updated event")
 

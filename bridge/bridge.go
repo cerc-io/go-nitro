@@ -399,7 +399,7 @@ func (b *Bridge) getUpdateMirrorChannelStateTransaction(con *consensus_channel.C
 
 // Set L2AssetAddress => L1AssetAddress if it doesn't already exist on L1 chain
 func (b *Bridge) updateOnchainAssetAddressMap() error {
-	var listenForAssetAddressUpdateEvent bool
+	l1AssetAddressesTxSent := make(map[common.Address]struct{})
 
 	for l1AssetAddress, l2AssetAddress := range b.L1ToL2AssetAddressMap {
 		l1OnchainAssetAddress, err := b.chainServiceL1.GetL1AssetAddressFromL2(l2AssetAddress)
@@ -411,17 +411,27 @@ func (b *Bridge) updateOnchainAssetAddressMap() error {
 			setL2ToL1AssetAddressTxToSubmit := protocols.NewSetL2ToL1AssetAddressTransaction(l1AssetAddress, l2AssetAddress)
 			_, err := b.chainServiceL1.SendTransaction(setL2ToL1AssetAddressTxToSubmit)
 			if err != nil {
-				return fmt.Errorf("error in send transaction %w", err)
+				return fmt.Errorf("failed to send transaction for updating asset address mapping: %w", err)
 			}
-			listenForAssetAddressUpdateEvent = true
+			l1AssetAddressesTxSent[l1AssetAddress] = struct{}{}
 		}
 	}
 
-	if listenForAssetAddressUpdateEvent {
-		event := <-b.chainServiceL1.BridgeEventFeed()
-		_, ok := event.(chainservice.AssetAddressUpdatedEvent)
-		if !ok {
-			return fmt.Errorf("event mismatch on updation of asset address")
+	if len(l1AssetAddressesTxSent) > 0 {
+		for event := range b.chainServiceL1.EventFeed() {
+			assetMapUpdatedEvent, ok := event.(chainservice.AssetMapUpdatedEvent)
+			if !ok {
+				continue
+			}
+
+			_, ok = l1AssetAddressesTxSent[assetMapUpdatedEvent.L1AssetAddress]
+			if ok {
+				delete(l1AssetAddressesTxSent, assetMapUpdatedEvent.L1AssetAddress)
+			}
+
+			if len(l1AssetAddressesTxSent) == 0 {
+				break
+			}
 		}
 	}
 
@@ -534,10 +544,10 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 		case l2DroppedEvent := <-b.chainServiceL2.DroppedEventFeed():
 			err = b.checkAndRetryDroppedTxs(l2DroppedEvent, b.chainServiceL2)
 
-		case l1ConfirmedEvent := <-b.chainServiceL1.BridgeEventFeed():
+		case l1ConfirmedEvent := <-b.chainServiceL1.EventFeed():
 			b.sentTxs.Delete(l1ConfirmedEvent.TxHash().String())
 
-		case l2ConfirmedEvent := <-b.chainServiceL2.BridgeEventFeed():
+		case l2ConfirmedEvent := <-b.chainServiceL2.EventFeed():
 			b.sentTxs.Delete(l2ConfirmedEvent.TxHash().String())
 
 		case <-ctx.Done():

@@ -18,10 +18,6 @@ type Event interface {
 	ChannelID() types.Destination
 	Block() Block
 	TxIndex() uint
-}
-
-type BridgeEvent interface {
-	Event
 	TxHash() common.Hash
 }
 
@@ -30,6 +26,7 @@ type commonEvent struct {
 	channelID types.Destination
 	block     Block
 	txIndex   uint
+	txHash    common.Hash
 }
 
 func (ce commonEvent) ChannelID() types.Destination {
@@ -42,6 +39,10 @@ func (ce commonEvent) Block() Block {
 
 func (ce commonEvent) TxIndex() uint {
 	return ce.txIndex
+}
+
+func (ce commonEvent) TxHash() common.Hash {
+	return ce.txHash
 }
 
 type assetAndAmount struct {
@@ -101,9 +102,10 @@ func NewChallengeRegisteredEvent(
 	sigs []state.Signature,
 	finalizesAt *big.Int,
 	isInitiatedByMe bool,
+	txhash common.Hash,
 ) ChallengeRegisteredEvent {
 	return ChallengeRegisteredEvent{
-		commonEvent: commonEvent{channelID: channelId, block: block, txIndex: txIndex},
+		commonEvent: commonEvent{channelID: channelId, block: block, txIndex: txIndex, txHash: txhash},
 		candidate: state.VariablePart{
 			AppData: variablePart.AppData,
 			Outcome: variablePart.Outcome,
@@ -151,12 +153,12 @@ func (cr ChallengeRegisteredEvent) String() string {
 	return "Challenge registered for Channel " + cr.channelID.String() + " at Block " + fmt.Sprint(cr.block.BlockNum)
 }
 
-func NewDepositedEvent(channelId types.Destination, block Block, txIndex uint, assetAddress common.Address, nowHeld *big.Int) DepositedEvent {
-	return DepositedEvent{commonEvent{channelId, block, txIndex}, assetAddress, nowHeld}
+func NewDepositedEvent(channelId types.Destination, block Block, txIndex uint, assetAddress common.Address, nowHeld *big.Int, txhash common.Hash) DepositedEvent {
+	return DepositedEvent{commonEvent{channelId, block, txIndex, txhash}, assetAddress, nowHeld}
 }
 
-func NewAllocationUpdatedEvent(channelId types.Destination, block Block, txIndex uint, assetAddress common.Address, assetAmount *big.Int) AllocationUpdatedEvent {
-	return AllocationUpdatedEvent{commonEvent{channelId, block, txIndex}, assetAndAmount{AssetAddress: assetAddress, AssetAmount: assetAmount}}
+func NewAllocationUpdatedEvent(channelId types.Destination, block Block, txIndex uint, assetAddress common.Address, assetAmount *big.Int, txhash common.Hash) AllocationUpdatedEvent {
+	return AllocationUpdatedEvent{commonEvent{channelId, block, txIndex, txhash}, assetAndAmount{AssetAddress: assetAddress, AssetAmount: assetAmount}}
 }
 
 type ChallengeClearedEvent struct {
@@ -168,8 +170,8 @@ func (cc ChallengeClearedEvent) String() string {
 	return "Challenge cleared for Channel " + cc.channelID.String() + " at Block " + fmt.Sprint(cc.block.BlockNum)
 }
 
-func NewChallengeClearedEvent(channelId types.Destination, block Block, txIndex uint, newTurnNumRecord *big.Int) ChallengeClearedEvent {
-	return ChallengeClearedEvent{commonEvent: commonEvent{channelID: channelId, block: block, txIndex: txIndex}, newTurnNumRecord: newTurnNumRecord}
+func NewChallengeClearedEvent(channelId types.Destination, block Block, txIndex uint, newTurnNumRecord *big.Int, txhash common.Hash) ChallengeClearedEvent {
+	return ChallengeClearedEvent{commonEvent: commonEvent{channelID: channelId, block: block, txIndex: txIndex, txHash: txhash}, newTurnNumRecord: newTurnNumRecord}
 }
 
 type ReclaimedEvent struct {
@@ -181,17 +183,22 @@ func (re ReclaimedEvent) String() string {
 	return "Reclaim event for Channel " + re.channelID.String() + " at Block " + fmt.Sprint(re.block.BlockNum)
 }
 
-type AssetAddressUpdatedEvent struct {
+type AssetMapUpdatedEvent struct {
 	commonEvent
-	txHash common.Hash
+	L1AssetAddress, L2AssetAddress common.Address
 }
 
-func (aaue AssetAddressUpdatedEvent) String() string {
-	return "Asset address updated event at Block " + fmt.Sprint(aaue.block.BlockNum)
+func (aaue AssetMapUpdatedEvent) String() string {
+	return "Asset map updated event at Block " + fmt.Sprint(aaue.block.BlockNum)
 }
 
-func (aaue AssetAddressUpdatedEvent) TxHash() common.Hash {
-	return aaue.txHash
+type L2ToL1MapUpdated struct {
+	commonEvent
+	l1ChannelId, l2ChannelId types.Destination
+}
+
+func (aaue L2ToL1MapUpdated) String() string {
+	return "L2ToL1 map updated event at Block " + fmt.Sprint(aaue.block.BlockNum)
 }
 
 // ChainEventHandler describes an objective that can handle chain events
@@ -200,10 +207,10 @@ type ChainEventHandler interface {
 }
 
 type ChainService interface {
-	// EventFeed returns a chan for receiving events from the chain service
+	// EventEngineFeed returns a chan for receiving events from the chain service
+	EventEngineFeed() <-chan Event
+	// EventFeed returns a chan for receiving bridge events from the chain service
 	EventFeed() <-chan Event
-	// BridgeEventFeed returns a chan for receiving bridge events from the chain service
-	BridgeEventFeed() <-chan BridgeEvent
 	// Dropped event engine feed returns a chan for catching dropped events from chain service used by engine
 	DroppedEventEngineFeed() <-chan protocols.DroppedEventInfo
 	// TODO: Add comment
@@ -224,7 +231,6 @@ type ChainService interface {
 	// GetL1ChannelFromL2 returns the L1 ledger channel ID from the L2 ledger channel by making a contract call to the l2ToL1 map of the Nitro Adjudicator contract
 	GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error)
 	GetL1AssetAddressFromL2(l2AssetAddress common.Address) (common.Address, error)
-	GetChain() ethChain
 	// Close closes the ChainService
 	Close() error
 }

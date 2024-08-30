@@ -502,19 +502,19 @@ func (b *Bridge) CompletedMirrorChannels() <-chan types.Destination {
 	return b.completedMirrorChannels
 }
 
-func (b *Bridge) RetryTx(objectiveId protocols.ObjectiveId) error {
+func (b *Bridge) RetryObjectiveTx(objectiveId protocols.ObjectiveId) error {
 	if bridgedfund.IsBridgedFundObjective(objectiveId) {
-		b.nodeL2.RetryTx(objectiveId)
+		b.nodeL2.RetryObjectiveTx(objectiveId)
 		return nil
 	}
 	if directfund.IsDirectFundObjective(objectiveId) {
-		b.nodeL1.RetryTx(objectiveId)
+		b.nodeL1.RetryObjectiveTx(objectiveId)
 		return nil
 	}
 	return fmt.Errorf("objective with given Id is not supported for retrying")
 }
 
-func (b *Bridge) RetryBridgeTx(txHash common.Hash) error {
+func (b *Bridge) RetryTx(txHash common.Hash) error {
 	txToRetry, ok := b.sentTxs.Load(txHash.String())
 	if !ok {
 		return fmt.Errorf("Tx with given hash %s was either complete or cannot be found", txHash)

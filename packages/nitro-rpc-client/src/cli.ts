@@ -634,7 +634,7 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "retry-tx <objectiveId>",
+    "retry-objective-tx <objectiveId>",
     "Retries transaction for given objective",
     (yargsBuilder) => {
       return yargsBuilder.positional("objectiveId", {
@@ -654,7 +654,7 @@ yargs(hideBin(process.argv))
         isSecure
       );
 
-      const id = await rpcClient.RetryTx(yargs.objectiveId);
+      const id = await rpcClient.RetryObjectiveTx(yargs.objectiveId);
 
       console.log(`Transaction retried for objective ${id}`);
       await rpcClient.Close();
@@ -662,11 +662,11 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "retry-bridge-txs <txHash>",
-    "Retries transaction for given objective",
+    "retry-tx <txHash>",
+    "Retries transaction with given transaction hash",
     (yargsBuilder) => {
       return yargsBuilder.positional("txHash", {
-        describe: "The id of the objective to send transaction for",
+        describe: "Hash of transaction to retry",
         type: "string",
         demandOption: true,
       });
@@ -682,7 +682,7 @@ yargs(hideBin(process.argv))
         isSecure
       );
 
-      const txHash = await rpcClient.RetryBridgeTx(yargs.txHash);
+      const txHash = await rpcClient.RetryTx(yargs.txHash);
 
       console.log(`Transaction with hash ${txHash} retried`);
       await rpcClient.Close();

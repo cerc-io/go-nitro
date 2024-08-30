@@ -238,9 +238,9 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 
 				return string(marshalledState), nil
 			})
-		case serde.RetryTxMethod:
-			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.RetryTxRequest) (protocols.ObjectiveId, error) {
-				nrs.node.RetryTx(req.ObjectiveId)
+		case serde.RetryObjectiveTxMethod:
+			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.RetryObjectiveTxRequest) (protocols.ObjectiveId, error) {
+				nrs.node.RetryObjectiveTx(req.ObjectiveId)
 				return req.ObjectiveId, nil
 			})
 		case serde.GetObjectiveMethod:

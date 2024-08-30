@@ -40,6 +40,6 @@ const (
 	Challenge
 )
 
-type RetryTxRequest struct {
+type RetryObjectiveTxRequest struct {
 	ObjectiveId string
 }

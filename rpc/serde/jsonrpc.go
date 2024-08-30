@@ -45,9 +45,9 @@ const (
 	GetSignedStateMethod RequestMethod = "get_signed_state"
 
 	// Chain reorgs workaround methods
-	GetObjectiveMethod  RequestMethod = "get_objective"
-	RetryTxMethod       RequestMethod = "retry_tx"
-	RetryBridgeTxMethod RequestMethod = "retry_bridge_tx"
+	GetObjectiveMethod     RequestMethod = "get_objective"
+	RetryObjectiveTxMethod RequestMethod = "retry_objective_tx"
+	RetryTxMethod          RequestMethod = "retry_tx"
 )
 
 type NotificationMethod string
@@ -102,11 +102,11 @@ type ValidateVoucherRequest struct {
 	Signer      common.Address
 	Value       uint64
 }
-type RetryTxRequest struct {
+type RetryObjectiveTxRequest struct {
 	ObjectiveId protocols.ObjectiveId
 }
 
-type RetryBridgeTxRequest struct {
+type RetryTxRequest struct {
 	TxHash common.Hash
 }
 
@@ -149,8 +149,8 @@ type RequestPayload interface {
 		CounterChallengeRequest |
 		ValidateVoucherRequest |
 		bridgeddefund.ObjectiveRequest |
+		RetryObjectiveTxRequest |
 		RetryTxRequest |
-		RetryBridgeTxRequest |
 		GetObjectiveRequest |
 		GetL2ObjectiveFromL1Request |
 		GetPendingBridgeTxsRequest

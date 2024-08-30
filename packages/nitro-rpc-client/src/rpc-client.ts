@@ -160,12 +160,12 @@ export class NitroRpcClient implements RpcClientApi {
     return this.sendRequest("create_ledger_channel", payload);
   }
 
-  public async RetryTx(objectiveId: string): Promise<string> {
-    return this.sendRequest("retry_tx", { ObjectiveId: objectiveId });
+  public async RetryObjectiveTx(objectiveId: string): Promise<string> {
+    return this.sendRequest("retry_objective_tx", { ObjectiveId: objectiveId });
   }
 
-  public async RetryBridgeTx(txHash: string): Promise<string> {
-    return this.sendRequest("retry_bridge_tx", { TxHash: txHash });
+  public async RetryTx(txHash: string): Promise<string> {
+    return this.sendRequest("retry_tx", { TxHash: txHash });
   }
 
   public async CreatePaymentChannel(

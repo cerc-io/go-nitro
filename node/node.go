@@ -412,6 +412,6 @@ func (n *Node) CounterChallenge(id types.Destination, action types.CounterChalle
 	n.engine.CounterChallengeRequestsFromAPI <- engine.CounterChallengeRequest{ChannelId: id, Action: action, Payload: payload}
 }
 
-func (n *Node) RetryTx(objectiveId protocols.ObjectiveId) {
-	n.engine.RetryTxRequestFromAPI <- types.RetryTxRequest{ObjectiveId: string(objectiveId)}
+func (n *Node) RetryObjectiveTx(objectiveId protocols.ObjectiveId) {
+	n.engine.RetryObjectiveTxRequestFromAPI <- types.RetryObjectiveTxRequest{ObjectiveId: string(objectiveId)}
 }

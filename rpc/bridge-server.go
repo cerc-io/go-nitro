@@ -117,14 +117,14 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 
 				return brs.bridge.MirrorBridgedDefund(req.ChannelId, l2SignedState, req.IsChallenge)
 			})
-		case serde.RetryTxMethod:
-			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.RetryTxRequest) (protocols.ObjectiveId, error) {
-				err := brs.bridge.RetryTx(req.ObjectiveId)
+		case serde.RetryObjectiveTxMethod:
+			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.RetryObjectiveTxRequest) (protocols.ObjectiveId, error) {
+				err := brs.bridge.RetryObjectiveTx(req.ObjectiveId)
 				return req.ObjectiveId, err
 			})
-		case serde.RetryBridgeTxMethod:
-			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.RetryBridgeTxRequest) (string, error) {
-				err := brs.bridge.RetryBridgeTx(req.TxHash)
+		case serde.RetryTxMethod:
+			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.RetryTxRequest) (string, error) {
+				err := brs.bridge.RetryTx(req.TxHash)
 				return req.TxHash.String(), err
 			})
 		case serde.GetObjectiveMethod:

@@ -116,13 +116,13 @@ export type DirectFundRequest = JsonRpcRequest<
   "create_ledger_channel",
   DirectFundPayload
 >;
-export type RetryTxRequest = JsonRpcRequest<
-  "retry_tx",
+export type RetryObjectiveTxRequest = JsonRpcRequest<
+  "retry_objective_tx",
   {
     ObjectiveId: string;
   }
 >;
-export type RetryBridgeTxRequest = JsonRpcRequest<
+export type RetryTxRequest = JsonRpcRequest<
   "retry_tx",
   {
     TxHash: string;
@@ -223,8 +223,8 @@ export type VirtualFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type VersionResponse = JsonRpcResponse<string>;
 export type GetAddressResponse = JsonRpcResponse<string>;
 export type DirectFundResponse = JsonRpcResponse<ObjectiveResponse>;
+export type RetryObjectiveTxResponse = JsonRpcResponse<string>;
 export type RetryTxResponse = JsonRpcResponse<string>;
-export type RetryBridgeTxResponse = JsonRpcResponse<string>;
 export type DirectDefundResponse = JsonRpcResponse<string>;
 export type MirrorBridgedDefundResponse = JsonRpcResponse<string>;
 export type BridgedDefundResponse = JsonRpcResponse<string>;
@@ -246,8 +246,8 @@ export type ReceiveVoucherResponse = JsonRpcResponse<ReceiveVoucherResult>;
 export type RPCRequestAndResponses = {
   get_auth_token: [GetAuthTokenRequest, GetAuthTokenResponse];
   create_ledger_channel: [DirectFundRequest, DirectFundResponse];
+  retry_objective_tx: [RetryObjectiveTxRequest, RetryObjectiveTxResponse];
   retry_tx: [RetryTxRequest, RetryTxResponse];
-  retry_bridge_tx: [RetryBridgeTxRequest, RetryBridgeTxResponse];
   close_ledger_channel: [DirectDefundRequest, DirectDefundResponse];
   close_bridge_channel: [BridgedDefundRequest, BridgedDefundResponse];
   mirror_bridged_defund: [

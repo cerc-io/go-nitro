@@ -49,5 +49,19 @@ func setupBridgeWithRPCClient(
 		panic(err)
 	}
 
+	// TODO: Add cleanup function to close bridge server and client
+
 	return rpcClient
+}
+
+func TestBridgeFlow() {
+	// TODO: Check if bridge client is really required
+
+	// TODO: Use setup function to setup bridge server and client
+	// TODO: use node setup function to setup L1 and L2 nodes
+	// TODO: Perform directfund between L1 node and bridge using L1 node's RPC client
+	// TODO: Check that bridge channel is established
+	// TODO: Create virtual channel, make payments and close virtual channel
+	// TODO: Close bridge channel using L2 node's RPC client
+	// TODO: Check that corresponding ledger channel is closed
 }

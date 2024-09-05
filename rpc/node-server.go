@@ -24,7 +24,7 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
-const DISABLE_BRIDGE_DEFUND = true
+const DISABLE_BRIDGE_DEFUND = false
 
 type NodeRpcServer struct {
 	*BaseRpcServer

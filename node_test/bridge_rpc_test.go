@@ -2,6 +2,7 @@ package node_test
 
 import (
 	"crypto/tls"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -158,10 +159,42 @@ func TestBridgeFlow(t *testing.T) {
 
 	// TODO: Use setup function to setup bridge server and client
 	bridgeClient, nodeL1MultiAddress, nodeL2MultiAddress := setupBridgeWithRPCClient(t, bridgeConfig)
+	bridgeAddress, _ := bridgeClient.Address()
 	// TODO: use node setup function to setup L1 and L2 nodes
 	nodeARpcClient, _, _ := setupNitroNodeWithRPCClient(t, tcL1.Participants[0].PrivateKey, int(tcL1.Participants[0].Port), int(tcL1.Participants[0].WSPort), 4007, nodeAChainservice, transport.Http, []string{nodeL1MultiAddress})
+	nodeAAddress, _ := nodeARpcClient.Address()
 
 	nodeAPrimeRpcClient, _, _ := setupNitroNodeWithRPCClient(t, tcL2.Participants[0].PrivateKey, int(tcL2.Participants[0].Port), int(tcL2.Participants[0].WSPort), 4008, nodeAPrimeChainservice, transport.Http, []string{nodeL2MultiAddress})
+	fmt.Println(">>>>nodeAPrimeRpcClient", nodeAPrimeRpcClient)
+	outcome := simpleOutcome(nodeAAddress, bridgeAddress, 100, 100)
+	ledgerChannel, err := nodeARpcClient.CreateLedgerChannel(bridgeAddress, 100, outcome)
+	fmt.Println(">>>>>LEDGER CHANNEL ID", ledgerChannel.Id)
+	time.Sleep(10 * time.Second)
+	l2Channel, err := bridgeClient.GetL2ChannelFromL1(ledgerChannel.ChannelId)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(">>>>>Mirror CHANNEL ID", l2Channel)
+	time.Sleep(10 * time.Second)
+
+	initialOutcome := simpleOutcome(nodeAAddress, bridgeAddress, 100, 0)
+
+	virtualChannelResponse, err := nodeAPrimeRpcClient.CreatePaymentChannel(
+		nil,
+		bridgeAddress,
+		100,
+		initialOutcome,
+	)
+	fmt.Println(">>>>>Virtual channel", virtualChannelResponse.ChannelId)
+	time.Sleep(10 * time.Second)
+	nodeAPrimeRpcClient.Pay(virtualChannelResponse.ChannelId, 1)
+	time.Sleep(3 * time.Second)
+
+	nodeAPrimeRpcClient.ClosePaymentChannel(virtualChannelResponse.ChannelId)
+	time.Sleep(10 * time.Second)
+
+	nodeAPrimeRpcClient.CloseBridgeChannel(l2Channel)
+	time.Sleep(10 * time.Second)
 
 	// TODO: Use clients to perform following flow
 	// TODO: Perform directfund between L1 node and bridge using L1 node's RPC client

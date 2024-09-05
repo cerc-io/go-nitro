@@ -41,6 +41,7 @@ const (
 	// Bridge methods
 	GetAllL2ChannelsRequestMethod RequestMethod = "get_all_l2_channels"
 	GetL2ObjectiveFromL1Method    RequestMethod = "get_l2_objective_from_l1"
+	GetL2ChannelFromL1Method      RequestMethod = "get_l2_channel_from_l1"
 	GetPendingBridgeTxsMethod     RequestMethod = "get_pending_bridge_txs"
 
 	GetSignedStateMethod RequestMethod = "get_signed_state"
@@ -120,6 +121,10 @@ type GetL2ObjectiveFromL1Request struct {
 	L1ObjectiveId protocols.ObjectiveId
 }
 
+type GetL2ChannelFromL1Request struct {
+	L1ChannelId types.Destination
+}
+
 type GetPendingBridgeTxsRequest struct {
 	ChannelId types.Destination
 }
@@ -154,7 +159,8 @@ type RequestPayload interface {
 		RetryTxRequest |
 		GetObjectiveRequest |
 		GetL2ObjectiveFromL1Request |
-		GetPendingBridgeTxsRequest
+		GetPendingBridgeTxsRequest |
+		GetL2ChannelFromL1Request
 }
 
 type NotificationPayload interface {
@@ -200,7 +206,8 @@ type ResponsePayload interface {
 		payments.ReceiveVoucherSummary |
 		CounterChallengeRequest |
 		ValidateVoucherResponse |
-		types.NodeInfo
+		types.NodeInfo |
+		types.Destination
 }
 
 type JsonRpcSuccessResponse[T ResponsePayload] struct {

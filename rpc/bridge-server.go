@@ -170,6 +170,20 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 
 				return string(marshalledPendingBridgeTxs), nil
 			})
+		case serde.GetL2ChannelFromL1Method:
+			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.GetL2ChannelFromL1Request) (types.Destination, error) {
+				l2ChannelId, ok := brs.bridge.GetL2ChannelIdByL1ChannelId(req.L1ChannelId)
+
+				if ok {
+					return types.Destination{}, nil
+				}
+
+				return l2ChannelId, nil
+			})
+		case serde.GetAddressMethod:
+			return processRequest(brs.BaseRpcServer, permNone, requestData, func(req serde.NoPayloadRequest) (string, error) {
+				return brs.bridge.GetBridgeAddress().Hex(), nil
+			})
 		case serde.GetNodeInfoRequestMethod:
 			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.NoPayloadRequest) (types.NodeInfo, error) {
 				return brs.bridge.GetNodeInfo(), nil

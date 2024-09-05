@@ -16,6 +16,7 @@ import (
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
+	"github.com/statechannels/go-nitro/protocols/bridgeddefund"
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
@@ -81,6 +82,10 @@ type RpcClientApi interface {
 	PaymentChannelUpdatesChan(paymentChannelId types.Destination) <-chan query.PaymentChannelInfo
 
 	ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value uint64) (serde.ValidateVoucherResponse, error)
+
+	GetL2ChannelFromL1(l1Channel types.Destination) (types.Destination, error)
+
+	CloseBridgeChannel(id types.Destination) (protocols.ObjectiveId, error)
 }
 
 // rpcClient is the implementation
@@ -211,6 +216,13 @@ func (rc *rpcClient) GetAllLedgerChannels() ([]query.LedgerChannelInfo, error) {
 	return waitForAuthorizedRequest[serde.NoPayloadRequest, []query.LedgerChannelInfo](rc, serde.GetAllLedgerChannelsMethod, struct{}{})
 }
 
+func (rc *rpcClient) GetL2ChannelFromL1(l1Channel types.Destination) (types.Destination, error) {
+	req := serde.GetL2ChannelFromL1Request{
+		L1ChannelId: l1Channel,
+	}
+	return waitForAuthorizedRequest[serde.GetL2ChannelFromL1Request, types.Destination](rc, serde.GetL2ChannelFromL1Method, req)
+}
+
 // GetPaymentChannelsByLedger returns all active payment channels for a given ledger channel
 func (rc *rpcClient) GetPaymentChannelsByLedger(ledgerId types.Destination) ([]query.PaymentChannelInfo, error) {
 	return waitForAuthorizedRequest[serde.GetPaymentChannelsByLedgerRequest, []query.PaymentChannelInfo](rc, serde.GetPaymentChannelsByLedgerMethod, serde.GetPaymentChannelsByLedgerRequest{LedgerId: ledgerId})
@@ -233,6 +245,12 @@ func (rc *rpcClient) CloseLedgerChannel(id types.Destination, isChallenge bool) 
 	objReq := directdefund.NewObjectiveRequest(id, isChallenge)
 
 	return waitForAuthorizedRequest[directdefund.ObjectiveRequest, protocols.ObjectiveId](rc, serde.CloseLedgerChannelRequestMethod, objReq)
+}
+
+func (rc *rpcClient) CloseBridgeChannel(id types.Destination) (protocols.ObjectiveId, error) {
+	objReq := bridgeddefund.NewObjectiveRequest(id)
+
+	return waitForAuthorizedRequest[bridgeddefund.ObjectiveRequest, protocols.ObjectiveId](rc, serde.CloseBridgeChannelRequestMethod, objReq)
 }
 
 // Pay uses the specified channel to pay the specified amount

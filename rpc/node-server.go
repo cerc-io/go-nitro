@@ -166,6 +166,10 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req virtualdefund.ObjectiveRequest) (protocols.ObjectiveId, error) {
 				return nrs.node.ClosePaymentChannel(req.ChannelId)
 			})
+		case serde.GetNodeInfoRequestMethod:
+			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.NoPayloadRequest) (types.NodeInfo, error) {
+				return nrs.node.GetNodeInfo(), nil
+			})
 		case serde.PayRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.PaymentRequest) (serde.PaymentRequest, error) {
 				if err := serde.ValidatePaymentRequest(req); err != nil {

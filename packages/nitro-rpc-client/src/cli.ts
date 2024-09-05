@@ -60,6 +60,25 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "get-node-info",
+    "Get the information of the nitro node",
+    async () => {},
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+      const nodeInfo = await rpcClient.GetNodeInfo();
+      console.log(nodeInfo);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "address",
     "Get the address of the Nitro RPC server",
     async () => {},

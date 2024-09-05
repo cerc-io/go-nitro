@@ -43,3 +43,8 @@ const (
 type RetryObjectiveTxRequest struct {
 	ObjectiveId string
 }
+
+type NodeInfo struct {
+	SCAddress            string
+	MessageServicePeerId string
+}

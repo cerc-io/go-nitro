@@ -32,6 +32,7 @@ const (
 	GetLedgerChannelRequestMethod     RequestMethod = "get_ledger_channel"
 	GetPaymentChannelsByLedgerMethod  RequestMethod = "get_payment_channels_by_ledger"
 	GetAllLedgerChannelsMethod        RequestMethod = "get_all_ledger_channels"
+	GetNodeInfoRequestMethod          RequestMethod = "get_node_info"
 	CreateVoucherRequestMethod        RequestMethod = "create_voucher"
 	ReceiveVoucherRequestMethod       RequestMethod = "receive_voucher"
 	CounterChallengeRequestMethod     RequestMethod = "counter_challenge"
@@ -198,7 +199,8 @@ type ResponsePayload interface {
 		string |
 		payments.ReceiveVoucherSummary |
 		CounterChallengeRequest |
-		ValidateVoucherResponse
+		ValidateVoucherResponse |
+		types.NodeInfo
 }
 
 type JsonRpcSuccessResponse[T ResponsePayload] struct {

@@ -18,6 +18,7 @@ import {
   CounterChallengeResult,
   ObjectiveCompleteNotification,
   MirrorBridgedDefundObjectiveRequest,
+  GetNodeInfo,
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -261,6 +262,10 @@ export class NitroRpcClient implements RpcClientApi {
 
   public async GetVersion(): Promise<string> {
     return this.sendRequest("version", {});
+  }
+
+  public async GetNodeInfo(): Promise<GetNodeInfo> {
+    return this.sendRequest("get_node_info", {});
   }
 
   public async GetAddress(): Promise<string> {

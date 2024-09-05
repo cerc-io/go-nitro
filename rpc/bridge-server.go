@@ -13,6 +13,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/bridgeddefund"
 	"github.com/statechannels/go-nitro/rpc/serde"
 	"github.com/statechannels/go-nitro/rpc/transport"
+	"github.com/statechannels/go-nitro/types"
 )
 
 type BridgeRpcServer struct {
@@ -168,6 +169,10 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 				}
 
 				return string(marshalledPendingBridgeTxs), nil
+			})
+		case serde.GetNodeInfoRequestMethod:
+			return processRequest(brs.BaseRpcServer, permSign, requestData, func(req serde.NoPayloadRequest) (types.NodeInfo, error) {
+				return brs.bridge.GetNodeInfo(), nil
 			})
 		default:
 			errRes := serde.NewJsonRpcErrorResponse(jsonrpcReq.Id, serde.MethodNotFoundError)

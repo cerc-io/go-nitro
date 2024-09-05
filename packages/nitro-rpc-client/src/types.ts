@@ -210,6 +210,11 @@ export type CreateVoucherRequest = JsonRpcRequest<
 
 export type ReceiveVoucherRequest = JsonRpcRequest<"receive_voucher", Voucher>;
 
+export type GetNodeInfoRequest = JsonRpcRequest<
+  "get_node_info",
+  Record<string, never>
+>;
+
 /**
  * RPC Responses
  */
@@ -221,6 +226,7 @@ export type CounterChallengeResponse = JsonRpcResponse<CounterChallengeResult>;
 export type GetLedgerChannelResponse = JsonRpcResponse<LedgerChannelInfo>;
 export type VirtualFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type VersionResponse = JsonRpcResponse<string>;
+export type GetNodeInfoResponse = JsonRpcResponse<GetNodeInfo>;
 export type GetAddressResponse = JsonRpcResponse<string>;
 export type DirectFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type RetryObjectiveTxResponse = JsonRpcResponse<string>;
@@ -255,6 +261,7 @@ export type RPCRequestAndResponses = {
     MirrorBridgedDefundResponse
   ];
   version: [VersionRequest, VersionResponse];
+  get_node_info: [GetNodeInfoRequest, GetNodeInfoResponse];
   create_payment_channel: [VirtualFundRequest, VirtualFundResponse];
   get_address: [GetAddressRequest, GetAddressResponse];
   get_ledger_channel: [GetLedgerChannelRequest, GetLedgerChannelResponse];
@@ -400,3 +407,8 @@ export enum ChannelMode {
   Challenge,
   Finalized,
 }
+
+export type GetNodeInfo = {
+  SCAddress: string;
+  MessageServicePeerId: string;
+};

@@ -617,3 +617,7 @@ func (b *Bridge) GetPendingBridgeTxs(channelId types.Destination) []PendingTx {
 
 	return foundPendingTx
 }
+
+func (b *Bridge) GetNodeInfo() types.NodeInfo {
+	return b.nodeL1.GetNodeInfo()
+}

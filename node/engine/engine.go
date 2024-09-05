@@ -1326,3 +1326,10 @@ func (e *Engine) checkError(err error) {
 		panic(err)
 	}
 }
+
+func (e *Engine) GetNodeInfo() types.NodeInfo {
+	return types.NodeInfo{
+		SCAddress:            e.store.GetAddress().String(),
+		MessageServicePeerId: e.msg.PeerId(),
+	}
+}

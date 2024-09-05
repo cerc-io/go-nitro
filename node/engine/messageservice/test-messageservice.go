@@ -118,6 +118,10 @@ func (tms TestMessageService) Close() error {
 	return nil
 }
 
+func (tms TestMessageService) PeerId() string {
+	return ""
+}
+
 // ┌──────────┐toMsg       in┌───────────┐
 // │          │  ───────────►|           │
 // │  Engine  │              │  Message  │

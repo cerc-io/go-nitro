@@ -15,4 +15,6 @@ type MessageService interface {
 	Send(protocols.Message) error
 	// Close closes the message service
 	Close() error
+
+	PeerId() string
 }

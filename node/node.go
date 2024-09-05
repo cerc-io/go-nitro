@@ -415,3 +415,7 @@ func (n *Node) CounterChallenge(id types.Destination, action types.CounterChalle
 func (n *Node) RetryObjectiveTx(objectiveId protocols.ObjectiveId) {
 	n.engine.RetryObjectiveTxRequestFromAPI <- types.RetryObjectiveTxRequest{ObjectiveId: string(objectiveId)}
 }
+
+func (n *Node) GetNodeInfo() types.NodeInfo {
+	return n.engine.GetNodeInfo()
+}

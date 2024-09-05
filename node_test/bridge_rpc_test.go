@@ -83,12 +83,12 @@ func TestBridgeFlow(t *testing.T) {
 		LogName:           "Bridge_test",
 		ChallengeDuration: 5,
 		Participants: []TestParticipant{
-			{StoreType: MemStore, Actor: testactors.BobPrime},
 			{StoreType: MemStore, Actor: testactors.AlicePrime},
+			{StoreType: MemStore, Actor: testactors.BobPrime},
 			{StoreType: MemStore, Actor: testactors.Irene},
 		},
 		ChainPort:     "8546",
-		deployerIndex: 0,
+		deployerIndex: 1,
 	}
 
 	dataFolder, _ := testhelpers.GenerateTempStoreFolder()
@@ -121,7 +121,7 @@ func TestBridgeFlow(t *testing.T) {
 		DurableStoreDir:   dataFolder,
 		BridgePublicIp:    DEFAULT_PUBLIC_IP,
 		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
-		NodeL2MsgPort:     int(tcL2.Participants[0].Port),
+		NodeL2MsgPort:     int(tcL2.Participants[1].Port),
 		Assets: []bridge.Asset{
 			{
 				L1AssetAddress: infraL1.anvilChain.ContractAddresses.TokenAddress.String(),
@@ -130,14 +130,38 @@ func TestBridgeFlow(t *testing.T) {
 		},
 	}
 
-	nodeAMockChainservice := chainservice.NewMockChainService(infraL1.mockChain, tcL1.Participants[0].Address())
-	nodeAPrimeMockChainservice := chainservice.NewMockChainService(infraL2.mockChain, tcL2.Participants[1].Address())
+	nodeAChainservice, err := chainservice.NewEthChainService(chainservice.ChainOpts{
+		ChainUrl:           infraL1.anvilChain.ChainUrl,
+		ChainStartBlockNum: 0,
+		ChainAuthToken:     infraL1.anvilChain.ChainAuthToken,
+		NaAddress:          infraL1.anvilChain.ContractAddresses.NaAddress,
+		VpaAddress:         infraL1.anvilChain.ContractAddresses.VpaAddress,
+		CaAddress:          infraL1.anvilChain.ContractAddresses.CaAddress,
+		ChainPk:            infraL1.anvilChain.ChainPks[tcL1.Participants[0].ChainAccountIndex],
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	nodeAPrimeChainservice, err := chainservice.NewL2ChainService(chainservice.L2ChainOpts{
+		ChainUrl:           infraL2.anvilChain.ChainUrl,
+		ChainStartBlockNum: 0,
+		ChainAuthToken:     infraL2.anvilChain.ChainAuthToken,
+		BridgeAddress:      infraL2.anvilChain.ContractAddresses.BridgeAddress,
+		CaAddress:          infraL2.anvilChain.ContractAddresses.CaAddress,
+		VpaAddress:         infraL2.anvilChain.ContractAddresses.VpaAddress,
+		ChainPk:            infraL2.anvilChain.ChainPks[tcL2.Participants[0].ChainAccountIndex],
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	// TODO: Use setup function to setup bridge server and client
 	bridgeClient, nodeL1MultiAddress, nodeL2MultiAddress := setupBridgeWithRPCClient(t, bridgeConfig)
 	// TODO: use node setup function to setup L1 and L2 nodes
-	nodeARpcClient, _, _ := setupNitroNodeWithRPCClient(t, tcL1.Participants[0].PrivateKey, int(tcL1.Participants[0].Port), int(tcL1.Participants[0].WSPort), 4007, nodeAMockChainservice, transport.Http, []string{nodeL1MultiAddress})
+	nodeARpcClient, _, _ := setupNitroNodeWithRPCClient(t, tcL1.Participants[0].PrivateKey, int(tcL1.Participants[0].Port), int(tcL1.Participants[0].WSPort), 4007, nodeAChainservice, transport.Http, []string{nodeL1MultiAddress})
 
-	nodeAPrimeRpcClient, _, _ := setupNitroNodeWithRPCClient(t, tcL2.Participants[1].PrivateKey, int(tcL2.Participants[1].Port), int(tcL2.Participants[1].WSPort), 4008, nodeAPrimeMockChainservice, transport.Http, []string{nodeL2MultiAddress})
+	nodeAPrimeRpcClient, _, _ := setupNitroNodeWithRPCClient(t, tcL2.Participants[0].PrivateKey, int(tcL2.Participants[0].Port), int(tcL2.Participants[0].WSPort), 4008, nodeAPrimeChainservice, transport.Http, []string{nodeL2MultiAddress})
 
 	// TODO: Use clients to perform following flow
 	// TODO: Perform directfund between L1 node and bridge using L1 node's RPC client

@@ -395,7 +395,7 @@ func setupNitroNodeWithRPCClient(
 	msgPort int,
 	wsMsgPort int,
 	rpcPort int,
-	chain *chainservice.MockChainService,
+	chain chainservice.ChainService,
 	connectionType transport.TransportType,
 	bootPeers []string,
 ) (rpc.RpcClientApi, *p2pms.P2PMessageService, func()) {

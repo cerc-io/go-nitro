@@ -233,11 +233,6 @@ func (ms *P2PMessageService) Id() peer.ID {
 	return ms.p2pHost.ID()
 }
 
-// PeerId returns the libp2p peer ID (string) of the message service.
-func (ms *P2PMessageService) PeerId() string {
-	return ms.p2pHost.ID().String()
-}
-
 // addScaddrDhtRecord adds this node's state channel address to the custom dht namespace
 func (ms *P2PMessageService) addScaddrDhtRecord(ctx context.Context) {
 	ms.logger.Debug("Adding state channel address to dht")

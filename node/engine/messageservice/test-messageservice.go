@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/libp2p/go-libp2p/core/peer"
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/protocols"
 	"github.com/statechannels/go-nitro/rand"
@@ -118,7 +119,7 @@ func (tms TestMessageService) Close() error {
 	return nil
 }
 
-func (tms TestMessageService) PeerId() string {
+func (tms TestMessageService) Id() peer.ID {
 	return ""
 }
 

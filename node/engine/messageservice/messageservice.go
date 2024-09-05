@@ -2,6 +2,7 @@
 package messageservice // import "github.com/statechannels/go-nitro/node/messageservice"
 
 import (
+	"github.com/libp2p/go-libp2p/core/peer"
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/protocols"
 )
@@ -16,5 +17,5 @@ type MessageService interface {
 	// Close closes the message service
 	Close() error
 
-	PeerId() string
+	Id() peer.ID
 }

@@ -1330,6 +1330,6 @@ func (e *Engine) checkError(err error) {
 func (e *Engine) GetNodeInfo() types.NodeInfo {
 	return types.NodeInfo{
 		SCAddress:            e.store.GetAddress().String(),
-		MessageServicePeerId: e.msg.PeerId(),
+		MessageServicePeerId: e.msg.Id().String(),
 	}
 }

@@ -2,7 +2,6 @@ package node_test
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -17,9 +16,13 @@ import (
 	"github.com/statechannels/go-nitro/internal/testhelpers"
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
 	Token "github.com/statechannels/go-nitro/node/engine/chainservice/erc20"
+	"github.com/statechannels/go-nitro/node/query"
+	"github.com/statechannels/go-nitro/protocols"
+	"github.com/statechannels/go-nitro/protocols/mirrorbridgeddefund"
 	"github.com/statechannels/go-nitro/rpc"
 	"github.com/statechannels/go-nitro/rpc/transport"
 	"github.com/statechannels/go-nitro/rpc/transport/http"
+	"github.com/statechannels/go-nitro/types"
 )
 
 const BRIDGE_RPC_PORT = 4006
@@ -157,49 +160,59 @@ func TestBridgeFlow(t *testing.T) {
 		panic(err)
 	}
 
-	// TODO: Use setup function to setup bridge server and client
 	bridgeClient, nodeL1MultiAddress, nodeL2MultiAddress := setupBridgeWithRPCClient(t, bridgeConfig)
 	bridgeAddress, _ := bridgeClient.Address()
-	// TODO: use node setup function to setup L1 and L2 nodes
 	nodeARpcClient, _, _ := setupNitroNodeWithRPCClient(t, tcL1.Participants[0].PrivateKey, int(tcL1.Participants[0].Port), int(tcL1.Participants[0].WSPort), 4007, nodeAChainservice, transport.Http, []string{nodeL1MultiAddress})
 	nodeAAddress, _ := nodeARpcClient.Address()
 
 	nodeAPrimeRpcClient, _, _ := setupNitroNodeWithRPCClient(t, tcL2.Participants[0].PrivateKey, int(tcL2.Participants[0].Port), int(tcL2.Participants[0].WSPort), 4008, nodeAPrimeChainservice, transport.Http, []string{nodeL2MultiAddress})
-	fmt.Println(">>>>nodeAPrimeRpcClient", nodeAPrimeRpcClient)
-	outcome := simpleOutcome(nodeAAddress, bridgeAddress, 100, 100)
-	ledgerChannel, err := nodeARpcClient.CreateLedgerChannel(bridgeAddress, 100, outcome)
-	fmt.Println(">>>>>LEDGER CHANNEL ID", ledgerChannel.Id)
-	time.Sleep(10 * time.Second)
-	l2Channel, err := bridgeClient.GetL2ChannelFromL1(ledgerChannel.ChannelId)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(">>>>>Mirror CHANNEL ID", l2Channel)
-	time.Sleep(10 * time.Second)
 
-	initialOutcome := simpleOutcome(nodeAAddress, bridgeAddress, 100, 0)
+	var l1LedgerChannelId types.Destination
+	var l2LedgerChannelId types.Destination
+	t.Run("Create ledger channel on L1 and mirror it on L2", func(t *testing.T) {
+		outcome := simpleOutcome(nodeAAddress, bridgeAddress, 100, 100)
+		res, err := nodeARpcClient.CreateLedgerChannel(bridgeAddress, 100, outcome)
+		if err != nil {
+			panic(err)
+		}
+		l1LedgerChannelId = res.ChannelId
 
-	virtualChannelResponse, err := nodeAPrimeRpcClient.CreatePaymentChannel(
-		nil,
-		bridgeAddress,
-		100,
-		initialOutcome,
-	)
-	fmt.Println(">>>>>Virtual channel", virtualChannelResponse.ChannelId)
-	time.Sleep(10 * time.Second)
-	nodeAPrimeRpcClient.Pay(virtualChannelResponse.ChannelId, 1)
-	time.Sleep(3 * time.Second)
+		// Wait for mirror channel creation
+		l2LedgerChannelId = <-bridgeClient.CreatedMirrorChannel()
 
-	nodeAPrimeRpcClient.ClosePaymentChannel(virtualChannelResponse.ChannelId)
-	time.Sleep(10 * time.Second)
+		expectedMirrorChannel := createLedgerInfo(l2LedgerChannelId, simpleOutcome(bridgeAddress, nodeAAddress, 100, 100), query.Open, nodeAAddress)
+		actualMirrorChannel, err := nodeAPrimeRpcClient.GetLedgerChannel(l2LedgerChannelId)
+		checkError(t, err, "client.GetLedgerChannel")
+		checkQueryInfo(t, expectedMirrorChannel, actualMirrorChannel)
+	})
 
-	nodeAPrimeRpcClient.CloseBridgeChannel(l2Channel)
-	time.Sleep(10 * time.Second)
+	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
+		initialOutcome := simpleOutcome(nodeAAddress, bridgeAddress, 100, 0)
+		virtualChannelResponse, err := nodeAPrimeRpcClient.CreatePaymentChannel(
+			nil,
+			bridgeAddress,
+			100,
+			initialOutcome,
+		)
+		checkError(t, err, "client.CreatePaymentChannel")
+		<-nodeAPrimeRpcClient.ObjectiveCompleteChan(virtualChannelResponse.Id)
+		_, err = nodeAPrimeRpcClient.Pay(virtualChannelResponse.ChannelId, 1)
+		checkError(t, err, "client.Pay")
 
-	// TODO: Use clients to perform following flow
-	// TODO: Perform directfund between L1 node and bridge using L1 node's RPC client
-	// TODO: Check that bridge channel is established
-	// TODO: Create virtual channel, make payments and close virtual channel
-	// TODO: Close bridge channel using L2 node's RPC client
-	// TODO: Check that corresponding ledger channel is closed
+		virtualDefundResponse, err := nodeAPrimeRpcClient.ClosePaymentChannel(virtualChannelResponse.ChannelId)
+		checkError(t, err, "client.ClosePaymentChannel")
+		<-nodeAPrimeRpcClient.ObjectiveCompleteChan(virtualDefundResponse)
+	})
+
+	t.Run("Exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
+		_, err = nodeAPrimeRpcClient.CloseBridgeChannel(l2LedgerChannelId)
+		checkError(t, err, "client.CloseBridgeChannel")
+
+		<-nodeARpcClient.ObjectiveCompleteChan(protocols.ObjectiveId(mirrorbridgeddefund.ObjectivePrefix + l1LedgerChannelId.String()))
+
+		expectedMirrorChannel := createLedgerInfo(l1LedgerChannelId, simpleOutcome(nodeAAddress, bridgeAddress, 99, 101), query.Complete, nodeAAddress)
+		actualMirrorChannel, err := nodeARpcClient.GetLedgerChannel(l1LedgerChannelId)
+		checkError(t, err, "client.GetLedgerChannel")
+		checkQueryInfo(t, expectedMirrorChannel, actualMirrorChannel)
+	})
 }

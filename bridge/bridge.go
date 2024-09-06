@@ -67,11 +67,11 @@ type Bridge struct {
 	storeL2        store.Store
 	chainServiceL2 chainservice.ChainService
 
-	cancel                  context.CancelFunc
-	L1ToL2AssetAddressMap   map[common.Address]common.Address
-	mirrorChannelMap        map[types.Destination]MirrorChannelDetails
-	completedMirrorChannels chan types.Destination
-	sentTxs                 safesync.Map[SentTx]
+	cancel                context.CancelFunc
+	L1ToL2AssetAddressMap map[common.Address]common.Address
+	mirrorChannelMap      map[types.Destination]MirrorChannelDetails
+	createdMirrorChannels chan types.Destination
+	sentTxs               safesync.Map[SentTx]
 }
 
 type BridgeConfig struct {
@@ -96,9 +96,9 @@ type BridgeConfig struct {
 
 func New() *Bridge {
 	bridge := Bridge{
-		mirrorChannelMap:        make(map[types.Destination]MirrorChannelDetails),
-		L1ToL2AssetAddressMap:   make(map[common.Address]common.Address),
-		completedMirrorChannels: make(chan types.Destination),
+		mirrorChannelMap:      make(map[types.Destination]MirrorChannelDetails),
+		L1ToL2AssetAddressMap: make(map[common.Address]common.Address),
+		createdMirrorChannels: make(chan types.Destination),
 	}
 
 	return &bridge
@@ -316,7 +316,7 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 
 		// use a nonblocking send in case no one is listening
 		select {
-		case b.completedMirrorChannels <- l2channelId:
+		case b.createdMirrorChannels <- l2channelId:
 		default:
 		}
 
@@ -498,8 +498,8 @@ func (b *Bridge) GetAllL2Channels() ([]query.LedgerChannelInfo, error) {
 	return b.nodeL2.GetAllLedgerChannels()
 }
 
-func (b *Bridge) CompletedMirrorChannels() <-chan types.Destination {
-	return b.completedMirrorChannels
+func (b *Bridge) CreatedMirrorChannels() <-chan types.Destination {
+	return b.createdMirrorChannels
 }
 
 func (b *Bridge) RetryObjectiveTx(objectiveId protocols.ObjectiveId) error {

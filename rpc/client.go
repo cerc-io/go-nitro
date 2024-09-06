@@ -86,12 +86,15 @@ type RpcClientApi interface {
 	GetL2ChannelFromL1(l1Channel types.Destination) (types.Destination, error)
 
 	CloseBridgeChannel(id types.Destination) (protocols.ObjectiveId, error)
+
+	CreatedMirrorChannel() <-chan types.Destination
 }
 
 // rpcClient is the implementation
 type rpcClient struct {
 	transport             transport.Requester
 	completedObjectives   *safesync.Map[chan struct{}]
+	createdMirrorChannels chan types.Destination
 	ledgerChannelUpdates  *safesync.Map[chan query.LedgerChannelInfo]
 	paymentChannelUpdates *safesync.Map[chan query.PaymentChannelInfo]
 	cancel                context.CancelFunc
@@ -135,6 +138,8 @@ func NewRpcClient(trans transport.Requester) (RpcClientApi, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	c.createdMirrorChannels = make(chan types.Destination)
 	c.routineTracker.Add(1)
 	go c.subscribeToNotifications(ctx, notificationChan)
 
@@ -307,8 +312,20 @@ func (rc *rpcClient) subscribeToNotifications(ctx context.Context, notificationC
 				}
 				c, _ := rc.paymentChannelUpdates.LoadOrStore(string(rpcRequest.Params.Payload.ID.String()), make(chan query.PaymentChannelInfo, 100))
 				c <- rpcRequest.Params.Payload
-			}
+			case serde.MirrorChannelCreated:
+				rpcRequest := serde.JsonRpcSpecificRequest[types.Destination]{}
+				err := json.Unmarshal(data, &rpcRequest)
+				rc.logger.Debug("Received notification", "method", method, "data", rpcRequest)
+				if err != nil {
+					panic(err)
+				}
 
+				// use a nonblocking send in case no one is listening
+				select {
+				case rc.createdMirrorChannels <- rpcRequest.Params.Payload:
+				default:
+				}
+			}
 		}
 	}
 }
@@ -407,4 +424,8 @@ func getNotificationMethod(raw []byte) (serde.NotificationMethod, error) {
 		return "", fmt.Errorf("method not found in notification")
 	}
 	return serde.NotificationMethod(method), nil
+}
+
+func (rc *rpcClient) CreatedMirrorChannel() <-chan types.Destination {
+	return rc.createdMirrorChannels
 }

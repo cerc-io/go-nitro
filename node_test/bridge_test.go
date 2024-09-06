@@ -75,7 +75,7 @@ func TestBridgedFund(t *testing.T) {
 		t.Log("L1 channel created", l1LedgerChannelResponse.Id)
 
 		// Wait for mirror channel to be created
-		completedMirrorChannel := <-bridge.CompletedMirrorChannels()
+		completedMirrorChannel := <-bridge.CreatedMirrorChannels()
 		l2LedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
 		testhelpers.Assert(t, completedMirrorChannel == l2LedgerChannelId, "Expects mirror channel id to be %v", l2LedgerChannelId)
 		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeA)
@@ -310,7 +310,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		t.Log("L1 channel created", l1LedgerChannelResponse.Id)
 
 		// Wait for mirror channel to be created
-		completedMirrorChannel := <-bridge.CompletedMirrorChannels()
+		completedMirrorChannel := <-bridge.CreatedMirrorChannels()
 
 		l2AliceBridgeLedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
 		testhelpers.Assert(t, completedMirrorChannel == l2AliceBridgeLedgerChannelId, "Expects mirror channel id to be %v", l2AliceBridgeLedgerChannelId)
@@ -330,7 +330,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		<-nodeC.ObjectiveCompleteChan(l1LedgerChannelResponse.Id)
 		t.Log("L1 channel created", l1LedgerChannelResponse.Id)
 		// Wait for mirror channel to be created
-		completedMirrorChannel = <-bridge.CompletedMirrorChannels()
+		completedMirrorChannel = <-bridge.CreatedMirrorChannels()
 
 		l2CharlieBridgeLedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
 		testhelpers.Assert(t, completedMirrorChannel == l2CharlieBridgeLedgerChannelId, "Expects mirror channel id to be %v", l2CharlieBridgeLedgerChannelId)
@@ -953,7 +953,7 @@ func createMirrorChannel(t *testing.T, node node.Node, bridge *bridge.Bridge, ch
 	t.Log("L1 channel created", l1LedgerChannelId)
 
 	// Wait for mirror channel to be created
-	l2LedgerChannelId := <-bridge.CompletedMirrorChannels()
+	l2LedgerChannelId := <-bridge.CreatedMirrorChannels()
 	t.Log("L2 channel created", l2LedgerChannelId)
 
 	return l1LedgerChannelId, l2LedgerChannelId

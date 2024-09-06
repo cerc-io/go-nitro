@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -30,6 +31,12 @@ func NewBridgeRpcServer(bridge *bridge.Bridge, trans transport.Responder) (*Brid
 	}
 
 	brs.logger = logging.LoggerWithAddress(slog.Default(), bridge.GetBridgeAddress())
+	ctx, cancel := context.WithCancel(context.Background())
+	brs.cancel = cancel
+	brs.wg.Add(1)
+
+	createdMirrorChannel := brs.bridge.CreatedMirrorChannels()
+	go brs.sendNotifications(ctx, createdMirrorChannel)
 
 	err := brs.registerHandlers()
 	if err != nil {
@@ -196,4 +203,26 @@ func (brs *BridgeRpcServer) registerHandlers() (err error) {
 
 	err = brs.transport.RegisterRequestHandler("v1", handlerV1)
 	return err
+}
+
+func (brs *BridgeRpcServer) sendNotifications(ctx context.Context,
+	createdMirrorChan <-chan types.Destination,
+) {
+	defer brs.wg.Done()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case createdMirrorChannel, ok := <-createdMirrorChan:
+			if !ok {
+				brs.logger.Warn("Completed mirror channel closed, exiting sendNotifications")
+				return
+			}
+			err := sendNotification(brs.BaseRpcServer, serde.MirrorChannelCreated, createdMirrorChannel)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 }

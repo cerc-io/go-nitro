@@ -231,7 +231,7 @@ yargs(hideBin(process.argv))
         isSecure
       );
       const objectiveInfo = await rpcClient.GetObjective(objectiveId, l2);
-      console.log(objectiveInfo);
+      prettyJson(objectiveInfo);
 
       await rpcClient.Close();
       process.exit(0);
@@ -259,7 +259,7 @@ yargs(hideBin(process.argv))
         isSecure
       );
       const objectiveInfo = await rpcClient.GetL2ObjectiveFromL1(l1ObjectiveId);
-      console.log(objectiveInfo);
+      prettyJson(objectiveInfo);
 
       await rpcClient.Close();
       process.exit(0);

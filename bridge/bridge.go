@@ -47,7 +47,7 @@ type L1ToL2AssetConfig struct {
 type SentTx struct {
 	Tx           protocols.ChainTransaction `json:"tx"`
 	NumOfRetries uint                       `json:"num_of_retries"`
-	IsDropped    bool                       `json:"is_dropped"`
+	IsRetried    bool                       `json:"is_retried"`
 	IsL2         bool                       `json:"is_l2"`
 }
 
@@ -522,7 +522,7 @@ func (b *Bridge) RetryTx(txHash common.Hash) error {
 		return fmt.Errorf("tx with given hash %s was either complete or cannot be found", txHash)
 	}
 
-	if !txToRetry.IsDropped {
+	if !txToRetry.IsRetried {
 		return fmt.Errorf("tx with given hash %s is pending confirmation and connot be retried", txHash)
 	}
 
@@ -589,7 +589,7 @@ func (b *Bridge) checkAndRetryDroppedTxs(droppedEvent protocols.DroppedEventInfo
 	txToRetry, ok := b.sentTxs.Load(droppedEvent.TxHash.String())
 
 	if ok {
-		txToRetry.IsDropped = true
+		txToRetry.IsRetried = true
 		b.sentTxs.Store(droppedEvent.TxHash.String(), txToRetry)
 	}
 

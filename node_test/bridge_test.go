@@ -75,9 +75,9 @@ func TestBridgedFund(t *testing.T) {
 		t.Log("L1 channel created", l1LedgerChannelResponse.Id)
 
 		// Wait for mirror channel to be created
-		completedMirrorChannel := <-bridge.CreatedMirrorChannels()
+		createdMirrorChannel := <-bridge.CreatedMirrorChannels()
 		l2LedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
-		testhelpers.Assert(t, completedMirrorChannel == l2LedgerChannelId, "Expects mirror channel id to be %v", l2LedgerChannelId)
+		testhelpers.Assert(t, createdMirrorChannel == l2LedgerChannelId, "Expects mirror channel id to be %v", l2LedgerChannelId)
 		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeA)
 		checkLedgerChannel(t, l2LedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
 	})
@@ -310,10 +310,10 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		t.Log("L1 channel created", l1LedgerChannelResponse.Id)
 
 		// Wait for mirror channel to be created
-		completedMirrorChannel := <-bridge.CreatedMirrorChannels()
+		createdMirrorChannel := <-bridge.CreatedMirrorChannels()
 
 		l2AliceBridgeLedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
-		testhelpers.Assert(t, completedMirrorChannel == l2AliceBridgeLedgerChannelId, "Expects mirror channel id to be %v", l2AliceBridgeLedgerChannelId)
+		testhelpers.Assert(t, createdMirrorChannel == l2AliceBridgeLedgerChannelId, "Expects mirror channel id to be %v", l2AliceBridgeLedgerChannelId)
 
 		checkLedgerChannel(t, l1AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeA)
 		checkLedgerChannel(t, l2AliceBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, ledgerChannelDeposit, ledgerChannelDeposit, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
@@ -330,10 +330,10 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		<-nodeC.ObjectiveCompleteChan(l1LedgerChannelResponse.Id)
 		t.Log("L1 channel created", l1LedgerChannelResponse.Id)
 		// Wait for mirror channel to be created
-		completedMirrorChannel = <-bridge.CreatedMirrorChannels()
+		createdMirrorChannel = <-bridge.CreatedMirrorChannels()
 
 		l2CharlieBridgeLedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
-		testhelpers.Assert(t, completedMirrorChannel == l2CharlieBridgeLedgerChannelId, "Expects mirror channel id to be %v", l2CharlieBridgeLedgerChannelId)
+		testhelpers.Assert(t, createdMirrorChannel == l2CharlieBridgeLedgerChannelId, "Expects mirror channel id to be %v", l2CharlieBridgeLedgerChannelId)
 
 		checkLedgerChannel(t, l1CharlieBridgeLedgerChannelId, CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeC)
 		checkLedgerChannel(t, l2CharlieBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeCPrime.Address, ledgerChannelDeposit, ledgerChannelDeposit, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeCPrime)

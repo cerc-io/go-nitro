@@ -67,16 +67,17 @@ func setupBridgeWithRPCClient(
 }
 
 func TestBridgeFlow(t *testing.T) {
+	payAmount := uint(5)
+	virtualChannelDeposit := uint(100)
 	tcL1 := TestCase{
 		Chain:             AnvilChainL1,
 		MessageService:    P2PMessageService,
 		MessageDelay:      0,
-		LogName:           "Bridge_test",
+		LogName:           "Bridge_test_l1",
 		ChallengeDuration: 5,
 		Participants: []TestParticipant{
 			{StoreType: MemStore, Actor: testactors.Alice},
 			{StoreType: MemStore, Actor: testactors.Bob},
-			{StoreType: MemStore, Actor: testactors.Irene},
 		},
 		deployerIndex: 1,
 	}
@@ -85,12 +86,11 @@ func TestBridgeFlow(t *testing.T) {
 		Chain:             AnvilChainL2,
 		MessageService:    P2PMessageService,
 		MessageDelay:      0,
-		LogName:           "Bridge_test",
+		LogName:           "Bridge_test_l2",
 		ChallengeDuration: 5,
 		Participants: []TestParticipant{
 			{StoreType: MemStore, Actor: testactors.AlicePrime},
 			{StoreType: MemStore, Actor: testactors.BobPrime},
-			{StoreType: MemStore, Actor: testactors.Irene},
 		},
 		ChainPort:     "8546",
 		deployerIndex: 1,
@@ -165,6 +165,7 @@ func TestBridgeFlow(t *testing.T) {
 
 	var l1LedgerChannelId types.Destination
 	var l2LedgerChannelId types.Destination
+
 	t.Run("Create ledger channel on L1 and mirror it on L2", func(t *testing.T) {
 		outcome := simpleOutcome(nodeAAddress, bridgeAddress, 100, 100)
 		res, err := nodeARpcClient.CreateLedgerChannel(bridgeAddress, 100, outcome)
@@ -183,7 +184,7 @@ func TestBridgeFlow(t *testing.T) {
 	})
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
-		initialOutcome := simpleOutcome(nodeAAddress, bridgeAddress, 100, 0)
+		initialOutcome := simpleOutcome(nodeAAddress, bridgeAddress, virtualChannelDeposit, 0)
 		virtualChannelResponse, err := nodeAPrimeRpcClient.CreatePaymentChannel(
 			nil,
 			bridgeAddress,
@@ -192,8 +193,18 @@ func TestBridgeFlow(t *testing.T) {
 		)
 		checkError(t, err, "client.CreatePaymentChannel")
 		<-nodeAPrimeRpcClient.ObjectiveCompleteChan(virtualChannelResponse.Id)
-		_, err = nodeAPrimeRpcClient.Pay(virtualChannelResponse.ChannelId, 1)
+		_, err = nodeAPrimeRpcClient.Pay(virtualChannelResponse.ChannelId, uint64(payAmount))
 		checkError(t, err, "client.Pay")
+
+		outcomeAfterPayment := simpleOutcome(nodeAAddress, bridgeAddress, virtualChannelDeposit-payAmount, payAmount)
+		expectedVirtualChannel := createPaychInfo(
+			virtualChannelResponse.ChannelId,
+			outcomeAfterPayment,
+			query.Open,
+		)
+		actualVirtualChannel, err := nodeAPrimeRpcClient.GetPaymentChannel(virtualChannelResponse.ChannelId)
+		checkError(t, err, "client.GetPaymentChannel")
+		checkQueryInfo(t, expectedVirtualChannel, actualVirtualChannel)
 
 		virtualDefundResponse, err := nodeAPrimeRpcClient.ClosePaymentChannel(virtualChannelResponse.ChannelId)
 		checkError(t, err, "client.ClosePaymentChannel")

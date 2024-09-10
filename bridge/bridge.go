@@ -45,10 +45,10 @@ type L1ToL2AssetConfig struct {
 }
 
 type SentTx struct {
-	Tx           protocols.ChainTransaction `json:"tx"`
-	NumOfRetries uint                       `json:"num_of_retries"`
-	IsRetried    bool                       `json:"is_retried"`
-	IsL2         bool                       `json:"is_l2"`
+	Tx                  protocols.ChainTransaction `json:"tx"`
+	NumOfRetries        uint                       `json:"num_of_retries"`
+	IsRetryLimitReached bool                       `json:"is_retry_limit_reached"`
+	IsL2                bool                       `json:"is_l2"`
 }
 
 type PendingTx struct {
@@ -522,7 +522,7 @@ func (b *Bridge) RetryTx(txHash common.Hash) error {
 		return fmt.Errorf("tx with given hash %s was either complete or cannot be found", txHash)
 	}
 
-	if !txToRetry.IsRetried {
+	if !txToRetry.IsRetryLimitReached {
 		return fmt.Errorf("tx with given hash %s is pending confirmation and connot be retried", txHash)
 	}
 
@@ -587,13 +587,14 @@ func (b *Bridge) listenForDroppedEvents(ctx context.Context) {
 
 func (b *Bridge) checkAndRetryDroppedTxs(droppedEvent protocols.DroppedEventInfo, chainservice chainservice.ChainService, isL2 bool) error {
 	txToRetry, ok := b.sentTxs.Load(droppedEvent.TxHash.String())
-
-	if ok {
-		txToRetry.IsRetried = true
-		b.sentTxs.Store(droppedEvent.TxHash.String(), txToRetry)
+	if !ok {
+		return nil
 	}
 
-	if ok && txToRetry.NumOfRetries < RETRY_TX_LIMIT {
+	if txToRetry.NumOfRetries >= RETRY_TX_LIMIT {
+		txToRetry.IsRetryLimitReached = true
+		b.sentTxs.Store(droppedEvent.TxHash.String(), txToRetry)
+	} else {
 		retriedTx, err := chainservice.SendTransaction(txToRetry.Tx)
 		if err != nil {
 			return err

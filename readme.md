@@ -522,7 +522,7 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
   # {
   #  "tx_hash": "0x9aebbd42f3044295411e3631fcb6aa834ed5373a6d3bf368bfa09e5b74f4f6d1",
   #  "num_of_retries": 3,
-  #  "is_retried": true,
+  #  "is_retry_limit_reached": true,
   #  "is_l2": false
   # }
   ```
@@ -531,9 +531,9 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 
 - If these txs fail, bridge retries them until retry tx threshold has been met
 
-  - If there are any txs with `is_retried: false`, that means they are not auto retried by bridge just yet
+  - If there are any txs with `is_retry_limit_reached: false`, that means they are not auto retried by bridge just yet
 
-- If there are any txs with `is_retried: true`, it means these txs failed even after auto retry
+- If there are any txs with `is_retry_limit_reached: true`, it means these txs failed even after auto retry
 
 - The `get-pending-bridge-txs` command will output pending txs details along with their tx hash
 

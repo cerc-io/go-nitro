@@ -594,16 +594,16 @@ func (b *Bridge) checkAndRetryDroppedTxs(droppedEvent protocols.DroppedEventInfo
 	if txToRetry.NumOfRetries >= RETRY_TX_LIMIT {
 		txToRetry.IsRetryLimitReached = true
 		b.sentTxs.Store(droppedEvent.TxHash.String(), txToRetry)
-	} else {
-		retriedTx, err := chainservice.SendTransaction(txToRetry.Tx)
-		if err != nil {
-			return err
-		}
-
-		b.sentTxs.Delete(droppedEvent.TxHash.String())
-		b.sentTxs.Store(retriedTx.Hash().String(), SentTx{txToRetry.Tx, txToRetry.NumOfRetries + 1, false, isL2})
+		return nil
 	}
 
+	retriedTx, err := chainservice.SendTransaction(txToRetry.Tx)
+	if err != nil {
+		return err
+	}
+
+	b.sentTxs.Delete(droppedEvent.TxHash.String())
+	b.sentTxs.Store(retriedTx.Hash().String(), SentTx{txToRetry.Tx, txToRetry.NumOfRetries + 1, false, isL2})
 	return nil
 }
 

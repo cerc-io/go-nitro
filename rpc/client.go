@@ -83,8 +83,6 @@ type RpcClientApi interface {
 
 	ValidateVoucher(voucherHash common.Hash, signerAddress common.Address, value uint64) (serde.ValidateVoucherResponse, error)
 
-	GetL2ChannelFromL1(l1Channel types.Destination) (types.Destination, error)
-
 	CloseBridgeChannel(id types.Destination) (protocols.ObjectiveId, error)
 
 	CreatedMirrorChannel() <-chan types.Destination
@@ -219,13 +217,6 @@ func (rc *rpcClient) GetLedgerChannel(id types.Destination) (query.LedgerChannel
 // GetAllLedgerChannels returns all ledger channels
 func (rc *rpcClient) GetAllLedgerChannels() ([]query.LedgerChannelInfo, error) {
 	return waitForAuthorizedRequest[serde.NoPayloadRequest, []query.LedgerChannelInfo](rc, serde.GetAllLedgerChannelsMethod, struct{}{})
-}
-
-func (rc *rpcClient) GetL2ChannelFromL1(l1Channel types.Destination) (types.Destination, error) {
-	req := serde.GetL2ChannelFromL1Request{
-		L1ChannelId: l1Channel,
-	}
-	return waitForAuthorizedRequest[serde.GetL2ChannelFromL1Request, types.Destination](rc, serde.GetL2ChannelFromL1Method, req)
 }
 
 // GetPaymentChannelsByLedger returns all active payment channels for a given ledger channel

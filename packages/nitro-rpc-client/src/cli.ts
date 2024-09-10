@@ -73,7 +73,7 @@ yargs(hideBin(process.argv))
         isSecure
       );
       const nodeInfo = await rpcClient.GetNodeInfo();
-      console.log(nodeInfo);
+      console.log(prettyJson(nodeInfo));
       await rpcClient.Close();
       process.exit(0);
     }

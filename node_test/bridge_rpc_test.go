@@ -212,6 +212,7 @@ func TestBridgeFlow(t *testing.T) {
 	})
 
 	t.Run("Exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
+		// Bridged defund is currently disabled
 		t.Skip()
 		_, err = nodeAPrimeRpcClient.CloseBridgeChannel(l2LedgerChannelId)
 		checkError(t, err, "client.CloseBridgeChannel")

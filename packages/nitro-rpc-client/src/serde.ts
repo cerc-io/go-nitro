@@ -132,14 +132,14 @@ const receiveVoucherSchema = {
 
 type ReceiveVoucherSchemaType = JTDDataType<typeof receiveVoucherSchema>;
 
-const GetNodeInfoSchema = {
+const getNodeInfoSchema = {
   properties: {
     SCAddress: { type: "string" },
     MessageServicePeerId: { type: "string" },
   },
 } as const;
 
-type GetNodeInfoSchemaType = JTDDataType<typeof GetNodeInfoSchema>;
+type GetNodeInfoSchemaType = JTDDataType<typeof getNodeInfoSchema>;
 
 type ResponseSchema =
   | typeof objectiveSchema
@@ -152,7 +152,7 @@ type ResponseSchema =
   | typeof voucherSchema
   | typeof receiveVoucherSchema
   | typeof counterChallengeSchema
-  | typeof GetNodeInfoSchema;
+  | typeof getNodeInfoSchema;
 
 type ResponseSchemaType =
   | ObjectiveSchemaType
@@ -272,7 +272,7 @@ export function getAndValidateResult<T extends RequestMethod>(
       );
     case "get_node_info":
       return validateAndConvertResult(
-        GetNodeInfoSchema,
+        getNodeInfoSchema,
         result,
         (result: GetNodeInfoSchemaType) => result
       );

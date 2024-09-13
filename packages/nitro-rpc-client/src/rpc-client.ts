@@ -163,6 +163,8 @@ export class NitroRpcClient implements RpcClientApi {
     return this.sendRequest("retry_tx", { TxHash: txHash });
   }
 
+  // TODO: Add CLI to create Swap channel
+
   public async CreatePaymentChannel(
     counterParty: string,
     intermediaries: string[],

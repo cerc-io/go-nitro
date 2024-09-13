@@ -95,6 +95,8 @@ func getLedgerBalanceFromState(latest state.State, myAddress types.Address) (Led
 	}, nil
 }
 
+// TODO: Check if swapfund getter function is required
+
 // GetVirtualFundObjective returns the virtual fund objective for the given channel if it exists.
 func GetVirtualFundObjective(id types.Destination, store store.Store) (*virtualfund.Objective, bool) {
 	// This is slightly awkward but if the virtual defunding objective is complete it won't come back if we query by channel id

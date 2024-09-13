@@ -193,6 +193,8 @@ func (c *Node) ReceiveVoucher(v payments.Voucher) (payments.ReceiveVoucherSummar
 	return payments.ReceiveVoucherSummary{Total: total, Delta: delta}, err
 }
 
+// TODO: Add function to create payment channel
+
 // CreatePaymentChannel creates a virtual channel with the counterParty using ledger channels
 // with the supplied intermediaries.
 func (n *Node) CreatePaymentChannel(Intermediaries []types.Address, CounterParty types.Address, ChallengeDuration uint32, Outcome outcome.Exit) (virtualfund.ObjectiveResponse, error) {

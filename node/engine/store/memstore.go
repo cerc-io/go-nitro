@@ -107,6 +107,11 @@ func (ms *MemStore) SetObjective(obj protocols.Objective) error {
 			if err != nil {
 				return fmt.Errorf("error setting virtual channel %s from objective %s: %w", ch.Id, obj.Id(), err)
 			}
+		case *channel.SwapChannel:
+			err := ms.SetChannel(&ch.Channel)
+			if err != nil {
+				return fmt.Errorf("error setting virtual channel %s from objective %s: %w", ch.Id, obj.Id(), err)
+			}
 		case *channel.Channel:
 			err := ms.SetChannel(ch)
 			if err != nil {

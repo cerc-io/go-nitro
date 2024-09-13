@@ -64,6 +64,7 @@ func (se *SideEffects) Merge(other SideEffects) {
 	se.ProposalsToProcess = append(se.ProposalsToProcess, other.ProposalsToProcess...)
 }
 
+// TODO: Add corresponding proposal method for swap fund
 // GetProposalObjectiveId returns the objectiveId for a proposal.
 func GetProposalObjectiveId(p consensus_channel.Proposal) (ObjectiveId, error) {
 	switch p.Type() {

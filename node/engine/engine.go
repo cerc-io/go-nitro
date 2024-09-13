@@ -31,6 +31,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/mirrorbridgeddefund"
+	"github.com/statechannels/go-nitro/protocols/swapfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
 	"github.com/statechannels/go-nitro/types"
@@ -64,6 +65,7 @@ var nonFatalErrors = []error{
 	store.ErrLoadVouchers,
 	directfund.ErrLedgerChannelExists,
 	virtualfund.ErrUpdatingLedgerFunding,
+	swapfund.ErrUpdatingLedgerFunding,
 	errEmptyDroppedEvent,
 }
 
@@ -677,6 +679,26 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 		}
 		return e.attemptProgress(&vfo)
 
+	case swapfund.ObjectiveRequest:
+		sfo, err := swapfund.NewObjective(request, true, myAddress, chainId, e.store.GetConsensusChannel)
+		if err != nil {
+			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not create swapfund objective for %+v: %w", request, err)
+		}
+		// Only Alice or Bob care about registering the objective and keeping track of vouchers
+		lastParticipant := uint(len(sfo.S.Participants) - 1)
+		if sfo.MyRole == lastParticipant || sfo.MyRole == payments.PAYER_INDEX {
+			// TODO: Complete function to register swap channels
+			err = e.registerSwapChannel(sfo)
+			if err != nil {
+				return failedEngineEvent, fmt.Errorf("could not register channel with swap manager: %w", err)
+			}
+		}
+
+		if err != nil {
+			return failedEngineEvent, fmt.Errorf("could not register channel with swap manager: %w", err)
+		}
+		return e.attemptProgress(&sfo)
+
 	case virtualdefund.ObjectiveRequest:
 		minAmount := big.NewInt(0)
 		if e.vm.ChannelRegistered(request.ChannelId) {
@@ -1011,6 +1033,12 @@ func (e Engine) registerPaymentChannel(vfo virtualfund.Objective) error {
 	return e.vm.Register(vfo.V.Id, payments.GetPayer(postfund.Participants), payments.GetPayee(postfund.Participants), startingBalance)
 }
 
+func (e Engine) registerSwapChannel(sfo swapfund.Objective) error {
+	// TODO: Add function to register swap channel
+	// Add swapManager similar to voucher mananger
+	return fmt.Errorf("Placeholder error")
+}
+
 // spawnConsensusChannel will attempt to create and store a ConsensusChannel derived from the supplied Objective if it is a directfund.Objective or bridgedfund.Objective.
 // The associated Channel will remain in the store.
 func (e Engine) spawnConsensusChannel(crankedObjective protocols.Objective, createChannelFunc func() (*consensus_channel.ConsensusChannel, error)) error {
@@ -1146,6 +1174,17 @@ func (e *Engine) constructObjectiveFromMessage(id protocols.ObjectiveId, p proto
 			return &virtualfund.Objective{}, fmt.Errorf("could not register channel with payment/receipt manager.\n\ttarget channel: %s\n\terr: %w", id, err)
 		}
 		return &vfo, nil
+	case swapfund.IsSwapFundObjective(id):
+		sfo, err := swapfund.ConstructObjectiveFromPayload(p, false, *e.store.GetAddress(), e.store.GetConsensusChannel)
+		if err != nil {
+			return &swapfund.Objective{}, fromMsgErr(id, err)
+		}
+		// TODO: Complete function
+		err = e.registerSwapChannel(sfo)
+		if err != nil {
+			return &swapfund.Objective{}, fmt.Errorf("could not register channel with swap manager.\n\ttarget channel: %s\n\terr: %w", id, err)
+		}
+		return &sfo, nil
 	case virtualdefund.IsVirtualDefundObjective(id):
 		vId, err := virtualdefund.GetVirtualChannelFromObjectiveId(id)
 		if err != nil {
@@ -1204,6 +1243,7 @@ func fromMsgErr(id protocols.ObjectiveId, err error) error {
 	return fmt.Errorf("could not create objective from message.\n\ttarget objective: %s\n\terr: %w", id, err)
 }
 
+// TODO: Add proposal methods for swap fund
 // getProposalObjectiveId returns the objectiveId for a proposal.
 func getProposalObjectiveId(p consensus_channel.Proposal) protocols.ObjectiveId {
 	switch p.Type() {

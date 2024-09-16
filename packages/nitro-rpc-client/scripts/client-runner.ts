@@ -174,16 +174,24 @@ yargs(hideBin(process.argv))
         console.log("Constructing ledger channels");
         const aliceLedger = await aliceClient.CreateLedgerChannel(
           ireneAddress,
-          ZERO_ETHEREUM_ADDRESS,
-          yargs.ledgerdeposit,
-          yargs.ledgerdeposit,
+          [
+            {
+              assetAddress: ZERO_ETHEREUM_ADDRESS,
+              alphaAmount: yargs.ledgerdeposit,
+              betaAmount: yargs.ledgerdeposit,
+            },
+          ],
           CHALLENGE_DURATION
         );
         const bobLedger = await ireneClient.CreateLedgerChannel(
           bobAddress,
-          ZERO_ETHEREUM_ADDRESS,
-          yargs.ledgerdeposit,
-          yargs.ledgerdeposit,
+          [
+            {
+              assetAddress: ZERO_ETHEREUM_ADDRESS,
+              alphaAmount: yargs.ledgerdeposit,
+              betaAmount: yargs.ledgerdeposit,
+            },
+          ],
           CHALLENGE_DURATION
         );
 
@@ -276,9 +284,13 @@ yargs(hideBin(process.argv))
       console.log("Constructing ledger channels");
       const ledger = await leftClient.CreateLedgerChannel(
         rightAddress,
-        ZERO_ETHEREUM_ADDRESS,
-        1_000_000,
-        1_000_000,
+        [
+          {
+            assetAddress: ZERO_ETHEREUM_ADDRESS,
+            alphaAmount: 1_000_000,
+            betaAmount: 1_000_000,
+          },
+        ],
         CHALLENGE_DURATION
       );
       await leftClient.WaitForLedgerChannelStatus(ledger.ChannelId, "Open");

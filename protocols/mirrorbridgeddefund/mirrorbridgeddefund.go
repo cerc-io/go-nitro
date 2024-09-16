@@ -444,7 +444,7 @@ func (o *Objective) CreateConsensusChannelFromChannel() (*consensus_channel.Cons
 	}
 
 	if ledger.MyIndex == uint(consensus_channel.Leader) {
-		con, err := consensus_channel.NewLeaderChannel(ledger.FixedPart, turnNum, outcome, signatures)
+		con, err := consensus_channel.NewLeaderChannel(ledger.FixedPart, turnNum, []consensus_channel.LedgerOutcome{outcome}, signatures)
 		con.OnChainFunding = ledger.OnChain.Holdings.Clone() // Copy OnChain.Holdings so we don't lose this information
 		if err != nil {
 			return nil, fmt.Errorf("could not create consensus channel as leader: %w", err)
@@ -452,7 +452,7 @@ func (o *Objective) CreateConsensusChannelFromChannel() (*consensus_channel.Cons
 		return &con, nil
 
 	} else {
-		con, err := consensus_channel.NewFollowerChannel(ledger.FixedPart, turnNum, outcome, signatures)
+		con, err := consensus_channel.NewFollowerChannel(ledger.FixedPart, turnNum, []consensus_channel.LedgerOutcome{outcome}, signatures)
 		con.OnChainFunding = ledger.OnChain.Holdings.Clone() // Copy OnChain.Holdings so we don't lose this information
 		if err != nil {
 			return nil, fmt.Errorf("could not create consensus channel as follower: %w", err)

@@ -17,12 +17,12 @@ func TestConsensusChannel(t *testing.T) {
 
 	proposal := add(vAmount, targetChannel, alice, bob)
 
-	outcome := func() LedgerOutcome {
-		return makeOutcome(
+	outcome := func() []LedgerOutcome {
+		return []LedgerOutcome{makeOutcome(
 			allocation(alice, aBal),
 			allocation(bob, bBal),
 			guarantee(vAmount, existingChannel, alice, bob),
-		)
+		)}
 	}
 
 	fingerprint := func(v Vars) string {
@@ -36,28 +36,36 @@ func TestConsensusChannel(t *testing.T) {
 	vars := Vars{TurnNum: 9, Outcome: outcome()}
 
 	f1 := fingerprint(vars)
-	clone1 := vars.Outcome.clone()
+	clone1 := CloneOutcomeArr(vars.Outcome)
 
 	if fingerprint(Vars{TurnNum: vars.TurnNum, Outcome: clone1}) != f1 {
 		t.Fatal("vars incorrectly cloned")
 	}
 
-	mutatedG := clone1.guarantees[existingChannel]
-	mutatedG.amount.SetInt64(111)
-	if f1 != fingerprint(vars) {
-		t.Fatal("vars shares data with clone")
+	var mutatedG Guarantee
+
+	for _, clone := range clone1 {
+		mutatedG = clone.guarantees[existingChannel]
+		mutatedG.amount.SetInt64(111)
+		if f1 != fingerprint(vars) {
+			t.Fatal("vars shares data with clone")
+		}
 	}
 
-	clone2 := vars.Outcome.clone()
-	clone2.leader.amount.SetInt64(111)
-	if f1 != fingerprint(vars) {
-		t.Fatal("vars shares data with clone")
+	clone2 := CloneOutcomeArr(vars.Outcome)
+	for _, clone := range clone2 {
+		clone.leader.amount.SetInt64(111)
+		if f1 != fingerprint(vars) {
+			t.Fatal("vars shares data with clone")
+		}
 	}
 
-	clone3 := vars.Outcome.clone()
-	clone3.follower.amount.SetInt64(111)
-	if f1 != fingerprint(vars) {
-		t.Fatal("vars shares data with clone")
+	clone3 := CloneOutcomeArr(vars.Outcome)
+	for _, clone := range clone3 {
+		clone.follower.amount.SetInt64(111)
+		if f1 != fingerprint(vars) {
+			t.Fatal("vars shares data with clone")
+		}
 	}
 
 	testApplyingAddProposalToVars := func(t *testing.T) {
@@ -95,7 +103,9 @@ func TestConsensusChannel(t *testing.T) {
 		// Proposing a change that depletes a balance should fail
 		vars = Vars{TurnNum: startingTurnNum, Outcome: outcome()}
 		largeProposal := proposal
-		leftAmount := big.NewInt(0).Set(vars.Outcome.leader.amount)
+		// Assume only one asset
+		// TODO: Update to check for all assets
+		leftAmount := big.NewInt(0).Set(vars.Outcome[0].leader.amount)
 		largeProposal.amount = leftAmount.Add(leftAmount, big.NewInt(1))
 		largeProposal.LeftDeposit = largeProposal.amount
 		err = vars.Add(largeProposal)
@@ -173,7 +183,7 @@ func TestConsensusChannel(t *testing.T) {
 			t.Fatalf("latest proposed vars returned err: %v", err)
 		}
 
-		latest.Outcome.guarantees[targetChannel] = guarantee(10, targetChannel, alice, bob)
+		latest.Outcome[0].guarantees[targetChannel] = guarantee(10, targetChannel, alice, bob)
 		if f != fingerprint(channel.current.Vars) {
 			t.Fatalf("latestProposedVars did not return a copy")
 		}

@@ -199,7 +199,7 @@ func GetPaymentChannelsByLedger(ledgerId types.Destination, s store.Store, vm *p
 		return []PaymentChannelInfo{}, fmt.Errorf("could not find any payment channels funded by %s: %w", ledgerId, err)
 	}
 
-	toQuery := con.ConsensusVars().Outcome.FundingTargets()
+	toQuery := consensus_channel.FundingTargetsOutcomeArr(con.ConsensusVars().Outcome)
 
 	paymentChannels, err := s.GetChannelsByIds(toQuery)
 	if err != nil {

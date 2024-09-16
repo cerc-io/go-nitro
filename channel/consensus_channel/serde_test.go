@@ -42,7 +42,7 @@ func TestSerde(t *testing.T) {
 		current: SignedVars{
 			Vars: Vars{
 				TurnNum: 0,
-				Outcome: someOutcome,
+				Outcome: []LedgerOutcome{someOutcome},
 			},
 			Signatures: [2]crypto.Signature{{
 				R: common.Hex2Bytes(`704b3afcc6e702102ca1af3f73cf3b37f3007f368c40e8b81ca823a65740a053`),

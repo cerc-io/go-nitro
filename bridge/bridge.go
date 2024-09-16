@@ -372,7 +372,8 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 // Get update mirror channel state transaction from given consensus channel
 func (b *Bridge) getUpdateMirrorChannelStateTransaction(con *consensus_channel.ConsensusChannel) (protocols.ChainTransaction, error) {
 	// Get latest outcome bytes
-	ledgerOutcome := con.ConsensusVars().Outcome
+	// Assume mirror channels have only single asset outcomes for now
+	ledgerOutcome := con.ConsensusVars().Outcome[0]
 	outcome := ledgerOutcome.AsOutcome()
 	outcomeByte, err := outcome.Encode()
 	if err != nil {

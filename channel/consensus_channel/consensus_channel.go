@@ -398,17 +398,17 @@ func (lo *LedgerOutcome) Follower() Balance {
 }
 
 // NewLedgerOutcome creates a new ledger outcome with the given asset address, balances, and guarantees.
-func NewLedgerOutcome(assetAddress types.Address, leader, follower Balance, guarantees []Guarantee) *LedgerOutcome {
+func NewLedgerOutcome(assetAddress types.Address, leader, follower Balance, guarantees []Guarantee) *[]LedgerOutcome {
 	guaranteeMap := make(map[types.Destination]Guarantee, len(guarantees))
 	for _, g := range guarantees {
 		guaranteeMap[g.target] = g
 	}
-	return &LedgerOutcome{
+	return &[]LedgerOutcome{{
 		assetAddress: assetAddress,
 		leader:       leader,
 		follower:     follower,
 		guarantees:   guaranteeMap,
-	}
+	}}
 }
 
 // IncludesTarget returns true when the receiver includes a guarantee that targets the given destination.
@@ -743,6 +743,7 @@ func (vars *Vars) HandleProposal(p Proposal) error {
 //   - the guarantee is already included in vars.Outcome
 //
 // If an error is returned, the original vars is not mutated.
+// TODO: Add `assets` argument to add a guarantee for a specific asset only
 func (vars *Vars) Add(p Add) error {
 	// CHECKS
 	for _, o := range vars.Outcome {
@@ -807,6 +808,7 @@ func (vars *Vars) Add(p Add) error {
 //   - the amounts are too large for the guarantee amount
 //
 // If an error is returned, the original vars is not mutated.
+// TODO: Return guarantee not found error only if none of the asset outcomes is providing guarantee
 func (vars *Vars) Remove(p Remove) error {
 	// CHECKS
 

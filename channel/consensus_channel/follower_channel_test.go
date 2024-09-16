@@ -117,12 +117,12 @@ func TestFollowerChannel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	outcomeSigned := makeOutcome(
+	outcomeSigned := []LedgerOutcome{makeOutcome(
 		allocation(alice, aBal-amountAdded),
 		allocation(bob, bBal),
 		guarantee(vAmount, channel1Id, alice, bob),
 		guarantee(amountAdded, targetChannel, alice, bob),
-	)
+	)}
 	varsSigned := Vars{Outcome: outcomeSigned, TurnNum: 1}
 	correctSig, _ := varsSigned.AsState(fp()).Sign(bob.PrivateKey)
 	equals(t, withMySig.Signature, correctSig)

@@ -10,11 +10,11 @@ import (
 )
 
 func TestClone(t *testing.T) {
-	outcome := makeOutcome(
+	outcome := []LedgerOutcome{makeOutcome(
 		allocation(alice, aBal),
 		allocation(bob, bBal),
 		guarantee(vAmount, types.Destination{7}, alice, bob),
-	)
+	)}
 
 	initialVars := Vars{Outcome: outcome, TurnNum: 0}
 	aliceSig, _ := initialVars.AsState(fp()).Sign(alice.PrivateKey)

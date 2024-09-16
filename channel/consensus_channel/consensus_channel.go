@@ -56,7 +56,7 @@ func newConsensusChannel(
 	fp state.FixedPart,
 	myIndex ledgerIndex,
 	initialTurnNum uint64,
-	outcome LedgerOutcome,
+	outcome []LedgerOutcome,
 	signatures [2]state.Signature,
 ) (ConsensusChannel, error) {
 	err := fp.Validate()
@@ -66,7 +66,7 @@ func newConsensusChannel(
 
 	cId := fp.ChannelId()
 
-	vars := Vars{TurnNum: initialTurnNum, Outcome: outcome.clone()}
+	vars := Vars{TurnNum: initialTurnNum, Outcome: CloneOutcomeArr(outcome)}
 
 	leaderAddr, err := vars.AsState(fp).RecoverSigner(signatures[Leader])
 	if err != nil {
@@ -126,12 +126,12 @@ func (c *ConsensusChannel) IsProposed(g Guarantee) (bool, error) {
 		return false, err
 	}
 
-	return latest.Outcome.includes(g) && !c.Includes(g), nil
+	return IsIncludesOutcomeArr(latest.Outcome, g) && !c.Includes(g), nil
 }
 
 // IsProposedNext returns true if the next proposal in the queue would lead to g being included in the receiver's outcome, and false otherwise.
 func (c *ConsensusChannel) IsProposedNext(g Guarantee) (bool, error) {
-	vars := Vars{TurnNum: c.current.TurnNum, Outcome: c.current.Outcome.clone()}
+	vars := Vars{TurnNum: c.current.TurnNum, Outcome: CloneOutcomeArr(c.current.Outcome)}
 
 	if len(c.proposalQueue) == 0 {
 		return false, nil
@@ -147,7 +147,7 @@ func (c *ConsensusChannel) IsProposedNext(g Guarantee) (bool, error) {
 		return false, err
 	}
 
-	return vars.Outcome.includes(g) && !c.Includes(g), nil
+	return IsIncludesOutcomeArr(vars.Outcome, g) && !c.Includes(g), nil
 }
 
 // ConsensusTurnNum returns the turn number of the current consensus state.
@@ -157,13 +157,13 @@ func (c *ConsensusChannel) ConsensusTurnNum() uint64 {
 
 // Includes returns whether or not the consensus state includes the given guarantee.
 func (c *ConsensusChannel) Includes(g Guarantee) bool {
-	return c.current.Outcome.includes(g)
+	return IsIncludesOutcomeArr(c.current.Outcome, g)
 }
 
 // IncludesTarget returns whether or not the consensus state includes a guarantee
 // addressed to the given target.
 func (c *ConsensusChannel) IncludesTarget(target types.Destination) bool {
-	return c.current.Outcome.IncludesTarget(target)
+	return IncludesTargetOutcomeArr(c.current.Outcome, target)
 }
 
 // HasRemovalBeenProposed returns whether or not a proposal exists to remove the guarantee for the target.
@@ -214,7 +214,7 @@ func (c *ConsensusChannel) Follower() common.Address {
 
 // FundingTargets returns a list of channels funded by the ConsensusChannel
 func (c *ConsensusChannel) FundingTargets() []types.Destination {
-	return c.current.Outcome.FundingTargets()
+	return FundingTargetsOutcomeArr(c.current.Outcome)
 }
 
 // sign constructs a state.State from the given vars, using the ConsensusChannel's constant
@@ -255,7 +255,7 @@ func (c *ConsensusChannel) ProposalQueue() []SignedProposal {
 // latestProposedVars returns the latest proposed vars in a consensus channel
 // by cloning its current vars and applying each proposal in the queue.
 func (c *ConsensusChannel) latestProposedVars() (Vars, error) {
-	vars := Vars{TurnNum: c.current.TurnNum, Outcome: c.current.Outcome.clone()}
+	vars := Vars{TurnNum: c.current.TurnNum, Outcome: CloneOutcomeArr(c.current.Outcome)}
 
 	var err error
 	for _, p := range c.proposalQueue {
@@ -506,14 +506,16 @@ func (o LedgerOutcome) FundingTargets() []types.Destination {
 // Vars stores the turn number and outcome for a state in a consensus channel.
 type Vars struct {
 	TurnNum uint64
-	Outcome LedgerOutcome
+	Outcome []LedgerOutcome
 }
 
 // Clone returns a deep copy of the receiver.
 func (v *Vars) Clone() Vars {
+	outcomeArr := CloneOutcomeArr(v.Outcome)
+
 	return Vars{
 		v.TurnNum,
-		v.Outcome.Clone(),
+		outcomeArr,
 	}
 }
 
@@ -743,53 +745,53 @@ func (vars *Vars) HandleProposal(p Proposal) error {
 // If an error is returned, the original vars is not mutated.
 func (vars *Vars) Add(p Add) error {
 	// CHECKS
-	o := vars.Outcome
+	for _, o := range vars.Outcome {
+		_, found := o.guarantees[p.target]
+		if found {
+			return ErrDuplicateGuarantee
+		}
 
-	_, found := o.guarantees[p.target]
-	if found {
-		return ErrDuplicateGuarantee
+		var left, right Balance
+
+		if o.leader.destination == p.Guarantee.left {
+			left = o.leader
+			right = o.follower
+		} else {
+			left = o.follower
+			right = o.leader
+		}
+
+		if types.Gt(p.LeftDeposit, p.amount) {
+			return ErrInvalidDeposit
+		}
+
+		if types.Gt(p.LeftDeposit, left.amount) {
+			return ErrInsufficientFunds
+		}
+
+		if types.Gt(p.RightDeposit(), right.amount) {
+			return ErrInsufficientFunds
+		}
+
+		// EFFECTS
+
+		// Increase the turn number
+		vars.TurnNum += 1
+
+		rightDeposit := p.RightDeposit()
+
+		// Adjust balances
+		if o.leader.destination == p.Guarantee.left {
+			o.leader.amount.Sub(o.leader.amount, p.LeftDeposit)
+			o.follower.amount.Sub(o.follower.amount, rightDeposit)
+		} else {
+			o.follower.amount.Sub(o.follower.amount, p.LeftDeposit)
+			o.leader.amount.Sub(o.leader.amount, rightDeposit)
+		}
+
+		// Include guarantee
+		o.guarantees[p.target] = p.Guarantee
 	}
-
-	var left, right Balance
-
-	if o.leader.destination == p.Guarantee.left {
-		left = o.leader
-		right = o.follower
-	} else {
-		left = o.follower
-		right = o.leader
-	}
-
-	if types.Gt(p.LeftDeposit, p.amount) {
-		return ErrInvalidDeposit
-	}
-
-	if types.Gt(p.LeftDeposit, left.amount) {
-		return ErrInsufficientFunds
-	}
-
-	if types.Gt(p.RightDeposit(), right.amount) {
-		return ErrInsufficientFunds
-	}
-
-	// EFFECTS
-
-	// Increase the turn number
-	vars.TurnNum += 1
-
-	rightDeposit := p.RightDeposit()
-
-	// Adjust balances
-	if o.leader.destination == p.Guarantee.left {
-		o.leader.amount.Sub(o.leader.amount, p.LeftDeposit)
-		o.follower.amount.Sub(o.follower.amount, rightDeposit)
-	} else {
-		o.follower.amount.Sub(o.follower.amount, p.LeftDeposit)
-		o.leader.amount.Sub(o.leader.amount, rightDeposit)
-	}
-
-	// Include guarantee
-	o.guarantees[p.target] = p.Guarantee
 
 	return nil
 }
@@ -808,35 +810,35 @@ func (vars *Vars) Add(p Add) error {
 func (vars *Vars) Remove(p Remove) error {
 	// CHECKS
 
-	o := vars.Outcome
+	for _, o := range vars.Outcome {
+		guarantee, found := o.guarantees[p.Target]
+		if !found {
+			return ErrGuaranteeNotFound
+		}
 
-	guarantee, found := o.guarantees[p.Target]
-	if !found {
-		return ErrGuaranteeNotFound
+		if p.LeftAmount.Cmp(guarantee.amount) > 0 {
+			return ErrInvalidAmount
+		}
+
+		// EFFECTS
+
+		// Increase the turn number
+		vars.TurnNum += 1
+
+		rightAmount := big.NewInt(0).Sub(guarantee.amount, p.LeftAmount)
+
+		// Adjust balances
+		if o.leader.destination == guarantee.left {
+			o.leader.amount.Add(o.leader.amount, p.LeftAmount)
+			o.follower.amount.Add(o.follower.amount, rightAmount)
+		} else {
+			o.leader.amount.Add(o.leader.amount, rightAmount)
+			o.follower.amount.Add(o.follower.amount, p.LeftAmount)
+		}
+
+		// Remove the guarantee
+		delete(o.guarantees, p.Target)
 	}
-
-	if p.LeftAmount.Cmp(guarantee.amount) > 0 {
-		return ErrInvalidAmount
-	}
-
-	// EFFECTS
-
-	// Increase the turn number
-	vars.TurnNum += 1
-
-	rightAmount := big.NewInt(0).Sub(guarantee.amount, p.LeftAmount)
-
-	// Adjust balances
-	if o.leader.destination == guarantee.left {
-		o.leader.amount.Add(o.leader.amount, p.LeftAmount)
-		o.follower.amount.Add(o.follower.amount, rightAmount)
-	} else {
-		o.leader.amount.Add(o.leader.amount, rightAmount)
-		o.follower.amount.Add(o.follower.amount, p.LeftAmount)
-	}
-
-	// Remove the guarantee
-	delete(o.guarantees, p.Target)
 
 	return nil
 }
@@ -863,7 +865,12 @@ func (r *Remove) Clone() Remove {
 }
 
 func (v Vars) AsState(fp state.FixedPart) state.State {
-	outcome := v.Outcome.AsOutcome()
+	var outcome outcome.Exit
+	for _, o := range v.Outcome {
+		outcomeExit := o.AsOutcome()
+		outcome = append(outcome, outcomeExit...)
+	}
+
 	return state.State{
 		// Variable
 		TurnNum: v.TurnNum,
@@ -905,4 +912,52 @@ func (cc *ConsensusChannel) SupportedSignedState() state.SignedState {
 	_ = ss.AddSignature(sigs[0])
 	_ = ss.AddSignature(sigs[1])
 	return ss
+}
+
+func CloneOutcomeArr(outcomeArr []LedgerOutcome) []LedgerOutcome {
+	var clonedOutcomeArr []LedgerOutcome
+
+	for _, o := range outcomeArr {
+		clonedOutcomeArr = append(clonedOutcomeArr, o.clone())
+	}
+
+	return clonedOutcomeArr
+}
+
+func IsIncludesOutcomeArr(outcomeArr []LedgerOutcome, g Guarantee) bool {
+	isGuaranteeIncluded := false
+
+	for _, o := range outcomeArr {
+		if o.includes(g) {
+			isGuaranteeIncluded = true
+			break
+		}
+	}
+
+	return isGuaranteeIncluded
+}
+
+func IncludesTargetOutcomeArr(outcomeArr []LedgerOutcome, target types.Destination) bool {
+	isTargetIncluded := false
+
+	for _, o := range outcomeArr {
+		if o.IncludesTarget(target) {
+			isTargetIncluded = true
+			break
+		}
+	}
+
+	return isTargetIncluded
+}
+
+// TODO: Check if working as expected
+func FundingTargetsOutcomeArr(outcomeArr []LedgerOutcome) []types.Destination {
+	var fundingTargets []types.Destination
+
+	for _, o := range outcomeArr {
+		f := o.FundingTargets()
+		fundingTargets = append(fundingTargets, f...)
+	}
+
+	return fundingTargets
 }

@@ -43,7 +43,6 @@ func TestConsensusChannel(t *testing.T) {
 	}
 
 	var mutatedG Guarantee
-
 	for _, clone := range clone1 {
 		mutatedG = clone.guarantees[existingChannel]
 		mutatedG.amount.SetInt64(111)

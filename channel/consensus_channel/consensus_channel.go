@@ -745,9 +745,9 @@ func (vars *Vars) HandleProposal(p Proposal) error {
 // If an error is returned, the original vars is not mutated.
 // TODO: Add `assets` argument to add a guarantee for a specific asset only
 func (vars *Vars) Add(p Add) error {
+	// CHECKS
 	o := vars.Outcome[0]
 
-	// CHECKS
 	_, found := o.guarantees[p.target]
 	if found {
 		return ErrDuplicateGuarantee
@@ -810,9 +810,10 @@ func (vars *Vars) Add(p Add) error {
 // If an error is returned, the original vars is not mutated.
 // TODO: Return guarantee not found error only if none of the asset outcomes is providing guarantee
 func (vars *Vars) Remove(p Remove) error {
+	// CHECKS
+
 	o := vars.Outcome[0]
 
-	// CHECKS
 	guarantee, found := o.guarantees[p.Target]
 	if !found {
 		return ErrGuaranteeNotFound
@@ -951,7 +952,6 @@ func IncludesTargetOutcomeArr(outcomeArr []LedgerOutcome, target types.Destinati
 	return isTargetIncluded
 }
 
-// TODO: Check if working as expected
 func FundingTargetsOutcomeArr(outcomeArr []LedgerOutcome) []types.Destination {
 	var fundingTargets []types.Destination
 

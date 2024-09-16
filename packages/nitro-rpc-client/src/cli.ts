@@ -320,9 +320,9 @@ yargs(hideBin(process.argv))
           type: "number",
           default: 1_000_000,
         })
-        .option("assets", {
+        .option("asset", {
           describe:
-            "An array of asset entries in the format '0xAddress:alphaAmount,betaAmount'",
+            "Asset data in the format '0xAddress:alphaAmount,betaAmount'",
           type: "array",
           string: true,
         })
@@ -346,7 +346,7 @@ yargs(hideBin(process.argv))
 
       let assetsData: AssetData[] = [];
 
-      if (!yargs.assets) {
+      if (!yargs.asset) {
         assetsData = [
           {
             assetAddress: yargs.assetAddress,
@@ -355,8 +355,7 @@ yargs(hideBin(process.argv))
           },
         ];
       } else {
-        // Parse asset data based on the user input
-        assetsData = parseAssetsData(yargs.assets);
+        assetsData = parseAssetsData(yargs.asset);
       }
 
       const dfObjective = await rpcClient.CreateLedgerChannel(

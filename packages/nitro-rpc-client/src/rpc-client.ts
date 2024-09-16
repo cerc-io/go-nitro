@@ -26,6 +26,7 @@ import { createOutcome, generateRequest } from "./utils";
 import { HttpTransport } from "./transport/http";
 import { getAndValidateResult } from "./serde";
 import { RpcClientApi } from "./interface";
+import { ZERO_ETHEREUM_ADDRESS } from "./constants";
 
 export class NitroRpcClient implements RpcClientApi {
   private transport: Transport;
@@ -147,8 +148,7 @@ export class NitroRpcClient implements RpcClientApi {
       CounterParty: counterParty,
       ChallengeDuration: challengeDuration,
       Outcome: createOutcome(await this.GetAddress(), counterParty, assetsData),
-      // TODO: Check if consensus app address can be passed
-      AppDefinition: assetsData[0].assetAddress,
+      AppDefinition: ZERO_ETHEREUM_ADDRESS,
       AppData: "0x00",
       Nonce: Date.now(),
     };

@@ -412,3 +412,9 @@ export type GetNodeInfo = {
   SCAddress: string;
   MessageServicePeerId: string;
 };
+
+export type AssetData = {
+  assetAddress: string;
+  alphaAmount: number;
+  betaAmount: number;
+};

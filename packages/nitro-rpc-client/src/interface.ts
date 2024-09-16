@@ -1,4 +1,5 @@
 import {
+  AssetData,
   ChannelStatus,
   LedgerChannelInfo,
   ObjectiveResponse,
@@ -17,9 +18,7 @@ interface ledgerChannelApi {
    */
   CreateLedgerChannel(
     counterParty: string,
-    assetAddress: string,
-    aplhaAmount: number,
-    betaAmount: number,
+    assetsData: AssetData[],
     challengeDuration: number
   ): Promise<ObjectiveResponse>;
   /**

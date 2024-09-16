@@ -13,8 +13,9 @@ import {
   prettyJson,
   getRPCUrl,
   logOutChannelUpdates,
+  parseAssetData as parseAssetsData,
 } from "./utils";
-import { CounterChallengeAction } from "./types";
+import { AssetData, CounterChallengeAction } from "./types";
 import { ZERO_ETHEREUM_ADDRESS } from "./constants";
 
 yargs(hideBin(process.argv))
@@ -319,6 +320,12 @@ yargs(hideBin(process.argv))
           type: "number",
           default: 1_000_000,
         })
+        .option("assets", {
+          describe:
+            "An array of asset entries in the format '0xAddress:alphaAmount,betaAmount'",
+          type: "array",
+          string: true,
+        })
         .option("challengeDuration", {
           describe:
             "The duration (in seconds) of the challenge-response window",
@@ -337,11 +344,24 @@ yargs(hideBin(process.argv))
       );
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
+      let assetsData: AssetData[] = [];
+
+      if (!yargs.assets) {
+        assetsData = [
+          {
+            assetAddress: yargs.assetAddress,
+            alphaAmount: yargs.alphaAmount,
+            betaAmount: yargs.betaAmount,
+          },
+        ];
+      } else {
+        // Parse asset data based on the user input
+        assetsData = parseAssetsData(yargs.assets);
+      }
+
       const dfObjective = await rpcClient.CreateLedgerChannel(
         yargs.counterparty,
-        yargs.assetAddress,
-        yargs.alphaAmount,
-        yargs.betaAmount,
+        assetsData,
         yargs.challengeDuration
       );
       const { Id, ChannelId } = dfObjective;
@@ -349,6 +369,7 @@ yargs(hideBin(process.argv))
       console.log(`Objective started ${Id}`);
       await rpcClient.WaitForLedgerChannelStatus(ChannelId, "Open");
       console.log(`Channel Open ${ChannelId}`);
+
       await rpcClient.Close();
       process.exit(0);
     }

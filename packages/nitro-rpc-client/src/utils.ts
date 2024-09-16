@@ -2,6 +2,7 @@ import JSONbig from "json-bigint";
 
 import { NitroRpcClient } from "./rpc-client";
 import {
+  AssetData,
   LedgerChannelInfo,
   Outcome,
   PaymentChannelInfo,
@@ -21,15 +22,13 @@ export const RPC_PATH = "api/v1";
  * @returns An outcome for a directly funded channel with 100 wei allocated to each participant
  */
 export function createOutcome(
-  asset: string,
   alpha: string,
   beta: string,
-  alphaAmount: number,
-  betaAmount: number
+  assetData: AssetData[]
 ): Outcome {
-  return [
-    {
-      Asset: asset,
+  return assetData.map((asset) => {
+    return {
+      Asset: asset.assetAddress,
       AssetMetadata: {
         AssetType: 0,
         Metadata: null,
@@ -38,19 +37,19 @@ export function createOutcome(
       Allocations: [
         {
           Destination: convertAddressToBytes32(alpha),
-          Amount: alphaAmount,
+          Amount: asset.alphaAmount,
           AllocationType: 0,
           Metadata: null,
         },
         {
           Destination: convertAddressToBytes32(beta),
-          Amount: betaAmount,
+          Amount: asset.betaAmount,
           AllocationType: 0,
           Metadata: null,
         },
       ],
-    },
-  ];
+    };
+  });
 }
 
 /**
@@ -122,4 +121,24 @@ export function prettyJson(obj: unknown): string {
 
 export function compactJson(obj: unknown): string {
   return JSONbig.stringify(obj, null, 0);
+}
+
+export function parseAssetData(assets: string[]): AssetData[] {
+  return assets.map((entry) => {
+    const [addressPart, amountsPart] = entry.split(":");
+    if (!addressPart || !amountsPart) {
+      throw new Error(`Invalid format for asset entry: ${entry}`);
+    }
+
+    const [alphaAmount, betaAmount] = amountsPart.split(",").map(Number);
+    if (isNaN(alphaAmount) || isNaN(betaAmount)) {
+      throw new Error(`Invalid alpha or beta amounts in: ${entry}`);
+    }
+
+    return {
+      assetAddress: addressPart,
+      alphaAmount,
+      betaAmount,
+    };
+  });
 }

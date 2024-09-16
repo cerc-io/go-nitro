@@ -148,7 +148,7 @@ export class NitroRpcClient implements RpcClientApi {
       ChallengeDuration: challengeDuration,
       Outcome: createOutcome(await this.GetAddress(), counterParty, assetsData),
       // TODO: Check if consensus app address can be passed
-      AppDefinition: "",
+      AppDefinition: assetsData[0].assetAddress,
       AppData: "0x00",
       Nonce: Date.now(),
     };

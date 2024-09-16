@@ -1035,8 +1035,9 @@ func (e Engine) registerPaymentChannel(vfo virtualfund.Objective) error {
 
 func (e Engine) registerSwapChannel(sfo swapfund.Objective) error {
 	// TODO: Add function to register swap channel
-	// Add swapManager similar to voucher mananger
-	return fmt.Errorf("Placeholder error")
+	// TODO: Add swapManager similar to voucher mananger
+	fmt.Println("Test swapfund objective", sfo)
+	return nil
 }
 
 // spawnConsensusChannel will attempt to create and store a ConsensusChannel derived from the supplied Objective if it is a directfund.Objective or bridgedfund.Objective.

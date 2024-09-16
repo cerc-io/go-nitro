@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/safesync"
@@ -24,6 +25,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/mirrorbridgeddefund"
+	"github.com/statechannels/go-nitro/protocols/swapfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
 	"github.com/statechannels/go-nitro/rand"
@@ -193,7 +195,25 @@ func (c *Node) ReceiveVoucher(v payments.Voucher) (payments.ReceiveVoucherSummar
 	return payments.ReceiveVoucherSummary{Total: total, Delta: delta}, err
 }
 
-// TODO: Add function to create payment channel
+// TODO: Add function to create swap channel
+func (n *Node) CreateSwapChannel(Intermediaries []types.Address, CounterParty types.Address, ChallengeDuration uint32, Outcome outcome.Exit) (swapfund.ObjectiveResponse, error) {
+	objectiveRequest := swapfund.NewObjectiveRequest(
+		Intermediaries,
+		CounterParty,
+		ChallengeDuration,
+		Outcome,
+		rand.Uint64(),
+		// Since no contract present for swap channels yet
+		// TODO: Handle sad path for swap channels
+		common.Address{},
+	)
+
+	// Send the event to the engine
+	n.engine.ObjectiveRequestsFromAPI <- objectiveRequest
+
+	objectiveRequest.WaitForObjectiveToStart()
+	return objectiveRequest.Response(*n.Address), nil
+}
 
 // CreatePaymentChannel creates a virtual channel with the counterParty using ledger channels
 // with the supplied intermediaries.

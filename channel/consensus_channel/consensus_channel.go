@@ -745,54 +745,54 @@ func (vars *Vars) HandleProposal(p Proposal) error {
 // If an error is returned, the original vars is not mutated.
 // TODO: Add `assets` argument to add a guarantee for a specific asset only
 func (vars *Vars) Add(p Add) error {
+	o := vars.Outcome[0]
+
 	// CHECKS
-	for _, o := range vars.Outcome {
-		_, found := o.guarantees[p.target]
-		if found {
-			return ErrDuplicateGuarantee
-		}
-
-		var left, right Balance
-
-		if o.leader.destination == p.Guarantee.left {
-			left = o.leader
-			right = o.follower
-		} else {
-			left = o.follower
-			right = o.leader
-		}
-
-		if types.Gt(p.LeftDeposit, p.amount) {
-			return ErrInvalidDeposit
-		}
-
-		if types.Gt(p.LeftDeposit, left.amount) {
-			return ErrInsufficientFunds
-		}
-
-		if types.Gt(p.RightDeposit(), right.amount) {
-			return ErrInsufficientFunds
-		}
-
-		// EFFECTS
-
-		// Increase the turn number
-		vars.TurnNum += 1
-
-		rightDeposit := p.RightDeposit()
-
-		// Adjust balances
-		if o.leader.destination == p.Guarantee.left {
-			o.leader.amount.Sub(o.leader.amount, p.LeftDeposit)
-			o.follower.amount.Sub(o.follower.amount, rightDeposit)
-		} else {
-			o.follower.amount.Sub(o.follower.amount, p.LeftDeposit)
-			o.leader.amount.Sub(o.leader.amount, rightDeposit)
-		}
-
-		// Include guarantee
-		o.guarantees[p.target] = p.Guarantee
+	_, found := o.guarantees[p.target]
+	if found {
+		return ErrDuplicateGuarantee
 	}
+
+	var left, right Balance
+
+	if o.leader.destination == p.Guarantee.left {
+		left = o.leader
+		right = o.follower
+	} else {
+		left = o.follower
+		right = o.leader
+	}
+
+	if types.Gt(p.LeftDeposit, p.amount) {
+		return ErrInvalidDeposit
+	}
+
+	if types.Gt(p.LeftDeposit, left.amount) {
+		return ErrInsufficientFunds
+	}
+
+	if types.Gt(p.RightDeposit(), right.amount) {
+		return ErrInsufficientFunds
+	}
+
+	// EFFECTS
+
+	// Increase the turn number
+	vars.TurnNum += 1
+
+	rightDeposit := p.RightDeposit()
+
+	// Adjust balances
+	if o.leader.destination == p.Guarantee.left {
+		o.leader.amount.Sub(o.leader.amount, p.LeftDeposit)
+		o.follower.amount.Sub(o.follower.amount, rightDeposit)
+	} else {
+		o.follower.amount.Sub(o.follower.amount, p.LeftDeposit)
+		o.leader.amount.Sub(o.leader.amount, rightDeposit)
+	}
+
+	// Include guarantee
+	o.guarantees[p.target] = p.Guarantee
 
 	return nil
 }
@@ -810,37 +810,36 @@ func (vars *Vars) Add(p Add) error {
 // If an error is returned, the original vars is not mutated.
 // TODO: Return guarantee not found error only if none of the asset outcomes is providing guarantee
 func (vars *Vars) Remove(p Remove) error {
+	o := vars.Outcome[0]
+
 	// CHECKS
-
-	for _, o := range vars.Outcome {
-		guarantee, found := o.guarantees[p.Target]
-		if !found {
-			return ErrGuaranteeNotFound
-		}
-
-		if p.LeftAmount.Cmp(guarantee.amount) > 0 {
-			return ErrInvalidAmount
-		}
-
-		// EFFECTS
-
-		// Increase the turn number
-		vars.TurnNum += 1
-
-		rightAmount := big.NewInt(0).Sub(guarantee.amount, p.LeftAmount)
-
-		// Adjust balances
-		if o.leader.destination == guarantee.left {
-			o.leader.amount.Add(o.leader.amount, p.LeftAmount)
-			o.follower.amount.Add(o.follower.amount, rightAmount)
-		} else {
-			o.leader.amount.Add(o.leader.amount, rightAmount)
-			o.follower.amount.Add(o.follower.amount, p.LeftAmount)
-		}
-
-		// Remove the guarantee
-		delete(o.guarantees, p.Target)
+	guarantee, found := o.guarantees[p.Target]
+	if !found {
+		return ErrGuaranteeNotFound
 	}
+
+	if p.LeftAmount.Cmp(guarantee.amount) > 0 {
+		return ErrInvalidAmount
+	}
+
+	// EFFECTS
+
+	// Increase the turn number
+	vars.TurnNum += 1
+
+	rightAmount := big.NewInt(0).Sub(guarantee.amount, p.LeftAmount)
+
+	// Adjust balances
+	if o.leader.destination == guarantee.left {
+		o.leader.amount.Add(o.leader.amount, p.LeftAmount)
+		o.follower.amount.Add(o.follower.amount, rightAmount)
+	} else {
+		o.leader.amount.Add(o.leader.amount, rightAmount)
+		o.follower.amount.Add(o.follower.amount, p.LeftAmount)
+	}
+
+	// Remove the guarantee
+	delete(o.guarantees, p.Target)
 
 	return nil
 }

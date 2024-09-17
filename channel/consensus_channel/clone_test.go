@@ -10,7 +10,7 @@ import (
 )
 
 func TestClone(t *testing.T) {
-	outcome := []LedgerOutcome{makeOutcome(
+	outcome := LedgerOutcomes{makeOutcome(
 		allocation(alice, aBal),
 		allocation(bob, bBal),
 		guarantee(vAmount, types.Destination{7}, alice, bob),

@@ -438,7 +438,7 @@ func (o *Objective) CreateConsensusChannelFromChannel() (*consensus_channel.Cons
 	}
 	assetExit := signedState.State().Outcome[0]
 	turnNum := signedState.State().TurnNum
-	outcome, err := consensus_channel.FromExit(assetExit)
+	outcome, err := consensus_channel.FromSingleAssetExit(assetExit)
 	if err != nil {
 		return nil, fmt.Errorf("could not create ledger outcome from channel exit: %w", err)
 	}

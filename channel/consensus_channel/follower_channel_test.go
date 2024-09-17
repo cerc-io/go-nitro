@@ -117,7 +117,7 @@ func TestFollowerChannel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	outcomeSigned := []LedgerOutcome{makeOutcome(
+	outcomeSigned := LedgerOutcomes{makeOutcome(
 		allocation(alice, aBal-amountAdded),
 		allocation(bob, bBal),
 		guarantee(vAmount, channel1Id, alice, bob),

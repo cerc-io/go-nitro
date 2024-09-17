@@ -15,12 +15,12 @@ import (
 
 func TestNewLeaderChannel(t *testing.T) {
 	o := ledgerOutcome()
-	initialVars := Vars{Outcome: CloneOutcomeArr(o), TurnNum: 0}
+	initialVars := Vars{Outcome: o.clone(), TurnNum: 0}
 	aliceSig, _ := initialVars.AsState(fp()).Sign(alice.PrivateKey)
 	bobsSig, _ := initialVars.AsState(fp()).Sign(bob.PrivateKey)
 	sigs := [2]state.Signature{aliceSig, bobsSig}
 
-	channel, err := NewLeaderChannel(fp(), 0, CloneOutcomeArr(o), sigs)
+	channel, err := NewLeaderChannel(fp(), 0, o.clone(), sigs)
 	if err != nil {
 		t.Fatal("unable to construct channel")
 	}
@@ -45,7 +45,7 @@ func TestLeaderChannel(t *testing.T) {
 	// createSignedProposal generates a proposal given the vars & proposed change
 	// The proposal is signed by the given actor, using a generic fixed part
 	createSignedProposal := func(vars Vars, p Proposal, actor testactors.Actor, turnNum uint64) SignedProposalVars {
-		proposalVars := Vars{TurnNum: vars.TurnNum, Outcome: CloneOutcomeArr(vars.Outcome)}
+		proposalVars := Vars{TurnNum: vars.TurnNum, Outcome: vars.Outcome.clone()}
 		_ = proposalVars.HandleProposal(p)
 
 		state := proposalVars.AsState(fp())
@@ -63,7 +63,7 @@ func TestLeaderChannel(t *testing.T) {
 	}
 
 	cId := fp().ChannelId()
-	testChannel := func(lo []LedgerOutcome, testProposalQueue []SignedProposalVars) ConsensusChannel {
+	testChannel := func(lo LedgerOutcomes, testProposalQueue []SignedProposalVars) ConsensusChannel {
 		vars := Vars{TurnNum: 0, Outcome: lo}
 		aliceSig, _ := vars.AsState(fp()).Sign(alice.PrivateKey)
 		bobsSig, _ := vars.AsState(fp()).Sign(bob.PrivateKey)
@@ -184,7 +184,7 @@ func TestLeaderChannel(t *testing.T) {
 
 	{
 		msg := "ok:adding with an empty queue"
-		startingOutcome := []LedgerOutcome{makeOutcome(
+		startingOutcome := LedgerOutcomes{makeOutcome(
 			allocation(alice, aBal-amountAdded),
 			allocation(bob, bBal),
 			guarantee(vAmount, channel1Id, alice, bob),
@@ -198,7 +198,7 @@ func TestLeaderChannel(t *testing.T) {
 
 	{
 		msg := "ok:adding with a non-empty queue"
-		startingOutcome := []LedgerOutcome{makeOutcome(
+		startingOutcome := LedgerOutcomes{makeOutcome(
 			allocation(alice, aBal-amountAdded),
 			allocation(bob, bBal),
 			guarantee(vAmount, channel1Id, alice, bob),
@@ -219,7 +219,7 @@ func TestLeaderChannel(t *testing.T) {
 	}
 	{
 		msg := "ok:adding a remove proposal"
-		startingOutcome := []LedgerOutcome{makeOutcome(
+		startingOutcome := LedgerOutcomes{makeOutcome(
 			allocation(alice, aBal),
 			allocation(bob, bBal),
 			guarantee(amountAdded, channel1Id, alice, bob),
@@ -236,7 +236,7 @@ func TestLeaderChannel(t *testing.T) {
 	}
 	{
 		msg := "err:adding a remove proposal with invalid target"
-		startingOutcome := []LedgerOutcome{makeOutcome(
+		startingOutcome := LedgerOutcomes{makeOutcome(
 			allocation(alice, aBal),
 			allocation(bob, bBal),
 		)}
@@ -249,7 +249,7 @@ func TestLeaderChannel(t *testing.T) {
 	}
 	{
 		msg := "err:adding a remove proposal with too large left/right amounts"
-		startingOutcome := []LedgerOutcome{makeOutcome(
+		startingOutcome := LedgerOutcomes{makeOutcome(
 			allocation(alice, aBal),
 			allocation(bob, bBal),
 			guarantee(amountAdded, channel1Id, alice, bob),
@@ -265,7 +265,7 @@ func TestLeaderChannel(t *testing.T) {
 
 	{
 		msg := "err:adding a duplicate proposal"
-		startingOutcome := []LedgerOutcome{makeOutcome(
+		startingOutcome := LedgerOutcomes{makeOutcome(
 			allocation(alice, aBal-amountAdded),
 			allocation(bob, bBal),
 			guarantee(vAmount, channel1Id, alice, bob),
@@ -286,7 +286,7 @@ func TestLeaderChannel(t *testing.T) {
 
 	{
 		msg := "err:overspending"
-		startingOutcome := []LedgerOutcome{makeOutcome(
+		startingOutcome := LedgerOutcomes{makeOutcome(
 			allocation(alice, 0),
 			allocation(bob, bBal),
 		)}
@@ -303,7 +303,7 @@ func TestLeaderChannel(t *testing.T) {
 	// // UpdateConsensus //
 	// // *************** //
 
-	startingOutcome := []LedgerOutcome{makeOutcome(
+	startingOutcome := LedgerOutcomes{makeOutcome(
 		allocation(alice, aBal-amountAdded),
 		allocation(bob, bBal),
 	)}
@@ -419,7 +419,7 @@ func TestLeaderChannel(t *testing.T) {
 	}
 
 	{ // Receiving a valid (but stale) proposal
-		initialVars := Vars{TurnNum: consensusTurnNum, Outcome: CloneOutcomeArr(startingOutcome)}
+		initialVars := Vars{TurnNum: consensusTurnNum, Outcome: startingOutcome.clone()}
 		p0 := createAdd(cId, channel1Id)
 
 		counterP := bobSignedProposal(initialVars, p0, 0).SignedProposal

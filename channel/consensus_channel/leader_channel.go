@@ -14,7 +14,7 @@ const (
 )
 
 // NewLeaderChannel constructs a new LeaderChannel
-func NewLeaderChannel(fp state.FixedPart, turnNum uint64, outcome []LedgerOutcome, signatures [2]state.Signature) (ConsensusChannel, error) {
+func NewLeaderChannel(fp state.FixedPart, turnNum uint64, outcome LedgerOutcomes, signatures [2]state.Signature) (ConsensusChannel, error) {
 	return newConsensusChannel(fp, Leader, turnNum, outcome, signatures)
 }
 
@@ -78,7 +78,7 @@ func (c *ConsensusChannel) leaderReceive(countersigned SignedProposal) error {
 
 	consensusCandidate := Vars{
 		TurnNum: c.current.TurnNum,
-		Outcome: CloneOutcomeArr(c.current.Outcome),
+		Outcome: c.current.Outcome.clone(),
 	}
 	consensusTurnNum := countersigned.TurnNum
 

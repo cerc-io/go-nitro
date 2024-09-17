@@ -666,16 +666,16 @@ func (o *Objective) CreateConsensusChannelFromChannel() (*consensus_channel.Cons
 	}
 	signatures := [2]state.Signature{leaderSig, followerSig}
 
-	assetExit := signedState.State().Outcome
+	assetsExit := signedState.State().Outcome
 	turnNum := signedState.State().TurnNum
 
-	outcomeArr, err := protocols.FromExitOutcomeArr(assetExit)
+	outcomes, err := consensus_channel.FromExit(assetsExit)
 	if err != nil {
 		return nil, fmt.Errorf("could not create ledger outcome from channel exit: %w", err)
 	}
 
 	if ledger.MyIndex == uint(consensus_channel.Leader) {
-		con, err := consensus_channel.NewLeaderChannel(ledger.FixedPart, turnNum, outcomeArr, signatures)
+		con, err := consensus_channel.NewLeaderChannel(ledger.FixedPart, turnNum, outcomes, signatures)
 		con.OnChainFunding = ledger.OnChain.Holdings.Clone() // Copy OnChain.Holdings so we don't lose this information
 		if err != nil {
 			return nil, fmt.Errorf("could not create consensus channel as leader: %w", err)
@@ -683,7 +683,7 @@ func (o *Objective) CreateConsensusChannelFromChannel() (*consensus_channel.Cons
 		return &con, nil
 
 	} else {
-		con, err := consensus_channel.NewFollowerChannel(ledger.FixedPart, turnNum, outcomeArr, signatures)
+		con, err := consensus_channel.NewFollowerChannel(ledger.FixedPart, turnNum, outcomes, signatures)
 		con.OnChainFunding = ledger.OnChain.Holdings.Clone() // Copy OnChain.Holdings so we don't lose this information
 		if err != nil {
 			return nil, fmt.Errorf("could not create consensus channel as follower: %w", err)

@@ -59,8 +59,8 @@ func makeOutcome(leader, follower Balance, guarantees ...Guarantee) LedgerOutcom
 //   - alice: 200,
 //   - bob: 300,
 //   - guarantee(target: 1, left: alice, right: bob, amount: 5)
-func ledgerOutcome() []LedgerOutcome {
-	return []LedgerOutcome{makeOutcome(
+func ledgerOutcome() LedgerOutcomes {
+	return LedgerOutcomes{makeOutcome(
 		allocation(alice, aBal),
 		allocation(bob, bBal),
 		guarantee(vAmount, channel1Id, alice, bob),
@@ -90,7 +90,7 @@ func remove(vId types.Destination, leftAmount uint64) Remove {
 // createSignedProposal generates a signed proposal given the vars, proposal fixed parts and private key
 // The vars passed in are NOT mutated!
 func createSignedProposal(vars Vars, proposal Proposal, fp state.FixedPart, pk []byte) SignedProposal {
-	proposalVars := Vars{TurnNum: vars.TurnNum, Outcome: CloneOutcomeArr(vars.Outcome)}
+	proposalVars := Vars{TurnNum: vars.TurnNum, Outcome: vars.Outcome.clone()}
 	_ = proposalVars.HandleProposal(proposal)
 
 	state := proposalVars.AsState(fp)

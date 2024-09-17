@@ -18,7 +18,7 @@ const (
 )
 
 // NewFollowerChannel constructs a new FollowerChannel
-func NewFollowerChannel(fp state.FixedPart, turnNum uint64, outcome []LedgerOutcome, signatures [2]state.Signature) (ConsensusChannel, error) {
+func NewFollowerChannel(fp state.FixedPart, turnNum uint64, outcome LedgerOutcomes, signatures [2]state.Signature) (ConsensusChannel, error) {
 	return newConsensusChannel(fp, Follower, turnNum, outcome, signatures)
 }
 
@@ -47,7 +47,7 @@ func (c *ConsensusChannel) SignNextProposal(expectedProposal Proposal, sk []byte
 	// vars are cloned and modified instead of modified in place to simplify recovering from error
 	vars := Vars{
 		TurnNum: c.current.TurnNum,
-		Outcome: CloneOutcomeArr(c.current.Outcome),
+		Outcome: c.current.Outcome.clone(),
 	}
 	err := vars.HandleProposal(p)
 	if err != nil {

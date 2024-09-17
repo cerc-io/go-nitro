@@ -17,6 +17,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/libp2p/go-libp2p/p2p/transport/websocket"
 	"github.com/multiformats/go-multiaddr"
@@ -112,6 +113,7 @@ func NewMessageService(opts MessageOpts) *P2PMessageService {
 			fmt.Sprintf("/ip4/%s/tcp/%d", "0.0.0.0", opts.TcpPort),
 			fmt.Sprintf("/ip4/%s/tcp/%d/ws", "0.0.0.0", opts.WsMsgPort),
 		),
+		libp2p.Security(noise.ID, noise.New),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.NATPortMap(),
 		libp2p.EnableNATService(),

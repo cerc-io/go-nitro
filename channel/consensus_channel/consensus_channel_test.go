@@ -43,8 +43,7 @@ func TestConsensusChannel(t *testing.T) {
 		t.Fatal("vars incorrectly cloned")
 	}
 
-	var mutatedG Guarantee
-	mutatedG = clone1.guarantees[existingChannel]
+	mutatedG := clone1.guarantees[existingChannel]
 	mutatedG.amount.SetInt64(111)
 	if f1 != fingerprint(vars) {
 		t.Fatal("vars shares data with clone")

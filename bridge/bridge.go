@@ -270,7 +270,8 @@ func (b *Bridge) processCompletedObjectivesFromL1(objId protocols.ObjectiveId) e
 	}
 
 	// Create mirrored ledger channel between node BPrime and APrime
-	l2LedgerChannelResponse, err := b.nodeL2.CreateBridgeChannel(l1ledgerChannelStateClone.State().Participants[0], l1ledgerChannelStateClone.State().ChallengeDuration, l2ChannelOutcome)
+	// TODO: Support mirrored ledger channel creation with multiple assets
+	l2LedgerChannelResponse, err := b.nodeL2.CreateBridgeChannel(l1ledgerChannelStateClone.State().Participants[0], l1ledgerChannelStateClone.State().ChallengeDuration, l2ChannelOutcome[:1])
 	if err != nil {
 		return err
 	}

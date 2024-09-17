@@ -98,6 +98,7 @@ yargs(hideBin(process.argv))
       process.exit(0);
     }
   )
+  // TODO: Update method to get info for all the outcomes
   .command(
     "get-all-ledger-channels",
     "Get all ledger channels",

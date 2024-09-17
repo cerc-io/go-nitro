@@ -373,8 +373,6 @@ type LedgerOutcome struct {
 	guarantees   map[types.Destination]Guarantee
 }
 
-type LedgerOutcomes []LedgerOutcome
-
 // Clone returns a deep copy of the receiver.
 func (lo *LedgerOutcome) Clone() LedgerOutcome {
 	clonedGuarantees := make(map[types.Destination]Guarantee)
@@ -563,6 +561,65 @@ func (o *LedgerOutcome) clone() LedgerOutcome {
 		follower:     follower,
 		guarantees:   guarantees,
 	}
+}
+
+type LedgerOutcomes []LedgerOutcome
+
+func (lo *LedgerOutcomes) clone() LedgerOutcomes {
+	var clonedOutcomes LedgerOutcomes
+
+	for _, o := range *lo {
+		clonedOutcomes = append(clonedOutcomes, o.clone())
+	}
+
+	return clonedOutcomes
+}
+
+func (lo *LedgerOutcomes) includes(g Guarantee) bool {
+	isGuaranteeIncluded := false
+
+	for _, o := range *lo {
+		if o.includes(g) {
+			isGuaranteeIncluded = true
+			break
+		}
+	}
+
+	return isGuaranteeIncluded
+}
+
+func (lo *LedgerOutcomes) includesTarget(target types.Destination) bool {
+	isTargetIncluded := false
+
+	for _, o := range *lo {
+		if o.IncludesTarget(target) {
+			isTargetIncluded = true
+			break
+		}
+	}
+
+	return isTargetIncluded
+}
+
+func (lo LedgerOutcomes) FundingTargets() []types.Destination {
+	var fundingTargets []types.Destination
+
+	for _, o := range lo {
+		f := o.FundingTargets()
+		fundingTargets = append(fundingTargets, f...)
+	}
+
+	return fundingTargets
+}
+
+func (lo *LedgerOutcomes) asOutcome() outcome.Exit {
+	var outcome outcome.Exit
+	for _, o := range *lo {
+		outcomeExit := o.AsOutcome()
+		outcome = append(outcome, outcomeExit...)
+	}
+
+	return outcome
 }
 
 // SignedVars stores 0-2 signatures for some vars in a consensus channel.
@@ -926,61 +983,4 @@ func (cc *ConsensusChannel) SupportedSignedState() state.SignedState {
 	_ = ss.AddSignature(sigs[0])
 	_ = ss.AddSignature(sigs[1])
 	return ss
-}
-
-func (lo *LedgerOutcomes) clone() LedgerOutcomes {
-	var clonedOutcomes LedgerOutcomes
-
-	for _, o := range *lo {
-		clonedOutcomes = append(clonedOutcomes, o.clone())
-	}
-
-	return clonedOutcomes
-}
-
-func (lo *LedgerOutcomes) includes(g Guarantee) bool {
-	isGuaranteeIncluded := false
-
-	for _, o := range *lo {
-		if o.includes(g) {
-			isGuaranteeIncluded = true
-			break
-		}
-	}
-
-	return isGuaranteeIncluded
-}
-
-func (lo *LedgerOutcomes) includesTarget(target types.Destination) bool {
-	isTargetIncluded := false
-
-	for _, o := range *lo {
-		if o.IncludesTarget(target) {
-			isTargetIncluded = true
-			break
-		}
-	}
-
-	return isTargetIncluded
-}
-
-func (lo LedgerOutcomes) FundingTargets() []types.Destination {
-	var fundingTargets []types.Destination
-
-	for _, o := range lo {
-		f := o.FundingTargets()
-		fundingTargets = append(fundingTargets, f...)
-	}
-
-	return fundingTargets
-}
-
-func (lo *LedgerOutcomes) asOutcome() outcome.Exit {
-	var outcome outcome.Exit
-	for _, o := range *lo {
-		outcomeExit := o.AsOutcome()
-		outcome = append(outcome, outcomeExit...)
-	}
-
-	return outcome
 }

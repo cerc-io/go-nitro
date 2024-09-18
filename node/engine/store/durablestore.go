@@ -19,6 +19,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/mirrorbridgeddefund"
+	"github.com/statechannels/go-nitro/protocols/swapfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
 	"github.com/statechannels/go-nitro/types"
@@ -588,6 +589,37 @@ func (ds *DurableStore) populateChannelData(obj protocols.Objective) error {
 			return fmt.Errorf("error retrieving virtual channel data for objective %s: %w", id, err)
 		}
 		o.V = &channel.VirtualChannel{Channel: v}
+
+		zeroAddress := types.Destination{}
+
+		if o.ToMyLeft != nil &&
+			o.ToMyLeft.Channel != nil &&
+			o.ToMyLeft.Channel.Id != zeroAddress {
+
+			left, err := ds.GetConsensusChannelById(o.ToMyLeft.Channel.Id)
+			if err != nil {
+				return fmt.Errorf("error retrieving left ledger channel data for objective %s: %w", id, err)
+			}
+			o.ToMyLeft.Channel = left
+		}
+
+		if o.ToMyRight != nil &&
+			o.ToMyRight.Channel != nil &&
+			o.ToMyRight.Channel.Id != zeroAddress {
+			right, err := ds.GetConsensusChannelById(o.ToMyRight.Channel.Id)
+			if err != nil {
+				return fmt.Errorf("error retrieving right ledger channel data for objective %s: %w", id, err)
+			}
+			o.ToMyRight.Channel = right
+		}
+
+		return nil
+	case *swapfund.Objective:
+		v, err := ds.getChannelById(o.S.Id)
+		if err != nil {
+			return fmt.Errorf("error retrieving swap channel data for objective %s: %w", id, err)
+		}
+		o.S = &channel.SwapChannel{Channel: v}
 
 		zeroAddress := types.Destination{}
 

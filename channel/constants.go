@@ -21,4 +21,5 @@ type ChannelType int
 const (
 	Ledger ChannelType = iota
 	Virtual
+	Swap
 )

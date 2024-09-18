@@ -275,7 +275,8 @@ func (e *Engine) run(ctx context.Context) {
 // a running ledger channel by pulling its corresponding objective
 // from the store and attempting progress.
 func (e *Engine) handleProposal(proposal consensus_channel.Proposal) (EngineEvent, error) {
-	id := getProposalObjectiveId(proposal)
+	c, _ := e.store.GetChannelById(proposal.Target())
+	id := getProposalObjectiveId(proposal, c.Type)
 
 	obj, err := e.store.GetObjectiveById(id)
 	if err != nil {
@@ -381,7 +382,8 @@ func (e *Engine) handleMessage(message protocols.Message) (EngineEvent, error) {
 
 	for _, entry := range message.LedgerProposals { // The ledger protocol requires us to process these proposals in turnNum order.
 		// Here we rely on the sender having packed them into the message in that order, and do not apply any checks or sorting of our own.
-		id := getProposalObjectiveId(entry.Proposal)
+		c, _ := e.store.GetChannelById(entry.Proposal.Target())
+		id := getProposalObjectiveId(entry.Proposal, c.Type)
 
 		o, err := e.store.GetObjectiveById(id)
 		if err != nil {
@@ -1248,17 +1250,25 @@ func fromMsgErr(id protocols.ObjectiveId, err error) error {
 
 // TODO: Add proposal methods for swap fund
 // getProposalObjectiveId returns the objectiveId for a proposal.
-func getProposalObjectiveId(p consensus_channel.Proposal) protocols.ObjectiveId {
+func getProposalObjectiveId(p consensus_channel.Proposal, channelType channel.ChannelType) protocols.ObjectiveId {
 	switch p.Type() {
 	case consensus_channel.AddProposal:
 		{
-			const prefix = virtualfund.ObjectivePrefix
+			var prefix string
+
+			if channelType == channel.Virtual {
+				prefix = virtualfund.ObjectivePrefix
+			} else if channelType == channel.Swap {
+				prefix = swapfund.ObjectivePrefix
+			}
+
 			channelId := p.ToAdd.Guarantee.Target().String()
 			return protocols.ObjectiveId(prefix + channelId)
 
 		}
 	case consensus_channel.RemoveProposal:
 		{
+			// TODO: Handle swap defund
 			const prefix = virtualdefund.ObjectivePrefix
 			channelId := p.ToRemove.Target.String()
 			return protocols.ObjectiveId(prefix + channelId)

@@ -17,11 +17,11 @@ func NewSwapChannel(s state.State, myIndex uint) (*SwapChannel, error) {
 
 	for _, assetExit := range s.Outcome {
 		if len(assetExit.Allocations) != 2 {
-			return &SwapChannel{}, errors.New("a virtual channel's initial state should only have two allocations")
+			return &SwapChannel{}, errors.New("a swap channel's initial state should only have two allocations")
 		}
 	}
 
-	c, err := New(s, myIndex, Virtual)
+	c, err := New(s, myIndex, Swap)
 
 	return &SwapChannel{*c}, err
 }

@@ -337,10 +337,14 @@ func (o *Objective) getPayload(raw protocols.ObjectivePayload) (*state.SignedSta
 }
 
 func (o *Objective) ReceiveProposal(sp consensus_channel.SignedProposal) (protocols.ProposalReceiver, error) {
-	pId, err := protocols.GetProposalObjectiveId(sp.Proposal)
-	if err != nil {
-		return o, err
+	// TODO: Refactor and use protocol.GetProposalObjectiveId
+	if sp.Proposal.Type() != consensus_channel.AddProposal {
+		return o, fmt.Errorf("invalid proposal type")
 	}
+
+	channelId := sp.Proposal.ToAdd.Guarantee.Target().String()
+	pId := protocols.ObjectiveId(ObjectivePrefix + channelId)
+
 	if o.Id() != pId {
 		return o, fmt.Errorf("sp and objective Ids do not match: %s and %s respectively", string(pId), string(o.Id()))
 	}
@@ -358,6 +362,7 @@ func (o *Objective) ReceiveProposal(sp consensus_channel.SignedProposal) (protoc
 	}
 
 	if sp.Proposal.Target() == o.S.Id {
+		var err error
 
 		switch sp.Proposal.LedgerID {
 		case types.Destination{}:

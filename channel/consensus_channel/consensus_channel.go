@@ -732,7 +732,8 @@ type Add struct {
 	// LeftDeposit is the portion of the Add's amount that will be deducted from left participant's ledger balance.
 	//
 	// The right participant's deduction is computed as the difference between the guarantee amount and LeftDeposit.
-	LeftDeposit *big.Int
+	LeftDeposit  *big.Int
+	AssetAddress common.Address
 }
 
 // Clone returns a deep copy of the receiver.
@@ -743,20 +744,22 @@ func (a *Add) Clone() Add {
 	return Add{
 		a.Guarantee.Clone(),
 		big.NewInt(0).Set(a.LeftDeposit),
+		a.AssetAddress,
 	}
 }
 
 // NewAdd constructs a new Add proposal.
-func NewAdd(g Guarantee, leftDeposit *big.Int) Add {
+func NewAdd(g Guarantee, leftDeposit *big.Int, assetAddress common.Address) Add {
 	return Add{
-		Guarantee:   g,
-		LeftDeposit: leftDeposit,
+		Guarantee:    g,
+		LeftDeposit:  leftDeposit,
+		AssetAddress: assetAddress,
 	}
 }
 
 // NewAddProposal constructs a proposal with a valid Add proposal and empty remove proposal.
-func NewAddProposal(ledgerID types.Destination, g Guarantee, leftDeposit *big.Int) Proposal {
-	return Proposal{ToAdd: NewAdd(g, leftDeposit), LedgerID: ledgerID}
+func NewAddProposal(ledgerID types.Destination, g Guarantee, leftDeposit *big.Int, assetAddress common.Address) Proposal {
+	return Proposal{ToAdd: NewAdd(g, leftDeposit, assetAddress), LedgerID: ledgerID}
 }
 
 // NewRemove constructs a new Remove proposal.
@@ -819,8 +822,15 @@ func (vars *Vars) HandleProposal(p Proposal) error {
 // If an error is returned, the original vars is not mutated.
 // TODO: Pass `assetIndex` argument to select asset used for guarantee
 func (vars *Vars) Add(p Add) error {
-	// CHECKS
-	o := vars.Outcome[0]
+	var o LedgerOutcome
+	for _, outcome := range vars.Outcome {
+		if outcome.assetAddress == p.AssetAddress {
+			o = outcome
+		}
+	}
+
+	// // CHECKS
+	// o := vars.Outcome[0]
 
 	_, found := o.guarantees[p.target]
 	if found {

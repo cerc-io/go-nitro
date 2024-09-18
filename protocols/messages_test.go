@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/payments"
@@ -26,6 +27,7 @@ func addProposal(ledgerId types.Destination, turnNum uint64) consensus_channel.S
 		types.Destination{'c'},
 	),
 		amount,
+		common.Address{},
 	)
 
 	return consensus_channel.SignedProposal{Proposal: add, Signature: state.Signature{}, TurnNum: turnNum}

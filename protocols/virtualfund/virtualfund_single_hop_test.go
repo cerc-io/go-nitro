@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/go-cmp/cmp"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
@@ -264,7 +265,7 @@ func TestCrankAsAlice(t *testing.T) {
 	oObj, effects, waitingFor, err = o.Crank(&my.PrivateKey)
 	o = oObj.(*Objective)
 
-	p := consensus_channel.NewAddProposal(o.ToMyRight.Channel.Id, o.ToMyRight.getExpectedGuarantee(), big.NewInt(6))
+	p := consensus_channel.NewAddProposal(o.ToMyRight.Channel.Id, o.ToMyRight.getExpectedGuarantee(), big.NewInt(6), common.Address{})
 	sp := consensus_channel.SignedProposal{Proposal: p, Signature: consensusStateSignatures(alice, p1, o.ToMyRight.getExpectedGuarantee())[0], TurnNum: 2}
 	Ok(t, err)
 	assertOneProposalSent(t, effects, sp, p1)
@@ -361,7 +362,7 @@ func TestCrankAsBob(t *testing.T) {
 	Equals(t, waitingFor, WaitingForCompleteFunding)
 
 	// If Bob had received a signed counterproposal, he should proceed to postFundSetup
-	p := consensus_channel.NewAddProposal(o.ToMyLeft.Channel.Id, o.ToMyLeft.getExpectedGuarantee(), big.NewInt(6))
+	p := consensus_channel.NewAddProposal(o.ToMyLeft.Channel.Id, o.ToMyLeft.getExpectedGuarantee(), big.NewInt(6), common.Address{})
 	sp := consensus_channel.SignedProposal{Proposal: p, Signature: consensusStateSignatures(p1, bob, o.ToMyLeft.getExpectedGuarantee())[0], TurnNum: 2}
 
 	oObj, err = o.ReceiveProposal(sp)
@@ -431,7 +432,7 @@ func TestCrankAsP1(t *testing.T) {
 	oObj, effects, waitingFor, err = o.Crank(&my.PrivateKey)
 	o = oObj.(*Objective)
 
-	p := consensus_channel.NewAddProposal(o.ToMyLeft.Channel.Id, o.ToMyLeft.getExpectedGuarantee(), big.NewInt(6))
+	p := consensus_channel.NewAddProposal(o.ToMyLeft.Channel.Id, o.ToMyLeft.getExpectedGuarantee(), big.NewInt(6), common.Address{})
 	sp := consensus_channel.SignedProposal{Proposal: p, Signature: consensusStateSignatures(p1, alice, o.ToMyLeft.getExpectedGuarantee())[0], TurnNum: 2}
 	Ok(t, err)
 	assertOneProposalSent(t, effects, sp, alice)
@@ -446,7 +447,7 @@ func TestCrankAsP1(t *testing.T) {
 	Equals(t, waitingFor, WaitingForCompleteFunding)
 
 	// If P1 had received a signed counterproposal, she should proceed to postFundSetup
-	p = consensus_channel.NewAddProposal(o.ToMyLeft.Channel.Id, o.ToMyLeft.getExpectedGuarantee(), big.NewInt(6))
+	p = consensus_channel.NewAddProposal(o.ToMyLeft.Channel.Id, o.ToMyLeft.getExpectedGuarantee(), big.NewInt(6), common.Address{})
 	sp = consensus_channel.SignedProposal{Proposal: p, Signature: consensusStateSignatures(p1, alice, o.ToMyLeft.getExpectedGuarantee())[1], TurnNum: 2}
 
 	oObj, err = o.ReceiveProposal(sp)

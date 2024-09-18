@@ -36,9 +36,9 @@ const ObjectivePrefix = "SwapFund-"
 type GuaranteeInfo struct {
 	Left                 types.Destination
 	Right                types.Destination
-	LeftAmount           types.Funds
-	RightAmount          types.Funds
 	GuaranteeDestination types.Destination
+	RightAmount          types.Funds
+	LeftAmount           types.Funds
 }
 type Connection struct {
 	Channel       *consensus_channel.ConsensusChannel
@@ -642,11 +642,13 @@ func (c *Connection) expectedProposal() consensus_channel.Proposal {
 	g := c.getExpectedGuarantee()
 
 	var leftAmount *big.Int
-	for _, val := range c.GuaranteeInfo.LeftAmount {
+	var assetAddress common.Address
+	for asset, val := range c.GuaranteeInfo.LeftAmount {
 		leftAmount = val
+		assetAddress = asset
 		break
 	}
-	proposal := consensus_channel.NewAddProposal(c.Channel.Id, g, leftAmount)
+	proposal := consensus_channel.NewAddProposal(c.Channel.Id, g, leftAmount, assetAddress)
 
 	return proposal
 }

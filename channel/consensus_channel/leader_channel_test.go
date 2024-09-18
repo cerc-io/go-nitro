@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/go-cmp/cmp"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/internal/testactors"
@@ -94,6 +95,7 @@ func TestLeaderChannel(t *testing.T) {
 			chID,
 			guarantee(amountAdded, target, alice, bob),
 			big.NewInt(int64(amountAdded)),
+			common.Address{},
 		)
 	}
 	createRemove := func(chID types.Destination, target types.Destination) Proposal {

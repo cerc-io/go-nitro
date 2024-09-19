@@ -11,7 +11,7 @@ import (
 	"github.com/statechannels/go-nitro/node/engine/store"
 )
 
-func InitializeL2Node(storeOpts store.StoreOpts, messageOpts p2pms.MessageOpts) (*node.Node, *store.Store, *p2pms.P2PMessageService, chainservice.ChainService, error) {
+func InitializeL2Node(chainOpts chainservice.LaconicChainOpts, storeOpts store.StoreOpts, messageOpts p2pms.MessageOpts) (*node.Node, *store.Store, *p2pms.P2PMessageService, chainservice.ChainService, error) {
 	ourStore, err := store.NewStore(storeOpts)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -22,7 +22,10 @@ func InitializeL2Node(storeOpts store.StoreOpts, messageOpts p2pms.MessageOpts) 
 	messageService := p2pms.NewMessageService(messageOpts)
 
 	// TODO: Implement laconic chain service
-	ourChain := &chainservice.LaconicChainService{}
+	ourChain, err := chainservice.NewLaconicChainService(chainOpts)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 
 	node := node.New(
 		messageService,

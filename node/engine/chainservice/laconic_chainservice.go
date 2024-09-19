@@ -10,10 +10,20 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
-type LaconicChainService struct{}
+type LaconicChainOpts struct {
+	VpaAddress common.Address
+	CaAddress  common.Address
+}
+type LaconicChainService struct {
+	consensusAppAddress      common.Address
+	virtualPaymentAppAddress common.Address
+}
 
-func NewLaconicChainService() (*LaconicChainService, error) {
-	return &LaconicChainService{}, nil
+func NewLaconicChainService(chainOpts LaconicChainOpts) (*LaconicChainService, error) {
+	return &LaconicChainService{
+		chainOpts.CaAddress,
+		chainOpts.VpaAddress,
+	}, nil
 }
 
 func (lcs *LaconicChainService) SendTransaction(tx protocols.ChainTransaction) (*ethTypes.Transaction, error) {
@@ -37,11 +47,11 @@ func (lcs *LaconicChainService) EventFeed() <-chan Event {
 }
 
 func (lcs *LaconicChainService) GetConsensusAppAddress() common.Address {
-	return common.Address{}
+	return lcs.consensusAppAddress
 }
 
 func (lcs *LaconicChainService) GetVirtualPaymentAppAddress() common.Address {
-	return common.Address{}
+	return lcs.virtualPaymentAppAddress
 }
 
 func (lcs *LaconicChainService) GetChainId() (*big.Int, error) {

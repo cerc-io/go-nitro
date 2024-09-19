@@ -110,7 +110,11 @@ func setupChainService(tc TestCase, tp TestParticipant, si sharedTestInfrastruct
 		}
 		return cs
 	case AnvilChainL2:
-		cs, err := chainservice.NewLaconicChainService()
+		cs, err := chainservice.NewLaconicChainService(
+			chainservice.LaconicChainOpts{
+				VpaAddress: si.anvilChain.ContractAddresses.VpaAddress,
+				CaAddress:  si.anvilChain.ContractAddresses.CaAddress,
+			})
 		if err != nil {
 			panic(err)
 		}

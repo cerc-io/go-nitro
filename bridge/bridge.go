@@ -90,6 +90,11 @@ func New() *Bridge {
 }
 
 func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node.Node, nodeL1MultiAddress string, nodeL2MultiAddress string, err error) {
+	chainOptsL2 := chainservice.LaconicChainOpts{
+		VpaAddress: common.HexToAddress(configOpts.VpaAddress),
+		CaAddress:  common.HexToAddress(configOpts.CaAddress),
+	}
+
 	chainOptsL1 := chainservice.ChainOpts{
 		ChainUrl:           configOpts.L1ChainUrl,
 		ChainStartBlockNum: configOpts.L1ChainStartBlock,
@@ -133,7 +138,7 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
 	}
 
-	nodeL2, storeL2, msgServiceL2, chainServiceL2, err := nodeutils.InitializeL2Node(storeOptsL2, messageOptsL2)
+	nodeL2, storeL2, msgServiceL2, chainServiceL2, err := nodeutils.InitializeL2Node(chainOptsL2, storeOptsL2, messageOptsL2)
 	if err != nil {
 		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
 	}

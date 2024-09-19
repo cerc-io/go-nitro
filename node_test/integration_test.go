@@ -2,11 +2,13 @@ package node_test
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/testactors"
 	td "github.com/statechannels/go-nitro/internal/testdata"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
@@ -88,7 +90,7 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 	}
 
 	// Create go-nitro nodes
-	nodeA, _, _, _, _ := setupIntegrationNode(testCase, testCase.Participants[0], infra, []string{}, dataFolder)
+	nodeA, _, _, storeA, _ := setupIntegrationNode(testCase, testCase.Participants[0], infra, []string{}, dataFolder)
 	defer nodeA.Close()
 	nodeB, _, _, _, _ := setupIntegrationNode(testCase, testCase.Participants[1], infra, []string{}, dataFolder)
 	defer nodeB.Close()
@@ -110,6 +112,57 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 	chB := nodeB.ObjectiveCompleteChan(ledgerResponse.Id)
 	<-chA
 	<-chB
+
+	cc, _ := storeA.GetConsensusChannelById(ledgerResponse.ChannelId)
+	fmt.Printf("MULIT ASSSET LEDGER CHANNEL %+v", cc)
+
+	multiassetVirtualChannelOutcome := outcome.Exit{
+		outcome.SingleAssetExit{
+			Asset: common.Address{},
+			Allocations: outcome.Allocations{
+				outcome.Allocation{
+					Destination: types.AddressToDestination(*nodeA.Address),
+					Amount:      big.NewInt(int64(1001)),
+				},
+				outcome.Allocation{
+					Destination: types.AddressToDestination(*nodeB.Address),
+					Amount:      big.NewInt(int64(1002)),
+				},
+			},
+		},
+		outcome.SingleAssetExit{
+			Asset: infra.anvilChain.ContractAddresses.TokenAddress,
+			Allocations: outcome.Allocations{
+				outcome.Allocation{
+					Destination: types.AddressToDestination(*nodeA.Address),
+					Amount:      big.NewInt(int64(501)),
+				},
+				outcome.Allocation{
+					Destination: types.AddressToDestination(*nodeB.Address),
+					Amount:      big.NewInt(int64(502)),
+				},
+			},
+		},
+	}
+
+	virtualresponse, err := nodeA.CreateSwapChannel(
+		nil,
+		*nodeB.Address,
+		0,
+		multiassetVirtualChannelOutcome,
+	)
+	if err != nil {
+		fmt.Println("err from here", err)
+		t.Fatal(err)
+	}
+	fmt.Println(">>>>>VIRTUAL CHANNEL RESPONSE....WAITING FOR OBJECTIVE TO COMPLETE", virtualresponse.ChannelId)
+
+	chB = nodeB.ObjectiveCompleteChan(virtualresponse.Id)
+	<-nodeA.ObjectiveCompleteChan(virtualresponse.Id)
+	<-chB
+
+	cc, _ = storeA.GetConsensusChannelById(ledgerResponse.ChannelId)
+	fmt.Printf("MULIT ASSET LEDGER CHANNEL AFTER VIRTUAL CHANNEL %+v", cc)
 
 	t.Log("Completed direct-fund objective")
 }

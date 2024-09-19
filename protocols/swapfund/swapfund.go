@@ -94,29 +94,27 @@ func (c *Connection) handleProposal(sp consensus_channel.SignedProposal) error {
 
 // IsFundingTheTarget computes whether the ledger channel on the receiver funds the guarantee expected by this connection
 func (c *Connection) IsFundingTheTarget() bool {
+	// TODO: Fix error, changed method to send guarantee map
 	g := c.getExpectedGuarantee()
 	return c.Channel.Includes(g)
 }
 
 // getExpectedGuarantee returns a map of asset addresses to guarantees for a Connection.
-func (c *Connection) getExpectedGuarantee() consensus_channel.Guarantee {
-	amountFunds := c.GuaranteeInfo.LeftAmount.Add(c.GuaranteeInfo.RightAmount)
+func (c *Connection) getExpectedGuarantee() map[common.Address]consensus_channel.Guarantee {
+	assetGuaranteeMap := make(map[common.Address]consensus_channel.Guarantee)
 
-	// HACK: GuaranteeInfo stores amounts as types.Funds.
-	// We only expect a single asset type, and we want to know how much is to be
-	// diverted for that asset type.
-	// So, we loop through amountFunds and break after the first asset type ...
-	var amount *big.Int
-	for _, val := range amountFunds {
-		amount = val
-		break
-	}
+	amountFunds := c.GuaranteeInfo.LeftAmount.Add(c.GuaranteeInfo.RightAmount)
 
 	target := c.GuaranteeInfo.GuaranteeDestination
 	left := c.GuaranteeInfo.Left
 	right := c.GuaranteeInfo.Right
 
-	return consensus_channel.NewGuarantee(amount, target, left, right)
+	for asset, amount := range amountFunds {
+		gaurantee := consensus_channel.NewGuarantee(amount, target, left, right)
+		assetGuaranteeMap[asset] = gaurantee
+	}
+
+	return assetGuaranteeMap
 }
 
 // Objective is a cache of data computed by reading from the store. It stores (potentially) infinite data.
@@ -638,19 +636,17 @@ func IsSwapFundObjective(id protocols.ObjectiveId) bool {
 	return strings.HasPrefix(string(id), ObjectivePrefix)
 }
 
-func (c *Connection) expectedProposal() consensus_channel.Proposal {
+func (c *Connection) expectedProposal() []consensus_channel.Proposal {
+	var proposals []consensus_channel.Proposal
 	g := c.getExpectedGuarantee()
 
-	var leftAmount *big.Int
-	var assetAddress common.Address
-	for asset, val := range c.GuaranteeInfo.LeftAmount {
-		leftAmount = val
-		assetAddress = asset
-		break
+	for asset, amount := range c.GuaranteeInfo.LeftAmount {
+		gaurantee := g[asset]
+		proposal := consensus_channel.NewAddProposal(c.Channel.Id, gaurantee, amount, asset)
+		proposals = append(proposals, proposal)
 	}
-	proposal := consensus_channel.NewAddProposal(c.Channel.Id, g, leftAmount, assetAddress)
 
-	return proposal
+	return proposals
 }
 
 // proposeLedgerUpdate will propose a ledger update to the channel by crafting a new state
@@ -663,6 +659,7 @@ func (o *Objective) proposeLedgerUpdate(connection Connection, sk *[]byte) (prot
 
 	sideEffects := protocols.SideEffects{}
 
+	// TODO: expectedProposal return multiple proposals, loop through it and call propose on each proposal
 	_, err := ledger.Propose(connection.expectedProposal(), *sk)
 	if err != nil {
 		return protocols.SideEffects{}, err
@@ -682,6 +679,7 @@ func (o *Objective) proposeLedgerUpdate(connection Connection, sk *[]byte) (prot
 // acceptLedgerUpdate checks for a ledger state proposal and accepts that proposal if it satisfies the expected guarantee.
 func (o *Objective) acceptLedgerUpdate(c Connection, sk *[]byte) (protocols.SideEffects, error) {
 	ledger := c.Channel
+	// TODO: Fix error, changed method expectedProposal to send array of proposal
 	sp, err := ledger.SignNextProposal(c.expectedProposal(), *sk)
 	if err != nil {
 		return protocols.SideEffects{}, fmt.Errorf("no proposed state found for ledger channel %w", err)
@@ -707,6 +705,7 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 	ledger := ledgerConnection.Channel
 
 	var sideEffects protocols.SideEffects
+	// TODO: Fix error, changed method to send guarantee map
 	g := ledgerConnection.getExpectedGuarantee()
 	proposed, err := ledger.IsProposed(g)
 	if err != nil {
@@ -727,6 +726,7 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 			return protocols.SideEffects{}, err
 		}
 		// If the proposal is next in the queue we accept it
+		// TODO: Fix error, changed method getExpectedGuarantee to send guarantee map
 		proposedNext, _ := ledger.IsProposedNext(g)
 		if proposedNext {
 

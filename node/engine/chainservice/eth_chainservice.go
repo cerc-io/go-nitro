@@ -419,13 +419,7 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 
 		ecs.sentTxToChannelIdMap.Store(setL2ToL1Tx.Hash().String(), tx.ChannelId())
 		return setL2ToL1Tx, nil
-	case protocols.SetL2ToL1AssetAddressTransaction:
-		setL2ToL1AssetAddressTx, err := ecs.na.SetL2ToL1AssetAddress(ecs.defaultTxOpts(), tx.L1AssetAddress, tx.L2AssetAddress)
-		if err != nil {
-			return nil, err
-		}
 
-		return setL2ToL1AssetAddressTx, nil
 	case protocols.MirrorWithdrawAllTransaction:
 		signedState := tx.SignedState.State()
 		signatures := tx.SignedState.Signatures()
@@ -447,10 +441,6 @@ func (ecs *EthChainService) SendTransaction(tx protocols.ChainTransaction) (*eth
 // GetL1ChannelFromL2 returns the L1 ledger channel ID from the L2 ledger channel by making a contract call to the l2ToL1 map of the Nitro Adjudicator contract
 func (ecs *EthChainService) GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error) {
 	return ecs.na.L2Tol1(ecs.defaultCallOpts(), l2Channel)
-}
-
-func (ecs *EthChainService) GetL1AssetAddressFromL2(l2AssetAddress common.Address) (common.Address, error) {
-	return ecs.na.L2Tol1AssetAddress(ecs.defaultCallOpts(), l2AssetAddress)
 }
 
 // dispatchChainEvents takes in a collection of event logs from the chain

@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math/big"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/statechannels/go-nitro/channel/consensus_channel"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	nodeutils "github.com/statechannels/go-nitro/internal/node"
@@ -19,7 +17,6 @@ import (
 	"github.com/statechannels/go-nitro/protocols/bridgeddefund"
 	"github.com/statechannels/go-nitro/protocols/bridgedfund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
-	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/tidwall/buntdb"
 
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
@@ -34,15 +31,6 @@ const (
 )
 
 const RETRY_TX_LIMIT = 1
-
-type Asset struct {
-	L1AssetAddress string `toml:"l1AssetAddress"`
-	L2AssetAddress string `toml:"l2AssetAddress"`
-}
-
-type L1ToL2AssetConfig struct {
-	Assets []Asset `toml:"assets"`
-}
 
 type SentTx struct {
 	Tx                  protocols.ChainTransaction `json:"tx"`
@@ -287,32 +275,6 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 		default:
 		}
 
-	case *virtualdefund.Objective:
-		// Get ledger channels from virtual defund objective
-		var ledgerChannels []*consensus_channel.ConsensusChannel
-		if objective.ToMyLeft != nil {
-			ledgerChannels = append(ledgerChannels, objective.ToMyLeft)
-		}
-
-		if objective.ToMyRight != nil {
-			ledgerChannels = append(ledgerChannels, objective.ToMyRight)
-		}
-
-		// Updates the bridge contract with the latest state of ledger channels
-		for _, ch := range ledgerChannels {
-			txToSubmit, err := b.getUpdateMirrorChannelStateTransaction(ch)
-			if err != nil {
-				return err
-			}
-
-			tx, err := b.chainServiceL2.SendTransaction(txToSubmit)
-			if err != nil {
-				return fmt.Errorf("error in send transaction %w", err)
-			}
-
-			b.sentTxs.Store(tx.Hash().String(), SentTx{txToSubmit, 0, false, true})
-		}
-
 	case *bridgeddefund.Objective:
 		// Get latest supported signed state of L2
 		signedState, err := objective.C.LatestSupportedSignedState()
@@ -334,36 +296,6 @@ func (b *Bridge) processCompletedObjectivesFromL2(objId protocols.ObjectiveId) e
 	}
 
 	return nil
-}
-
-// Get update mirror channel state transaction from given consensus channel
-func (b *Bridge) getUpdateMirrorChannelStateTransaction(con *consensus_channel.ConsensusChannel) (protocols.ChainTransaction, error) {
-	// Get latest outcome bytes
-	// TODO: Support mirrored channels with multiple assets
-	ledgerOutcome := con.ConsensusVars().Outcome[0]
-	outcome := ledgerOutcome.AsOutcome()
-	outcomeByte, err := outcome.Encode()
-	if err != nil {
-		return nil, err
-	}
-
-	// Get latest state hash
-	state := con.ConsensusVars().AsState(con.FixedPart())
-	stateHash, err := state.Hash()
-	if err != nil {
-		return nil, err
-	}
-
-	asset := outcome[0].Asset
-	// Calculate latest holdings
-	holdingAmount := new(big.Int)
-	for _, allocation := range outcome[0].Allocations {
-		holdingAmount.Add(holdingAmount, allocation.Amount)
-	}
-
-	updateMirroredChannelStateTx := protocols.NewUpdateMirroredChannelStatesTransaction(con.Id, stateHash, outcomeByte, asset, holdingAmount)
-
-	return updateMirroredChannelStateTx, nil
 }
 
 // Since bridge node addresses are same

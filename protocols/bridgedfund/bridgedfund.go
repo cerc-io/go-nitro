@@ -21,7 +21,6 @@ const (
 	WaitingForCompletePrefund  protocols.WaitingFor = "WaitingForCompletePrefund"
 	WaitingForCompletePostFund protocols.WaitingFor = "WaitingForCompletePostFund"
 	WaitingForNothing          protocols.WaitingFor = "WaitingForNothing" // Finished
-	WaitingForStatusUpdate     protocols.WaitingFor = "WaitingForStatusUpdate"
 )
 
 const (
@@ -36,11 +35,8 @@ func FundOnChainEffect(cId types.Destination, asset string, amount types.Funds) 
 
 // Objective is a cache of data computed by reading from the store. It stores (potentially) infinite data
 type Objective struct {
-	Status               protocols.ObjectiveStatus
-	C                    *channel.Channel
-	transactionSubmitted bool // whether a transaction for the objective has been submitted or not
-
-	droppedEvent protocols.DroppedEventInfo
+	Status protocols.ObjectiveStatus
+	C      *channel.Channel
 }
 
 // GetChannelByIdFunction specifies a function that can be used to retrieve channels from a store.
@@ -314,39 +310,6 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		return &updated, sideEffects, WaitingForCompletePostFund, nil
 	}
 
-	// On completion, write mirrored ledger channel state to L2 chain if bridge channel was created by me
-	if updated.C.MyIndex == 0 && !updated.transactionSubmitted {
-		latestState, _ := updated.C.LatestSupportedState()
-		stateHash, err := latestState.Hash()
-		if err != nil {
-			return &updated, protocols.SideEffects{}, WaitingForCompletePostFund, fmt.Errorf("could not get state hash %w", err)
-		}
-
-		latestStateOutcomeBytes, err := latestState.Outcome.Encode()
-		if err != nil {
-			return &updated, protocols.SideEffects{}, WaitingForCompletePostFund, fmt.Errorf("could not get outcome bytes %w", err)
-		}
-
-		asset := latestState.Outcome[0].Asset
-		holdingAmount := new(big.Int)
-		for _, allocation := range latestState.Outcome[0].Allocations {
-			holdingAmount.Add(holdingAmount, allocation.Amount)
-		}
-
-		updateMirroredChannelStateTx := protocols.NewUpdateMirroredChannelStatesTransaction(latestState.ChannelId(), stateHash, latestStateOutcomeBytes, asset, holdingAmount)
-
-		updated.transactionSubmitted = true
-		// Reset dropped event info as new tx is submitted
-		updated.droppedEvent = protocols.DroppedEventInfo{}
-		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, updateMirroredChannelStateTx)
-	}
-
-	// TODO: Remove waiting for status updated event
-	// Return with `waitingForStatusUpdate` until `StatusUpdated` event is received from chain and `updated.C.OnChain.StateHash` is populated
-	if types.IsZero(updated.C.OnChain.StateHash.Big()) {
-		return &updated, sideEffects, WaitingForStatusUpdate, nil
-	}
-
 	// Completion
 	updated.Status = protocols.Completed
 
@@ -363,25 +326,11 @@ func (o *Objective) Related() []protocols.Storable {
 func (o *Objective) clone() Objective {
 	clone := Objective{}
 	clone.Status = o.Status
-	clone.transactionSubmitted = o.transactionSubmitted
-	clone.droppedEvent = o.droppedEvent
 
 	cClone := o.C.Clone()
 	clone.C = cClone
 
 	return clone
-}
-
-func (o *Objective) ResetTxSubmitted() {
-	o.transactionSubmitted = false
-}
-
-func (o *Objective) SetDroppedEvent(droppedEventFromChain protocols.DroppedEventInfo) {
-	o.droppedEvent = droppedEventFromChain
-}
-
-func (o *Objective) GetDroppedEvent() protocols.DroppedEventInfo {
-	return o.droppedEvent
 }
 
 // IsBridgedFundObjective inspects a objective id and returns true if the objective id is for a bridged fund objective.

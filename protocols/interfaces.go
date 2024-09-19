@@ -137,46 +137,6 @@ func NewSetL2ToL1Transaction(
 	}
 }
 
-type SetL2ToL1AssetAddressTransaction struct {
-	ChainTransaction
-	L1AssetAddress common.Address
-	L2AssetAddress common.Address
-}
-
-func NewSetL2ToL1AssetAddressTransaction(
-	L1AssetAddress common.Address,
-	L2AssetAddress common.Address,
-) SetL2ToL1AssetAddressTransaction {
-	return SetL2ToL1AssetAddressTransaction{
-		L1AssetAddress: L1AssetAddress,
-		L2AssetAddress: L2AssetAddress,
-	}
-}
-
-type UpdateMirroredChannelStatesTransaction struct {
-	ChainTransaction
-	StateHash    types.Bytes32
-	OutcomeBytes types.Bytes
-	Amount       *big.Int
-	Asset        common.Address
-}
-
-func NewUpdateMirroredChannelStatesTransaction(
-	channelId types.Destination,
-	stateHash types.Bytes32,
-	outcomeBytes types.Bytes,
-	asset common.Address,
-	amount *big.Int,
-) UpdateMirroredChannelStatesTransaction {
-	return UpdateMirroredChannelStatesTransaction{
-		ChainTransaction: ChainTransactionBase{channelId: channelId},
-		StateHash:        stateHash,
-		OutcomeBytes:     outcomeBytes,
-		Asset:            asset,
-		Amount:           amount,
-	}
-}
-
 // SideEffects are effects to be executed by an imperative shell
 type SideEffects struct {
 	MessagesToSend       []Message

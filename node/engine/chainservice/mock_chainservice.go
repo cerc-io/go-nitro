@@ -42,10 +42,6 @@ func (mc *MockChainService) GetL1ChannelFromL2(l2Channel types.Destination) (typ
 	return types.Destination{}, nil
 }
 
-func (mc *MockChainService) GetL1AssetAddressFromL2(l2AssetAddress common.Address) (common.Address, error) {
-	return common.Address{}, nil
-}
-
 func (mc *MockChainService) EventEngineFeed() <-chan Event {
 	return mc.eventFeed
 }

@@ -11,11 +11,9 @@ import (
 // jsonObjective replaces the directfund.Objective's channel pointer with the
 // channel's ID, making jsonObjective suitable for serialization
 type jsonObjective struct {
-	Id                    protocols.ObjectiveId
-	Status                protocols.ObjectiveStatus
-	C                     types.Destination
-	TransactionSumbmitted bool
-	DroppedEvent          protocols.DroppedEventInfo
+	Id     protocols.ObjectiveId
+	Status protocols.ObjectiveStatus
+	C      types.Destination
 }
 
 // MarshalJSON returns a JSON representation of the DirectFundObjective
@@ -26,8 +24,6 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		o.Id(),
 		o.Status,
 		o.C.Id,
-		o.transactionSubmitted,
-		o.droppedEvent,
 	}
 	return json.Marshal(jsonDFO)
 }
@@ -51,8 +47,6 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.C.Id = jsonDFO.C
 
 	o.Status = jsonDFO.Status
-	o.transactionSubmitted = jsonDFO.TransactionSumbmitted
-	o.droppedEvent = jsonDFO.DroppedEvent
 
 	return nil
 }

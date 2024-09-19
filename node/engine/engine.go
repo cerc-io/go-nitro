@@ -589,12 +589,6 @@ func (e *Engine) handleDroppedChainEvent(droppedEventInfo protocols.DroppedEvent
 		if err != nil {
 			return err
 		}
-	case *bridgedfund.Objective:
-		objective.SetDroppedEvent(droppedEventInfo)
-		err := e.store.SetObjective(objective)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -851,15 +845,6 @@ func (e *Engine) handleRetryObjectiveTxRequest(request types.RetryObjectiveTxReq
 			return errEmptyDroppedEvent
 		}
 		objective.ResetWithDrawAllTxSubmitted()
-		_, err = e.attemptProgress(objective)
-
-	case *bridgedfund.Objective:
-		droppedEvent := objective.GetDroppedEvent()
-		if droppedEvent.ChannelId.IsZero() {
-			return errEmptyDroppedEvent
-		}
-
-		objective.ResetTxSubmitted()
 		_, err = e.attemptProgress(objective)
 	}
 

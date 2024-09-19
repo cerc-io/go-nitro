@@ -61,10 +61,6 @@ func (lcs *LaconicChainService) GetL1ChannelFromL2(l2Channel types.Destination) 
 	return types.Destination{}, nil
 }
 
-func (lcs *LaconicChainService) GetL1AssetAddressFromL2(l2AssetAddress common.Address) (common.Address, error) {
-	return common.Address{}, nil
-}
-
 func (lcs *LaconicChainService) Close() error {
 	return nil
 }

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
@@ -233,17 +232,21 @@ func (e *Engine) run(ctx context.Context) {
 			err = e.store.SetLastBlockNumSeen(blockNum)
 			e.checkError(err)
 
-			var block *ethTypes.Block
+			// TODO: Remove when laconic chain service is functional
+			_, isEthChainService := e.chain.(*chainservice.EthChainService)
+			if isEthChainService {
+				block, err := e.chain.GetBlockByNumber(big.NewInt(int64(blockNum)))
+				e.checkError(err)
 
-			block, err = e.chain.GetBlockByNumber(big.NewInt(int64(blockNum)))
-			e.checkError(err)
+				chainServiceBlock := chainservice.Block{
+					BlockNum:  block.NumberU64(),
+					Timestamp: block.Time(),
+				}
 
-			chainServiceBlock := chainservice.Block{
-				BlockNum:  block.NumberU64(),
-				Timestamp: block.Time(),
+				err = e.processStoreChannels(chainServiceBlock)
+				e.checkError(err)
 			}
 
-			err = e.processStoreChannels(chainServiceBlock)
 		case <-ctx.Done():
 			e.wg.Done()
 			return

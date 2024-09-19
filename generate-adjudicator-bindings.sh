@@ -21,7 +21,6 @@ parseJson "NitroAdjudicator"
 parseJson "ConsensusApp"
 parseJson "Token"
 parseJson "VirtualPaymentApp"
-parseJson "Bridge"
 
 echo "Using abigen from $GETH_DIR..."
 
@@ -38,4 +37,3 @@ runAbigen "NitroAdjudicator" "adjudicator"
 runAbigen "ConsensusApp" "consensusapp"
 runAbigen "Token" "erc20"
 runAbigen "VirtualPaymentApp" "virtualpaymentapp"
-runAbigen "Bridge" "bridge"

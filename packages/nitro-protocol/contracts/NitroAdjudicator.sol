@@ -41,6 +41,7 @@ contract NitroAdjudicator is INitroAdjudicator, ForceMove, MultiAssetHolder, Own
         FixedPart memory fixedPart,
         SignedVariablePart memory candidate
     ) public virtual {
+        // TODO: Fix channel id (l2 channelId) in mirror bridged defund conclude event
         bytes32 mirrorChannelId = _conclude(fixedPart, candidate);
 
         mirrorTransferAllAssets(mirrorChannelId, candidate.variablePart.outcome, bytes32(0));

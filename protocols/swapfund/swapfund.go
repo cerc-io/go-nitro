@@ -96,7 +96,12 @@ func (c *Connection) handleProposal(sp consensus_channel.SignedProposal) error {
 func (c *Connection) IsFundingTheTarget() bool {
 	// TODO: Fix error, changed method to send guarantee map
 	g := c.getExpectedGuarantee()
-	return c.Channel.Includes(g)
+	for _, guarantee := range g {
+		if c.Channel.Includes(guarantee) {
+			return true
+		}
+	}
+	return false
 }
 
 // getExpectedGuarantee returns a map of asset addresses to guarantees for a Connection.
@@ -660,9 +665,13 @@ func (o *Objective) proposeLedgerUpdate(connection Connection, sk *[]byte) (prot
 	sideEffects := protocols.SideEffects{}
 
 	// TODO: expectedProposal return multiple proposals, loop through it and call propose on each proposal
-	_, err := ledger.Propose(connection.expectedProposal(), *sk)
-	if err != nil {
-		return protocols.SideEffects{}, err
+	proposals := connection.expectedProposal()
+
+	for _, p := range proposals {
+		_, err := ledger.Propose(p, *sk)
+		if err != nil {
+			return protocols.SideEffects{}, err
+		}
 	}
 
 	recipient := ledger.Follower()
@@ -679,22 +688,26 @@ func (o *Objective) proposeLedgerUpdate(connection Connection, sk *[]byte) (prot
 // acceptLedgerUpdate checks for a ledger state proposal and accepts that proposal if it satisfies the expected guarantee.
 func (o *Objective) acceptLedgerUpdate(c Connection, sk *[]byte) (protocols.SideEffects, error) {
 	ledger := c.Channel
-	// TODO: Fix error, changed method expectedProposal to send array of proposal
-	sp, err := ledger.SignNextProposal(c.expectedProposal(), *sk)
-	if err != nil {
-		return protocols.SideEffects{}, fmt.Errorf("no proposed state found for ledger channel %w", err)
-	}
 	sideEffects := protocols.SideEffects{}
+	// TODO: Fix error, changed method expectedProposal to send array of proposal
+	expectedProposals := c.expectedProposal()
 
-	// ledger sideEffect
-	if proposals := ledger.ProposalQueue(); len(proposals) != 0 {
-		sideEffects.ProposalsToProcess = append(sideEffects.ProposalsToProcess, proposals[0].Proposal)
+	for _, p := range expectedProposals {
+		sp, err := ledger.SignNextProposal(p, *sk)
+		if err != nil {
+			return protocols.SideEffects{}, fmt.Errorf("no proposed state found for ledger channel %w", err)
+		}
+		// ledger sideEffect
+		if proposals := ledger.ProposalQueue(); len(proposals) != 0 {
+			sideEffects.ProposalsToProcess = append(sideEffects.ProposalsToProcess, proposals[0].Proposal)
+		}
+
+		// message sideEffect
+		recipient := ledger.Leader()
+		message := protocols.CreateSignedProposalMessage(recipient, sp)
+		sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, message)
 	}
 
-	// message sideEffect
-	recipient := ledger.Leader()
-	message := protocols.CreateSignedProposalMessage(recipient, sp)
-	sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, message)
 	return sideEffects, nil
 }
 
@@ -706,10 +719,18 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 
 	var sideEffects protocols.SideEffects
 	// TODO: Fix error, changed method to send guarantee map
-	g := ledgerConnection.getExpectedGuarantee()
-	proposed, err := ledger.IsProposed(g)
-	if err != nil {
-		return protocols.SideEffects{}, err
+	guarantee := ledgerConnection.getExpectedGuarantee()
+	proposed := false
+	for _, g := range guarantee {
+		p, err := ledger.IsProposed(g)
+		if err != nil {
+			return protocols.SideEffects{}, err
+		}
+
+		if p {
+			proposed = true
+			break
+		}
 	}
 
 	if ledger.IsLeader() { // If the user is the proposer craft a new proposal
@@ -722,14 +743,21 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 		}
 		sideEffects = se
 	} else {
-		if err != nil {
-			return protocols.SideEffects{}, err
-		}
 		// If the proposal is next in the queue we accept it
 		// TODO: Fix error, changed method getExpectedGuarantee to send guarantee map
-		proposedNext, _ := ledger.IsProposedNext(g)
-		if proposedNext {
+		proposedNext := false
+		for _, g := range guarantee {
+			p, err := ledger.IsProposedNext(g)
+			if err != nil {
+				return protocols.SideEffects{}, err
+			}
 
+			if p {
+				proposedNext = true
+				break
+			}
+		}
+		if proposedNext {
 			se, err := o.acceptLedgerUpdate(ledgerConnection, sk)
 			if err != nil {
 				return protocols.SideEffects{}, fmt.Errorf("error proposing ledger update: %w", err)

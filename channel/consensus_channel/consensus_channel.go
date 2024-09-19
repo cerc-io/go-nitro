@@ -935,6 +935,7 @@ type Remove struct {
 	// LeftAmount is the amount to be credited (in the ledger channel) to the participant specified as the "left" in the guarantee.
 	//
 	// The amount for the "right" participant is calculated as the difference between the guarantee amount and LeftAmount.
+	// TODO: add assetAddress` similar to `Add` struct
 	LeftAmount *big.Int
 }
 

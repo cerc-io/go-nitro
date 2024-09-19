@@ -341,6 +341,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		sideEffects.TransactionsToSubmit = append(sideEffects.TransactionsToSubmit, updateMirroredChannelStateTx)
 	}
 
+	// TODO: Remove waiting for status updated event
 	// Return with `waitingForStatusUpdate` until `StatusUpdated` event is received from chain and `updated.C.OnChain.StateHash` is populated
 	if types.IsZero(updated.C.OnChain.StateHash.Big()) {
 		return &updated, sideEffects, WaitingForStatusUpdate, nil

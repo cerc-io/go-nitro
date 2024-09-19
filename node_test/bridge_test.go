@@ -885,12 +885,6 @@ func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge,
 		BridgePublicIp:    DEFAULT_PUBLIC_IP,
 		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
 		NodeL2MsgPort:     int(tcL2.Participants[0].Port),
-		Assets: []bridge.Asset{
-			{
-				L1AssetAddress: infraL1.anvilChain.ContractAddresses.TokenAddress.String(),
-				L2AssetAddress: infraL2.anvilChain.ContractAddresses.TokenAddress.String(),
-			},
-		},
 	}
 
 	bridge := bridge.New()

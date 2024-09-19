@@ -117,15 +117,6 @@ func NewChallengeRegisteredEvent(
 	}
 }
 
-type StatusUpdatedEvent struct {
-	commonEvent
-	StateHash types.Bytes32
-}
-
-func (sue StatusUpdatedEvent) String() string {
-	return "Status updated event for Channel " + sue.channelID.String() + " concluded at Block " + fmt.Sprint(sue.block.BlockNum)
-}
-
 // StateHash returns the statehash stored on chain at the time of the ChallengeRegistered Event firing.
 func (cr ChallengeRegisteredEvent) StateHash(fp state.FixedPart) (common.Hash, error) {
 	return state.StateFromFixedAndVariablePart(fp, cr.candidate).Hash()
@@ -230,7 +221,6 @@ type ChainService interface {
 	// TODO: Implement method for eth calls
 	// GetL1ChannelFromL2 returns the L1 ledger channel ID from the L2 ledger channel by making a contract call to the l2ToL1 map of the Nitro Adjudicator contract
 	GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error)
-	GetL1AssetAddressFromL2(l2AssetAddress common.Address) (common.Address, error)
 	// Close closes the ChainService
 	Close() error
 }

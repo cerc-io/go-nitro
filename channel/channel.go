@@ -403,8 +403,6 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 	// checkpoint method of ForceMove.sol contract
 	case chainservice.ReclaimedEvent:
 	// TODO: Handle ReclaimedEvent
-	case chainservice.StatusUpdatedEvent:
-		c.OnChain.StateHash = e.StateHash
 	default:
 		return &Channel{}, fmt.Errorf("channel %+v cannot handle event %+v", c, event)
 	}

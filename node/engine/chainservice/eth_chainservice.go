@@ -44,7 +44,6 @@ var (
 	challengeClearedTopic    = naAbi.Events["ChallengeCleared"].ID
 	reclaimedTopic           = naAbi.Events["Reclaimed"].ID
 	L2ToL1MapUpdatedTopic    = naAbi.Events["L2ToL1MapUpdated"].ID
-	AssetsMapUpdatedTopic    = naAbi.Events["AssetsMapUpdated"].ID
 )
 
 var topicsToWatch = []common.Hash{
@@ -54,9 +53,7 @@ var topicsToWatch = []common.Hash{
 	challengeRegisteredTopic,
 	challengeClearedTopic,
 	reclaimedTopic,
-	statusUpdatedTopic,
 	L2ToL1MapUpdatedTopic,
-	AssetsMapUpdatedTopic,
 }
 
 var topicsToEventName = map[common.Hash]string{
@@ -66,9 +63,7 @@ var topicsToEventName = map[common.Hash]string{
 	challengeRegisteredTopic: "ChallengeRegistered",
 	challengeClearedTopic:    "ChallengeCleared",
 	reclaimedTopic:           "Reclaimed",
-	statusUpdatedTopic:       "StatusUpdated",
 	L2ToL1MapUpdatedTopic:    "L2ToL1MapUpdated",
-	AssetsMapUpdatedTopic:    "AssetsMapUpdated",
 }
 
 const (
@@ -562,22 +557,6 @@ func (ecs *EthChainService) dispatchChainEvents(logs []ethTypes.Log) error {
 
 			event := ReclaimedEvent{commonEvent: commonEvent{channelID: ce.ChannelId, block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex, txHash: l.TxHash}}
 			ecs.eventEngineOut <- event
-
-		case AssetsMapUpdatedTopic:
-			ecs.logger.Debug("Processing asset map updated event")
-
-			assetMapUpdatedEvent, err := ecs.na.ParseAssetsMapUpdated(l)
-			if err != nil {
-				return fmt.Errorf("error in ParseAssetsMapUpdated: %w", err)
-			}
-
-			event := AssetMapUpdatedEvent{commonEvent: commonEvent{block: Block{BlockNum: l.BlockNumber, Timestamp: block.Time()}, txIndex: l.TxIndex, txHash: l.TxHash}, L1AssetAddress: assetMapUpdatedEvent.L1AssetAddress, L2AssetAddress: assetMapUpdatedEvent.L2AssetAddress}
-
-			// Use non-blocking send incase no-one is listening
-			select {
-			case ecs.eventOut <- event:
-			default:
-			}
 
 		case L2ToL1MapUpdatedTopic:
 			ecs.logger.Debug("Processing l2 to l1 map updated event")

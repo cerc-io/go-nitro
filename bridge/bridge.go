@@ -68,7 +68,6 @@ type Bridge struct {
 	chainServiceL2 chainservice.ChainService
 
 	cancel                context.CancelFunc
-	L1ToL2AssetAddressMap map[common.Address]common.Address
 	mirrorChannelMap      map[types.Destination]MirrorChannelDetails
 	createdMirrorChannels chan types.Destination
 	sentTxs               safesync.Map[SentTx]
@@ -85,7 +84,6 @@ type BridgeConfig struct {
 	VpaAddress         string
 	CaAddress          string
 	BridgeAddress      string
-	Assets             []Asset
 	DurableStoreDir    string
 	BridgePublicIp     string
 	NodeL1ExtMultiAddr string
@@ -97,7 +95,6 @@ type BridgeConfig struct {
 func New() *Bridge {
 	bridge := Bridge{
 		mirrorChannelMap:      make(map[types.Destination]MirrorChannelDetails),
-		L1ToL2AssetAddressMap: make(map[common.Address]common.Address),
 		createdMirrorChannels: make(chan types.Destination),
 	}
 
@@ -162,11 +159,6 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
 	}
 
-	// Process Assets array to convert it to map of L1 asset address to L2 asset address
-	for _, asset := range configOpts.Assets {
-		b.L1ToL2AssetAddressMap[common.HexToAddress(asset.L1AssetAddress)] = common.HexToAddress(asset.L2AssetAddress)
-	}
-
 	b.nodeL1 = nodeL1
 	b.storeL1 = *storeL1
 	b.chainServiceL1 = chainServiceL1
@@ -176,11 +168,6 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	b.cancel = cancelFunc
-
-	err = b.updateOnchainAssetAddressMap()
-	if err != nil {
-		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
-	}
 
 	ds, err := NewDurableStore(configOpts.DurableStoreDir, buntdb.Config{})
 	if err != nil {
@@ -254,20 +241,8 @@ func (b *Bridge) processCompletedObjectivesFromL1(objId protocols.ObjectiveId) e
 	l1ChannelCloneOutcome := l1ledgerChannelStateClone.State().Outcome
 	var l2ChannelOutcome outcome.Exit
 
-	for _, l1Outcome := range l1ChannelCloneOutcome {
-		if (l1Outcome.Asset == common.Address{}) {
-			l2ChannelOutcome = append(l2ChannelOutcome, l1Outcome)
-		} else {
-			value, ok := b.L1ToL2AssetAddressMap[l1Outcome.Asset]
-
-			if !ok {
-				return fmt.Errorf("could not find corresponding L2 asset address for L1 asset address %s", l1Outcome.Asset.String())
-			}
-
-			l1Outcome.Asset = value
-			l2ChannelOutcome = append(l2ChannelOutcome, l1Outcome)
-		}
-	}
+	// TODO: Check and remove this logic
+	l2ChannelOutcome = append(l2ChannelOutcome, l1ChannelCloneOutcome...)
 
 	// Create mirrored ledger channel between node BPrime and APrime
 	// TODO: Support mirrored ledger channel creation with multiple assets
@@ -398,47 +373,6 @@ func (b *Bridge) getUpdateMirrorChannelStateTransaction(con *consensus_channel.C
 	updateMirroredChannelStateTx := protocols.NewUpdateMirroredChannelStatesTransaction(con.Id, stateHash, outcomeByte, asset, holdingAmount)
 
 	return updateMirroredChannelStateTx, nil
-}
-
-// Set L2AssetAddress => L1AssetAddress if it doesn't already exist on L1 chain
-func (b *Bridge) updateOnchainAssetAddressMap() error {
-	l1AssetAddressesTxSent := make(map[common.Address]struct{})
-
-	for l1AssetAddress, l2AssetAddress := range b.L1ToL2AssetAddressMap {
-		l1OnchainAssetAddress, err := b.chainServiceL1.GetL1AssetAddressFromL2(l2AssetAddress)
-		if err != nil {
-			return err
-		}
-
-		if l1OnchainAssetAddress != l1AssetAddress {
-			setL2ToL1AssetAddressTxToSubmit := protocols.NewSetL2ToL1AssetAddressTransaction(l1AssetAddress, l2AssetAddress)
-			_, err := b.chainServiceL1.SendTransaction(setL2ToL1AssetAddressTxToSubmit)
-			if err != nil {
-				return fmt.Errorf("failed to send transaction for updating asset address mapping: %w", err)
-			}
-			l1AssetAddressesTxSent[l1AssetAddress] = struct{}{}
-		}
-	}
-
-	if len(l1AssetAddressesTxSent) > 0 {
-		for event := range b.chainServiceL1.EventFeed() {
-			assetMapUpdatedEvent, ok := event.(chainservice.AssetMapUpdatedEvent)
-			if !ok {
-				continue
-			}
-
-			_, ok = l1AssetAddressesTxSent[assetMapUpdatedEvent.L1AssetAddress]
-			if ok {
-				delete(l1AssetAddressesTxSent, assetMapUpdatedEvent.L1AssetAddress)
-			}
-
-			if len(l1AssetAddressesTxSent) == 0 {
-				break
-			}
-		}
-	}
-
-	return nil
 }
 
 // Since bridge node addresses are same

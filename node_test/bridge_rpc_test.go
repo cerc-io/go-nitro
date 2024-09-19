@@ -119,12 +119,6 @@ func TestBridgeFlow(t *testing.T) {
 		BridgePublicIp:    DEFAULT_PUBLIC_IP,
 		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
 		NodeL2MsgPort:     int(tcL2.Participants[1].Port),
-		Assets: []bridge.Asset{
-			{
-				L1AssetAddress: infraL1.anvilChain.ContractAddresses.TokenAddress.String(),
-				L2AssetAddress: infraL2.anvilChain.ContractAddresses.TokenAddress.String(),
-			},
-		},
 	}
 
 	nodeAChainservice, err := chainservice.NewEthChainService(chainservice.ChainOpts{

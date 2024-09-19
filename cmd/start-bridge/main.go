@@ -2,12 +2,10 @@ package main
 
 import (
 	"crypto/tls"
-	"io"
 	"log"
 	"log/slog"
 	"os"
 
-	"github.com/BurntSushi/toml"
 	"github.com/statechannels/go-nitro/bridge"
 	"github.com/statechannels/go-nitro/cmd/utils"
 	"github.com/statechannels/go-nitro/internal/logging"
@@ -63,8 +61,6 @@ func main() {
 
 	var tlscertfilepath, tlskeyfilepath string
 
-	var assetsmapfilepath string
-
 	// urfave default precedence for flag value sources (highest to lowest):
 	// 1. Command line flag value
 	// 2. Environment variable (if specified)
@@ -119,11 +115,6 @@ func main() {
 			Usage:       "Specifies the bridge contract address",
 			Destination: &bridgeaddress,
 			EnvVars:     []string{"BRIDGE_ADDRESS"},
-		}),
-		altsrc.NewPathFlag(&cli.PathFlag{
-			Name:        ASSET_MAP_FILEPATH,
-			Usage:       "Filepath to the map of asset address on L1 to asset address of L2",
-			Destination: &assetsmapfilepath,
 		}),
 		altsrc.NewStringFlag(&cli.StringFlag{
 			Name:        DURABLE_STORE_DIR,
@@ -202,28 +193,6 @@ func main() {
 			chainpk = utils.TrimHexPrefix(chainpk)
 			statechannelpk = utils.TrimHexPrefix(statechannelpk)
 
-			// Variable to hold the deserialized data
-			var assets bridge.L1ToL2AssetConfig
-
-			if assetsmapfilepath != "" {
-				tomlFile, err := os.Open(assetsmapfilepath)
-				if err != nil {
-					return err
-				}
-				defer tomlFile.Close()
-
-				byteValue, err := io.ReadAll(tomlFile)
-				if err != nil {
-					return err
-				}
-
-				// Deserialize toml file data into the struct
-				err = toml.Unmarshal(byteValue, &assets)
-				if err != nil {
-					return err
-				}
-			}
-
 			bridgeConfig := bridge.BridgeConfig{
 				L1ChainUrl:         l1chainurl,
 				L2ChainUrl:         l2chainurl,
@@ -241,7 +210,6 @@ func main() {
 				NodeL2ExtMultiAddr: nodel2ExtMultiAddr,
 				NodeL1MsgPort:      nodel1msgport,
 				NodeL2MsgPort:      nodel2msgport,
-				Assets:             assets.Assets,
 			}
 
 			logging.SetupDefaultLogger(os.Stdout, slog.LevelDebug)

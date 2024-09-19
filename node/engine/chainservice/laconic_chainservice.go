@@ -56,7 +56,6 @@ func (lcs *LaconicChainService) GetBlockByNumber(blockNum *big.Int) (*ethTypes.B
 	return &ethTypes.Block{}, nil
 }
 
-// TODO: Check is this method really required
 func (lcs *LaconicChainService) GetL1ChannelFromL2(l2Channel types.Destination) (types.Destination, error) {
 	return types.Destination{}, nil
 }

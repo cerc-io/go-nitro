@@ -46,7 +46,7 @@ type UtilsWithBridge struct {
 	chainServiceA, chainServiceAPrime          chainservice.ChainService
 	storeA, storeAPrime                        store.Store
 	infraL1, infraL2                           sharedTestInfrastructure
-	l1TokenBinding, l2TokenBinding             *Token.Token
+	l1TokenBinding                             *Token.Token
 }
 
 func TestBridgedFund(t *testing.T) {
@@ -57,7 +57,7 @@ func TestBridgedFund(t *testing.T) {
 	nodeA, nodeAPrime := utils.nodeA, utils.nodeAPrime
 	bridge, bridgeAddress := utils.bridge, utils.bridgeAddress
 	storeA := utils.storeA
-	infraL1, infraL2 := utils.infraL1, utils.infraL2
+	infraL1 := utils.infraL1
 
 	var l1LedgerChannelId types.Destination
 	var l2LedgerChannelId types.Destination
@@ -78,8 +78,8 @@ func TestBridgedFund(t *testing.T) {
 		createdMirrorChannel := <-bridge.CreatedMirrorChannels()
 		l2LedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
 		testhelpers.Assert(t, createdMirrorChannel == l2LedgerChannelId, "Expects mirror channel id to be %v", l2LedgerChannelId)
-		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeA)
-		checkLedgerChannel(t, l2LedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
+		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeA)
+		checkLedgerChannel(t, l2LedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
 	})
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
@@ -316,7 +316,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		testhelpers.Assert(t, createdMirrorChannel == l2AliceBridgeLedgerChannelId, "Expects mirror channel id to be %v", l2AliceBridgeLedgerChannelId)
 
 		checkLedgerChannel(t, l1AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeA)
-		checkLedgerChannel(t, l2AliceBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, ledgerChannelDeposit, ledgerChannelDeposit, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
+		checkLedgerChannel(t, l2AliceBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
 
 		// Irene create ledger channel with bridge
 		outcome = CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress)
@@ -336,7 +336,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		testhelpers.Assert(t, createdMirrorChannel == l2CharlieBridgeLedgerChannelId, "Expects mirror channel id to be %v", l2CharlieBridgeLedgerChannelId)
 
 		checkLedgerChannel(t, l1CharlieBridgeLedgerChannelId, CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeC)
-		checkLedgerChannel(t, l2CharlieBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeCPrime.Address, ledgerChannelDeposit, ledgerChannelDeposit, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeCPrime)
+		checkLedgerChannel(t, l2CharlieBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeCPrime.Address, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeCPrime)
 	})
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments via bridge as intermediary", func(t *testing.T) {
@@ -362,8 +362,8 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		<-nodeAPrimeObjCompleteChan
 		<-nodeCPrimeObjCompleteChan
 
-		checkLedgerChannel(t, l2AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeAPrime.Address, bridgeAddress, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
-		checkLedgerChannel(t, l2CharlieBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeCPrime.Address, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, infraL2.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeCPrime)
+		checkLedgerChannel(t, l2AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeAPrime.Address, bridgeAddress, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
+		checkLedgerChannel(t, l2CharlieBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeCPrime.Address, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeCPrime)
 	})
 
 	t.Run("Exit to L1 using updated L2 ledger channel states after making payments", func(t *testing.T) {
@@ -740,7 +740,7 @@ func createL2VirtualChannel(t *testing.T, nodeAPrime node.Node, nodeBPrime node.
 
 func initializeUtils(t *testing.T, closeBridge bool) (Utils, func()) {
 	tcL1 := TestCase{
-		Chain:             AnvilChainL1,
+		Chain:             AnvilChain,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -753,7 +753,7 @@ func initializeUtils(t *testing.T, closeBridge bool) (Utils, func()) {
 	}
 
 	tcL2 := TestCase{
-		Chain:             AnvilChainL2,
+		Chain:             LaconicChain,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -776,8 +776,8 @@ func initializeUtils(t *testing.T, closeBridge bool) (Utils, func()) {
 
 	nodeB, _, _, storeB, chainServiceB := setupIntegrationNode(tcL1, tcL1.Participants[1], infraL1, []string{}, dataFolder)
 
-	infraL2.anvilChain.ContractAddresses.CaAddress = infraL1.anvilChain.ContractAddresses.CaAddress
-	infraL2.anvilChain.ContractAddresses.VpaAddress = infraL1.anvilChain.ContractAddresses.VpaAddress
+	infraL2.laconicChain.ContractAddresses.CaAddress = infraL1.anvilChain.ContractAddresses.CaAddress
+	infraL2.laconicChain.ContractAddresses.VpaAddress = infraL1.anvilChain.ContractAddresses.VpaAddress
 
 	nodeBPrime, _, _, storeBPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[0], infraL2, []string{}, dataFolder)
 
@@ -826,7 +826,7 @@ func initializeUtils(t *testing.T, closeBridge bool) (Utils, func()) {
 
 func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge, func()) {
 	tcL1 := TestCase{
-		Chain:             AnvilChainL1,
+		Chain:             AnvilChain,
 		MessageService:    P2PMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -840,7 +840,7 @@ func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge,
 	}
 
 	tcL2 := TestCase{
-		Chain:             AnvilChainL2,
+		Chain:             LaconicChain,
 		MessageService:    P2PMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -865,14 +865,8 @@ func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge,
 		t.Fatal(err)
 	}
 
-	l2TokenBinding, err := Token.NewToken(infraL2.anvilChain.ContractAddresses.TokenAddress, infraL2.anvilChain.EthClient)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	bridgeConfig := bridge.BridgeConfig{
 		L1ChainUrl:        infraL1.anvilChain.ChainUrl,
-		L2ChainUrl:        infraL2.anvilChain.ChainUrl,
 		L1ChainStartBlock: 0,
 		L2ChainStartBlock: 0,
 		ChainPK:           infraL1.anvilChain.ChainPks[tcL1.Participants[1].ChainAccountIndex],
@@ -880,7 +874,6 @@ func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge,
 		NaAddress:         infraL1.anvilChain.ContractAddresses.NaAddress.String(),
 		VpaAddress:        infraL1.anvilChain.ContractAddresses.VpaAddress.String(),
 		CaAddress:         infraL1.anvilChain.ContractAddresses.CaAddress.String(),
-		BridgeAddress:     infraL2.anvilChain.ContractAddresses.BridgeAddress.String(),
 		DurableStoreDir:   dataFolder,
 		BridgePublicIp:    DEFAULT_PUBLIC_IP,
 		NodeL1MsgPort:     int(tcL1.Participants[1].Port),
@@ -914,7 +907,6 @@ func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge,
 		infraL1:              infraL1,
 		infraL2:              infraL2,
 		l1TokenBinding:       l1TokenBinding,
-		l2TokenBinding:       l2TokenBinding,
 	}
 
 	cleanupUtilsWithBridge := func() {

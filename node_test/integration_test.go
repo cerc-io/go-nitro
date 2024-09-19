@@ -63,7 +63,7 @@ func TestComplexIntegrationScenario(t *testing.T) {
 func TestMultiAssetLedgerChannel(t *testing.T) {
 	testCase := TestCase{
 		Description:       "Direct defund with Challenge",
-		Chain:             AnvilChainL1,
+		Chain:             AnvilChain,
 		MessageService:    TestMessageService,
 		ChallengeDuration: 5,
 		MessageDelay:      0,

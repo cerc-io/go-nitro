@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
@@ -205,7 +206,11 @@ func (e *Engine) run(ctx context.Context) {
 		var res EngineEvent
 		var err error
 
-		blockTicker := time.NewTicker(5 * time.Second)
+		var blockTicker <-chan time.Time
+		_, isEthChainService := e.chain.(*chainservice.EthChainService)
+		if isEthChainService {
+			blockTicker = time.NewTicker(5 * time.Second).C
+		}
 
 		select {
 
@@ -227,25 +232,22 @@ func (e *Engine) run(ctx context.Context) {
 			err = e.handleCounterChallengeRequest(counterChallengeReq)
 		case retryObjectiveTxReq := <-e.RetryObjectiveTxRequestFromAPI:
 			err = e.handleRetryObjectiveTxRequest(retryObjectiveTxReq)
-		case <-blockTicker.C:
+		case <-blockTicker:
 			blockNum := e.chain.GetLastConfirmedBlockNum()
 			err = e.store.SetLastBlockNumSeen(blockNum)
 			e.checkError(err)
 
-			// TODO: Remove when laconic chain service is functional
-			_, isEthChainService := e.chain.(*chainservice.EthChainService)
-			if isEthChainService {
-				block, err := e.chain.GetBlockByNumber(big.NewInt(int64(blockNum)))
-				e.checkError(err)
+			var block *ethTypes.Block
 
-				chainServiceBlock := chainservice.Block{
-					BlockNum:  block.NumberU64(),
-					Timestamp: block.Time(),
-				}
+			block, err = e.chain.GetBlockByNumber(big.NewInt(int64(blockNum)))
+			e.checkError(err)
 
-				err = e.processStoreChannels(chainServiceBlock)
-				e.checkError(err)
+			chainServiceBlock := chainservice.Block{
+				BlockNum:  block.NumberU64(),
+				Timestamp: block.Time(),
 			}
+
+			err = e.processStoreChannels(chainServiceBlock)
 
 		case <-ctx.Done():
 			e.wg.Done()

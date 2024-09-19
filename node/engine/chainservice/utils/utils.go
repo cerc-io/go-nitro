@@ -22,11 +22,10 @@ import (
 )
 
 type ContractAddresses struct {
-	NaAddress     common.Address
-	VpaAddress    common.Address
-	CaAddress     common.Address
-	BridgeAddress common.Address
-	TokenAddress  common.Address
+	NaAddress    common.Address
+	VpaAddress   common.Address
+	CaAddress    common.Address
+	TokenAddress common.Address
 }
 
 // ConnectToChain connects to the chain at the given url and returns a client and a transactor.
@@ -123,4 +122,8 @@ func deployContract[T contractBackend](ctx context.Context, name string, ethClie
 	}
 	fmt.Printf("%s successfully deployed to %s\n", name, a.String())
 	return a, nil
+}
+
+type LaconicChain struct {
+	ContractAddresses ContractAddresses
 }

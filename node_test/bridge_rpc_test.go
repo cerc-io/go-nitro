@@ -70,7 +70,7 @@ func TestBridgeFlow(t *testing.T) {
 	payAmount := uint(5)
 	virtualChannelDeposit := uint(100)
 	tcL1 := TestCase{
-		Chain:             AnvilChainL1,
+		Chain:             AnvilChain,
 		MessageService:    P2PMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test_l1",
@@ -83,7 +83,7 @@ func TestBridgeFlow(t *testing.T) {
 	}
 
 	tcL2 := TestCase{
-		Chain:             AnvilChainL2,
+		Chain:             LaconicChain,
 		MessageService:    P2PMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test_l2",
@@ -106,7 +106,6 @@ func TestBridgeFlow(t *testing.T) {
 
 	bridgeConfig := bridge.BridgeConfig{
 		L1ChainUrl:        infraL1.anvilChain.ChainUrl,
-		L2ChainUrl:        infraL2.anvilChain.ChainUrl,
 		L1ChainStartBlock: 0,
 		L2ChainStartBlock: 0,
 		ChainPK:           infraL1.anvilChain.ChainPks[tcL1.Participants[1].ChainAccountIndex],
@@ -114,7 +113,6 @@ func TestBridgeFlow(t *testing.T) {
 		NaAddress:         infraL1.anvilChain.ContractAddresses.NaAddress.String(),
 		VpaAddress:        infraL1.anvilChain.ContractAddresses.VpaAddress.String(),
 		CaAddress:         infraL1.anvilChain.ContractAddresses.CaAddress.String(),
-		BridgeAddress:     infraL2.anvilChain.ContractAddresses.BridgeAddress.String(),
 		DurableStoreDir:   dataFolder,
 		BridgePublicIp:    DEFAULT_PUBLIC_IP,
 		NodeL1MsgPort:     int(tcL1.Participants[1].Port),

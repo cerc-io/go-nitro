@@ -9,6 +9,7 @@ import (
 	"github.com/statechannels/go-nitro/cmd/utils"
 	"github.com/statechannels/go-nitro/internal/testactors"
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
+	chainutils "github.com/statechannels/go-nitro/node/engine/chainservice/utils"
 	"github.com/statechannels/go-nitro/node/engine/messageservice"
 )
 
@@ -34,8 +35,8 @@ type ChainType string
 const (
 	MockChain      ChainType = "MockChain"
 	SimulatedChain ChainType = "SimulatedChain"
-	AnvilChainL1   ChainType = "AnvilChainL1"
-	AnvilChainL2   ChainType = "AnvilChainL2"
+	AnvilChain     ChainType = "AnvilChain"
+	LaconicChain   ChainType = "LaconicChain"
 )
 
 type TestParticipant struct {
@@ -90,6 +91,7 @@ type sharedTestInfrastructure struct {
 	mockChain      *chainservice.MockChain
 	simulatedChain chainservice.SimulatedChain
 	anvilChain     *chainservice.AnvilChain
+	laconicChain   chainutils.LaconicChain
 	bindings       *chainservice.Bindings
 	ethAccounts    []*bind.TransactOpts
 }

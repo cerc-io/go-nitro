@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel/state"
-	"github.com/statechannels/go-nitro/channel/state/outcome"
 	nodeutils "github.com/statechannels/go-nitro/internal/node"
 	"github.com/statechannels/go-nitro/internal/safesync"
 	"github.com/statechannels/go-nitro/node"
@@ -223,14 +222,10 @@ func (b *Bridge) processCompletedObjectivesFromL1(objId protocols.ObjectiveId) e
 
 	// Create extended state outcome based on l1ChannelState
 	l1ChannelCloneOutcome := l1ledgerChannelStateClone.State().Outcome
-	var l2ChannelOutcome outcome.Exit
-
-	// TODO: Check and remove this logic
-	l2ChannelOutcome = append(l2ChannelOutcome, l1ChannelCloneOutcome...)
 
 	// Create mirrored ledger channel between node BPrime and APrime
 	// TODO: Support mirrored ledger channel creation with multiple assets
-	l2LedgerChannelResponse, err := b.nodeL2.CreateBridgeChannel(l1ledgerChannelStateClone.State().Participants[0], l1ledgerChannelStateClone.State().ChallengeDuration, l2ChannelOutcome[:1])
+	l2LedgerChannelResponse, err := b.nodeL2.CreateBridgeChannel(l1ledgerChannelStateClone.State().Participants[0], l1ledgerChannelStateClone.State().ChallengeDuration, l1ChannelCloneOutcome[:1])
 	if err != nil {
 		return err
 	}

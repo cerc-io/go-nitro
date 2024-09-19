@@ -111,15 +111,6 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 		CaAddress:          common.HexToAddress(configOpts.CaAddress),
 	}
 
-	chainOptsL2 := chainservice.L2ChainOpts{
-		ChainUrl:           configOpts.L2ChainUrl,
-		ChainStartBlockNum: configOpts.L2ChainStartBlock,
-		ChainPk:            configOpts.ChainPK,
-		BridgeAddress:      common.HexToAddress(configOpts.BridgeAddress),
-		VpaAddress:         common.HexToAddress(configOpts.VpaAddress),
-		CaAddress:          common.HexToAddress(configOpts.CaAddress),
-	}
-
 	storeOptsL1 := store.StoreOpts{
 		PkBytes:            common.Hex2Bytes(configOpts.StateChannelPK),
 		UseDurableStore:    true,
@@ -154,7 +145,7 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
 	}
 
-	nodeL2, storeL2, msgServiceL2, chainServiceL2, err := nodeutils.InitializeL2Node(chainOptsL2, storeOptsL2, messageOptsL2)
+	nodeL2, storeL2, msgServiceL2, chainServiceL2, err := nodeutils.InitializeL2Node(storeOptsL2, messageOptsL2)
 	if err != nil {
 		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
 	}

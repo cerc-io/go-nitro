@@ -134,18 +134,7 @@ func TestBridgeFlow(t *testing.T) {
 		panic(err)
 	}
 
-	nodeAPrimeChainservice, err := chainservice.NewL2ChainService(chainservice.L2ChainOpts{
-		ChainUrl:           infraL2.anvilChain.ChainUrl,
-		ChainStartBlockNum: 0,
-		ChainAuthToken:     infraL2.anvilChain.ChainAuthToken,
-		BridgeAddress:      infraL2.anvilChain.ContractAddresses.BridgeAddress,
-		CaAddress:          infraL2.anvilChain.ContractAddresses.CaAddress,
-		VpaAddress:         infraL2.anvilChain.ContractAddresses.VpaAddress,
-		ChainPk:            infraL2.anvilChain.ChainPks[tcL2.Participants[0].ChainAccountIndex],
-	})
-	if err != nil {
-		panic(err)
-	}
+	nodeAPrimeChainservice, err := chainservice.NewLaconicChainService()
 
 	bridgeClient, nodeL1MultiAddress, nodeL2MultiAddress, cleanUp := setupBridgeWithRPCClient(t, bridgeConfig)
 	defer cleanUp()

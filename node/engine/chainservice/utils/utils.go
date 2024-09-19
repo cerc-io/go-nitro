@@ -102,15 +102,6 @@ func TransferToken(ethClient *ethclient.Client, tokenBinding *Token.Token, txSub
 	return nil
 }
 
-func DeployL2Contract(ctx context.Context, ethClient *ethclient.Client, txSubmitter *bind.TransactOpts) (common.Address, error) {
-	ba, err := deployContract(ctx, "Bridge", ethClient, txSubmitter, Bridge.DeployBridge)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	return ba, nil
-}
-
 type contractBackend interface {
 	NitroAdjudicator.NitroAdjudicator | VirtualPaymentApp.VirtualPaymentApp | ConsensusApp.ConsensusApp | Bridge.Bridge
 }

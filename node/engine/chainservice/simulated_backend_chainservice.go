@@ -7,12 +7,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/ethclient/simulated"
-	"github.com/ethereum/go-ethereum/node"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	NitroAdjudicator "github.com/statechannels/go-nitro/node/engine/chainservice/adjudicator"
 	ConsensusApp "github.com/statechannels/go-nitro/node/engine/chainservice/consensusapp"
 	Token "github.com/statechannels/go-nitro/node/engine/chainservice/erc20"
@@ -51,8 +50,7 @@ type SimulatedChain interface {
 
 // This is used to wrap the simulated backend so that we can provide a ChainID function like a real eth client
 type BackendWrapper struct {
-	*simulated.Backend
-	simulated.Client
+	*backends.SimulatedBackend
 }
 
 func (b *BackendWrapper) ChainID(ctx context.Context) (*big.Int, error) {
@@ -106,7 +104,7 @@ func (sbcs *SimulatedBackendChainService) SendTransaction(tx protocols.ChainTran
 // SetupSimulatedBackend creates a new SimulatedBackend with the supplied number of transacting accounts, deploys the Nitro Adjudicator and returns both.
 func SetupSimulatedBackend(numAccounts uint64) (SimulatedChain, Bindings, []*bind.TransactOpts, error) {
 	accounts := make([]*bind.TransactOpts, numAccounts)
-	genesisAlloc := make(map[common.Address]ethTypes.Account)
+	genesisAlloc := make(map[common.Address]core.GenesisAccount)
 	contractBindings := Bindings{}
 
 	balance, success := new(big.Int).SetString("10000000000000000000", 10) // 10 eth in wei
@@ -122,15 +120,12 @@ func SetupSimulatedBackend(numAccounts uint64) (SimulatedChain, Bindings, []*bin
 		if err != nil {
 			return nil, contractBindings, accounts, err
 		}
-		genesisAlloc[accounts[i].From] = ethTypes.Account{Balance: balance}
+		genesisAlloc[accounts[i].From] = core.GenesisAccount{Balance: balance}
 	}
 
 	// Setup "blockchain"
 	blockGasLimit := uint64(15_000_000)
-	sim := simulated.NewBackend(genesisAlloc, func(nodeConf *node.Config, ethConf *ethconfig.Config) {
-		ethConf.Genesis.GasLimit = blockGasLimit
-	})
-	simulatedClient := sim.Client()
+	simulatedClient := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
 	// Deploy Adjudicator
 	naAddress, _, na, err := NitroAdjudicator.DeployNitroAdjudicator(accounts[0], simulatedClient)
 	if err != nil {
@@ -156,7 +151,7 @@ func SetupSimulatedBackend(numAccounts uint64) (SimulatedChain, Bindings, []*bin
 	}
 
 	// https://github.com/ethereum/go-ethereum/issues/15930
-	sim.Commit()
+	simulatedClient.Commit()
 
 	// Distributed tokens to all accounts
 	INITIAL_TOKEN_BALANCE := big.NewInt(10_000_000)
@@ -174,9 +169,9 @@ func SetupSimulatedBackend(numAccounts uint64) (SimulatedChain, Bindings, []*bin
 		ConsensusApp:      binding[ConsensusApp.ConsensusApp]{consensusAppAddress, ca},
 		VirtualPaymentApp: binding[VirtualPaymentApp.VirtualPaymentApp]{virtualPaymentAppAddress, vpa},
 	}
-	sim.Commit()
+	simulatedClient.Commit()
 
-	return &BackendWrapper{sim, simulatedClient}, contractBindings, accounts, nil
+	return &BackendWrapper{simulatedClient}, contractBindings, accounts, nil
 }
 
 func (sbcs *SimulatedBackendChainService) GetConsensusAppAddress() types.Address {

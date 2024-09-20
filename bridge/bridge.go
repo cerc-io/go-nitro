@@ -89,7 +89,7 @@ func New() *Bridge {
 }
 
 func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node.Node, nodeL1MultiAddress string, nodeL2MultiAddress string, err error) {
-	chainOptsL2 := chainservice.LaconicChainOpts{
+	chainOptsL2 := chainservice.LaconicdChainOpts{
 		VpaAddress: common.HexToAddress(configOpts.VpaAddress),
 		CaAddress:  common.HexToAddress(configOpts.CaAddress),
 	}

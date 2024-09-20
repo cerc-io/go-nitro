@@ -36,7 +36,7 @@ const (
 	MockChain      ChainType = "MockChain"
 	SimulatedChain ChainType = "SimulatedChain"
 	AnvilChain     ChainType = "AnvilChain"
-	LaconicChain   ChainType = "LaconicChain"
+	LaconicdChain  ChainType = "LaconicdChain"
 )
 
 type TestParticipant struct {
@@ -91,7 +91,7 @@ type sharedTestInfrastructure struct {
 	mockChain      *chainservice.MockChain
 	simulatedChain chainservice.SimulatedChain
 	anvilChain     *chainservice.AnvilChain
-	laconicChain   chainutils.LaconicChain
+	laconicdChain  chainutils.LaconicdChain
 	bindings       *chainservice.Bindings
 	ethAccounts    []*bind.TransactOpts
 }

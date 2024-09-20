@@ -110,11 +110,11 @@ func setupChainService(tc TestCase, tp TestParticipant, si sharedTestInfrastruct
 			panic(err)
 		}
 		return cs
-	case LaconicChain:
-		cs, err := chainservice.NewLaconicChainService(
-			chainservice.LaconicChainOpts{
-				VpaAddress: si.laconicChain.ContractAddresses.VpaAddress,
-				CaAddress:  si.laconicChain.ContractAddresses.CaAddress,
+	case LaconicdChain:
+		cs, err := chainservice.NewLaconicdChainService(
+			chainservice.LaconicdChainOpts{
+				VpaAddress: si.laconicdChain.ContractAddresses.VpaAddress,
+				CaAddress:  si.laconicdChain.ContractAddresses.CaAddress,
 			})
 		if err != nil {
 			panic(err)
@@ -279,8 +279,8 @@ func setupSharedInfra(tc TestCase) sharedTestInfrastructure {
 			panic(err)
 		}
 		infra.anvilChain = chain
-	case LaconicChain:
-		infra.laconicChain = chainutils.LaconicChain{}
+	case LaconicdChain:
+		infra.laconicdChain = chainutils.LaconicdChain{}
 	default:
 		panic("Unknown chain service")
 	}

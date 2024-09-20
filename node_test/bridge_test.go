@@ -753,7 +753,7 @@ func initializeUtils(t *testing.T, closeBridge bool) (Utils, func()) {
 	}
 
 	tcL2 := TestCase{
-		Chain:             LaconicChain,
+		Chain:             LaconicdChain,
 		MessageService:    TestMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",
@@ -776,8 +776,8 @@ func initializeUtils(t *testing.T, closeBridge bool) (Utils, func()) {
 
 	nodeB, _, _, storeB, chainServiceB := setupIntegrationNode(tcL1, tcL1.Participants[1], infraL1, []string{}, dataFolder)
 
-	infraL2.laconicChain.ContractAddresses.CaAddress = infraL1.anvilChain.ContractAddresses.CaAddress
-	infraL2.laconicChain.ContractAddresses.VpaAddress = infraL1.anvilChain.ContractAddresses.VpaAddress
+	infraL2.laconicdChain.ContractAddresses.CaAddress = infraL1.anvilChain.ContractAddresses.CaAddress
+	infraL2.laconicdChain.ContractAddresses.VpaAddress = infraL1.anvilChain.ContractAddresses.VpaAddress
 
 	nodeBPrime, _, _, storeBPrime, _ := setupIntegrationNode(tcL2, tcL2.Participants[0], infraL2, []string{}, dataFolder)
 
@@ -840,7 +840,7 @@ func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge,
 	}
 
 	tcL2 := TestCase{
-		Chain:             LaconicChain,
+		Chain:             LaconicdChain,
 		MessageService:    P2PMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test",

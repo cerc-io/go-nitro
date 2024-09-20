@@ -83,7 +83,7 @@ func TestBridgeFlow(t *testing.T) {
 	}
 
 	tcL2 := TestCase{
-		Chain:             LaconicChain,
+		Chain:             LaconicdChain,
 		MessageService:    P2PMessageService,
 		MessageDelay:      0,
 		LogName:           "Bridge_test_l2",
@@ -132,7 +132,7 @@ func TestBridgeFlow(t *testing.T) {
 		panic(err)
 	}
 
-	nodeAPrimeChainservice, err := chainservice.NewLaconicChainService(chainservice.LaconicChainOpts{
+	nodeAPrimeChainservice, err := chainservice.NewLaconicdChainService(chainservice.LaconicdChainOpts{
 		VpaAddress: infraL1.anvilChain.ContractAddresses.VpaAddress,
 		CaAddress:  infraL1.anvilChain.ContractAddresses.CaAddress,
 	})

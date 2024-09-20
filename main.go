@@ -270,7 +270,7 @@ func main() {
 			var node *node.Node
 			var err error
 			if l2 {
-				chainOpts := chainservice.LaconicChainOpts{
+				chainOpts := chainservice.LaconicdChainOpts{
 					VpaAddress: common.HexToAddress(vpaAddress),
 					CaAddress:  common.HexToAddress(caAddress),
 				}

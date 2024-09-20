@@ -124,6 +124,6 @@ func deployContract[T contractBackend](ctx context.Context, name string, ethClie
 	return a, nil
 }
 
-type LaconicChain struct {
+type LaconicdChain struct {
 	ContractAddresses ContractAddresses
 }

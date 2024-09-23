@@ -14,10 +14,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/ethclient/simulated"
+	"github.com/ethereum/go-ethereum/node"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
@@ -213,15 +215,18 @@ func prepareSimulatedBackend(t *testing.T) preparedChain {
 	// Setup "blockchain" params
 	balance := new(big.Int)
 	balance.SetString("10000000000000000000", 10) // 10 eth in wei
-	gAlloc := map[common.Address]core.GenesisAccount{
+	gAlloc := map[common.Address]ethtypes.Account{
 		address:  {Balance: balance},
 		address2: {Balance: balance},
 	}
 	blockGasLimit := uint64(4712388)
-	sim := backends.NewSimulatedBackend(gAlloc, blockGasLimit)
+	sim := simulated.NewBackend(gAlloc, func(nodeConf *node.Config, ethConf *ethconfig.Config) {
+		ethConf.Genesis.GasLimit = blockGasLimit
+	})
+	simulatedClient := sim.Client()
 
 	// Deploy Adjudicator
-	_, _, na, err := DeployNitroAdjudicator(auth, sim)
+	_, _, na, err := DeployNitroAdjudicator(auth, simulatedClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,13 +234,13 @@ func prepareSimulatedBackend(t *testing.T) preparedChain {
 	sim.Commit()
 
 	// Deploy ConsensusApp
-	consensusAppAddress, _, _, err := ConsensusApp.DeployConsensusApp(auth2, sim)
+	consensusAppAddress, _, _, err := ConsensusApp.DeployConsensusApp(auth2, simulatedClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	return preparedChain{
-		sim,
+		simulatedClient,
 		consensusAppAddress,
 		*na,
 		auth,

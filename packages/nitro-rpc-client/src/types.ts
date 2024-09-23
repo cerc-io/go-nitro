@@ -46,6 +46,14 @@ export type VirtualFundPayload = {
   Nonce: number;
   AppDefinition: string;
 };
+export type SwapFundPayload = {
+  Intermediaries: string[];
+  CounterParty: string;
+  ChallengeDuration: number;
+  Outcome: Outcome;
+  Nonce: number;
+  AppDefinition: string;
+};
 export type PaymentPayload = {
   // todo: this should be a bigint
   Amount: number;
@@ -138,6 +146,10 @@ export type VirtualFundRequest = JsonRpcRequest<
   "create_payment_channel",
   VirtualFundPayload
 >;
+export type SwapFundRequest = JsonRpcRequest<
+  "create_payment_channel",
+  SwapFundPayload
+>;
 export type GetLedgerChannelRequest = JsonRpcRequest<
   "get_ledger_channel",
   GetChannelRequest
@@ -225,6 +237,7 @@ export type PaymentResponse = JsonRpcResponse<PaymentPayload>;
 export type CounterChallengeResponse = JsonRpcResponse<CounterChallengeResult>;
 export type GetLedgerChannelResponse = JsonRpcResponse<LedgerChannelInfo>;
 export type VirtualFundResponse = JsonRpcResponse<ObjectiveResponse>;
+export type SwapFundResponse = JsonRpcResponse<ObjectiveResponse>;
 export type VersionResponse = JsonRpcResponse<string>;
 export type GetNodeInfoResponse = JsonRpcResponse<GetNodeInfo>;
 export type GetAddressResponse = JsonRpcResponse<string>;
@@ -263,6 +276,7 @@ export type RPCRequestAndResponses = {
   version: [VersionRequest, VersionResponse];
   get_node_info: [GetNodeInfoRequest, GetNodeInfoResponse];
   create_payment_channel: [VirtualFundRequest, VirtualFundResponse];
+  create_swap_channel: [SwapFundRequest, SwapFundResponse];
   get_address: [GetAddressRequest, GetAddressResponse];
   get_ledger_channel: [GetLedgerChannelRequest, GetLedgerChannelResponse];
   get_payment_channel: [GetPaymentChannelRequest, GetPaymentChannelResponse];

@@ -503,6 +503,55 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "swap-fund <counterparty> [intermediaries...]",
+    "Creates a swap channel",
+    (yargsBuilder) => {
+      return yargsBuilder
+        .positional("counterparty", {
+          describe: "The counterparty's address",
+          type: "string",
+          demandOption: true,
+        })
+        .array("intermediaries")
+        .option("amount", {
+          describe: "The amount to fund the channel with",
+          type: "number",
+          default: 1000,
+        });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+
+      // Parse all intermediary args to strings
+      const intermediaries =
+        yargs.intermediaries?.map((intermediary) => {
+          if (typeof intermediary === "string") {
+            return intermediary;
+          }
+          return intermediary.toString(16);
+        }) ?? [];
+
+      const sfObjective = await rpcClient.CreateSwapChannel(
+        yargs.counterparty,
+        intermediaries,
+        yargs.amount
+      );
+
+      const { Id } = sfObjective;
+      console.log(`Objective started ${Id}`);
+
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "virtual-fund <counterparty> [intermediaries...]",
     "Creates a virtually funded payment channel",
     (yargsBuilder) => {

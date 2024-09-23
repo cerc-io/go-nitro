@@ -20,6 +20,7 @@ import {
   MirrorBridgedDefundObjectiveRequest,
   GetNodeInfo,
   AssetData,
+  SwapFundPayload,
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -163,7 +164,30 @@ export class NitroRpcClient implements RpcClientApi {
     return this.sendRequest("retry_tx", { TxHash: txHash });
   }
 
-  // TODO: Add CLI to create Swap channel
+  public async CreateSwapChannel(
+    counterParty: string,
+    intermediaries: string[],
+    amount: number
+  ): Promise<ObjectiveResponse> {
+    const asset = `0x${"00".repeat(20)}`;
+    const payload: SwapFundPayload = {
+      CounterParty: counterParty,
+      Intermediaries: intermediaries,
+      ChallengeDuration: 0,
+      Outcome: createOutcome(await this.GetAddress(), counterParty, [
+        {
+          assetAddress: asset,
+          alphaAmount: amount,
+          // As payment channel is simplex, only alpha node can pay beta node and not vice-versa hence beta node's allocation amount is 0
+          betaAmount: 0,
+        },
+      ]),
+      AppDefinition: asset,
+      Nonce: Date.now(),
+    };
+
+    return this.sendRequest("create_swap_channel", payload);
+  }
 
   public async CreatePaymentChannel(
     counterParty: string,

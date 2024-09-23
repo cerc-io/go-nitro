@@ -107,7 +107,6 @@ func TestBridgeFlow(t *testing.T) {
 	bridgeConfig := bridge.BridgeConfig{
 		L1ChainUrl:        infraL1.anvilChain.ChainUrl,
 		L1ChainStartBlock: 0,
-		L2ChainStartBlock: 0,
 		ChainPK:           infraL1.anvilChain.ChainPks[tcL1.Participants[1].ChainAccountIndex],
 		StateChannelPK:    common.Bytes2Hex(tcL1.Participants[1].PrivateKey),
 		NaAddress:         infraL1.anvilChain.ContractAddresses.NaAddress.String(),

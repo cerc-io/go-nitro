@@ -62,9 +62,7 @@ type Bridge struct {
 
 type BridgeConfig struct {
 	L1ChainUrl         string
-	L2ChainUrl         string
 	L1ChainStartBlock  uint64
-	L2ChainStartBlock  uint64
 	ChainPK            string
 	StateChannelPK     string
 	NaAddress          string

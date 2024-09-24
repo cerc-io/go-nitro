@@ -2,7 +2,6 @@ package node_test
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -63,7 +62,6 @@ func TestComplexIntegrationScenario(t *testing.T) {
 }
 
 func TestMultiAssetLedgerChannel(t *testing.T) {
-	t.Skip()
 	testCase := TestCase{
 		Description:       "Direct defund with Challenge",
 		Chain:             AnvilChain,
@@ -91,7 +89,7 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 	}
 
 	// Create go-nitro nodes
-	nodeA, _, _, storeA, _ := setupIntegrationNode(testCase, testCase.Participants[0], infra, []string{}, dataFolder)
+	nodeA, _, _, _, _ := setupIntegrationNode(testCase, testCase.Participants[0], infra, []string{}, dataFolder)
 	defer nodeA.Close()
 	nodeB, _, _, _, _ := setupIntegrationNode(testCase, testCase.Participants[1], infra, []string{}, dataFolder)
 	defer nodeB.Close()
@@ -113,9 +111,6 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 	chB := nodeB.ObjectiveCompleteChan(ledgerResponse.Id)
 	<-chA
 	<-chB
-
-	cc, _ := storeA.GetConsensusChannelById(ledgerResponse.ChannelId)
-	fmt.Printf("MULIT ASSSET LEDGER CHANNEL %+v", cc)
 
 	multiassetVirtualChannelOutcome := outcome.Exit{
 		outcome.SingleAssetExit{
@@ -146,7 +141,7 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 		},
 	}
 
-	virtualresponse, err := nodeA.CreateSwapChannel(
+	swapChannelresponse, err := nodeA.CreateSwapChannel(
 		nil,
 		*nodeB.Address,
 		0,
@@ -155,16 +150,12 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("SWAP CHANNEL RESPONSE....WAITING FOR OBJECTIVE TO COMPLETE", virtualresponse.ChannelId)
 
-	chB = nodeB.ObjectiveCompleteChan(virtualresponse.Id)
-	<-nodeA.ObjectiveCompleteChan(virtualresponse.Id)
+	chB = nodeB.ObjectiveCompleteChan(swapChannelresponse.Id)
+	<-nodeA.ObjectiveCompleteChan(swapChannelresponse.Id)
 	<-chB
 
-	cc, _ = storeA.GetConsensusChannelById(ledgerResponse.ChannelId)
-	fmt.Printf("MULIT ASSET LEDGER CHANNEL AFTER VIRTUAL CHANNEL %+v", cc)
-
-	t.Log("Completed direct-fund objective")
+	t.Log("Completed swap-fund objective")
 }
 
 // RunIntegrationTestCase runs the integration test case.

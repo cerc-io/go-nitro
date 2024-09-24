@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/types"
 )
@@ -13,14 +14,15 @@ import (
 // making it suitable for serialization
 // embedded structs are moved to name fields for easier serialization
 type jsonAdd struct {
-	Guarantee   Guarantee
-	LeftDeposit *big.Int
+	Guarantee    Guarantee
+	LeftDeposit  *big.Int
+	AssetAddress common.Address
 }
 
 // MarshalJSON returns a JSON representation of the Add
 func (a Add) MarshalJSON() ([]byte, error) {
 	jsonA := jsonAdd{
-		a.Guarantee, a.LeftDeposit,
+		a.Guarantee, a.LeftDeposit, a.AssetAddress,
 	}
 	return json.Marshal(jsonA)
 }
@@ -36,6 +38,7 @@ func (a *Add) UnmarshalJSON(data []byte) error {
 
 	a.Guarantee = jsonA.Guarantee
 	a.LeftDeposit = jsonA.LeftDeposit
+	a.AssetAddress = jsonA.AssetAddress
 
 	return nil
 }

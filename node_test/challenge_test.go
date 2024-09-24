@@ -150,7 +150,7 @@ func TestCheckpoint(t *testing.T) {
 	ledgerUpdatesChannelNodeB := nodeB.LedgerUpdatedChan(ledgerChannel)
 
 	// Conduct virtual fund, make payment and virtual defund
-	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, common.BigToAddress(common.Big0))
+	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, infra.anvilChain.ContractAddresses.TokenAddress)
 	response, err := nodeA.CreatePaymentChannel([]common.Address{}, *nodeB.Address, uint32(testCase.ChallengeDuration), virtualOutcome)
 	if err != nil {
 		t.Error(err)
@@ -268,7 +268,7 @@ func TestCounterChallenge(t *testing.T) {
 	ledgerUpdatesChannelNodeB := nodeB.LedgerUpdatedChan(ledgerChannel)
 
 	// Conduct virtual fund, make payment and virtual defund
-	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, common.BigToAddress(common.Big0))
+	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, infra.anvilChain.ContractAddresses.TokenAddress)
 	response, err := nodeA.CreatePaymentChannel([]common.Address{}, *nodeB.Address, uint32(testCase.ChallengeDuration), virtualOutcome)
 	if err != nil {
 		t.Error(err)

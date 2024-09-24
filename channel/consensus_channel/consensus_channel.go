@@ -829,8 +829,7 @@ func (vars *Vars) Add(p Add) error {
 		}
 	}
 
-	// // CHECKS
-	// o := vars.Outcome[0]
+	// CHECKS
 
 	_, found := o.guarantees[p.target]
 	if found {

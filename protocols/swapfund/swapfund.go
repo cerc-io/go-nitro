@@ -750,7 +750,6 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 		sideEffects = se
 	} else {
 		// If the proposal is next in the queue we accept it
-		// TODO: Fix error, changed method getExpectedGuarantee to send guarantee map
 		for a, g := range guarantee {
 			proposedNext, err := ledger.IsProposedNext(g)
 			if err != nil {

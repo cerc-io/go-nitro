@@ -75,7 +75,6 @@ func (ms *MemStore) GetObjectiveById(id protocols.ObjectiveId) (protocols.Object
 
 	// return immediately if no such objective exists
 	if !ok {
-		fmt.Println("THROWN FROM HERE")
 		return nil, fmt.Errorf("%w: %s", ErrNoSuchObjective, id)
 	}
 

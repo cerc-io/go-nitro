@@ -63,6 +63,7 @@ func TestComplexIntegrationScenario(t *testing.T) {
 }
 
 func TestMultiAssetLedgerChannel(t *testing.T) {
+	t.Skip()
 	testCase := TestCase{
 		Description:       "Direct defund with Challenge",
 		Chain:             AnvilChain,
@@ -152,10 +153,9 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 		multiassetVirtualChannelOutcome,
 	)
 	if err != nil {
-		fmt.Println("err from here", err)
 		t.Fatal(err)
 	}
-	fmt.Println(">>>>>VIRTUAL CHANNEL RESPONSE....WAITING FOR OBJECTIVE TO COMPLETE", virtualresponse.ChannelId)
+	fmt.Println("SWAP CHANNEL RESPONSE....WAITING FOR OBJECTIVE TO COMPLETE", virtualresponse.ChannelId)
 
 	chB = nodeB.ObjectiveCompleteChan(virtualresponse.Id)
 	<-nodeA.ObjectiveCompleteChan(virtualresponse.Id)

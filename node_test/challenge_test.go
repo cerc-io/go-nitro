@@ -355,7 +355,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 
 	// Wait for objective to complete
 	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{virtualResponse.Id})
-	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeA, nodeB)
+	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, common.Address{}, nodeA, nodeB)
 
 	// Alice pays Bob
 	err := nodeA.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))

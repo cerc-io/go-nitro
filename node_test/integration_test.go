@@ -263,6 +263,7 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 				virtualIds[i],
 				initialPaymentOutcome(*clientA.Address, *clientB.Address, asset),
 				query.Open,
+				common.Address{},
 				clientA, clientB)
 		}
 
@@ -291,6 +292,7 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 				virtualIds[i],
 				finalPaymentOutcome(*clientA.Address, *clientB.Address, asset, tc.NumOfPayments, 1),
 				query.Open,
+				common.Address{},
 				clientA, clientB)
 		}
 

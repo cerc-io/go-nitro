@@ -293,9 +293,9 @@ func setupSharedInfra(tc TestCase) sharedTestInfrastructure {
 
 // checkPaymentChannel checks that the ledger channel has the expected outcome and status
 // It will fail if the channel does not exist
-func checkPaymentChannel(t *testing.T, id types.Destination, o outcome.Exit, status query.ChannelStatus, clients ...node.Node) {
+func checkPaymentChannel(t *testing.T, id types.Destination, o outcome.Exit, status query.ChannelStatus, assetAddress common.Address, clients ...node.Node) {
 	for _, c := range clients {
-		expected := createPaychInfo(id, o, status)
+		expected := createPaychInfo(id, o, status, assetAddress)
 		ledger, err := c.GetPaymentChannel(id)
 		if err != nil {
 			t.Fatal(err)
@@ -399,7 +399,7 @@ func checkLedgerChannel(t *testing.T, ledgerId types.Destination, o outcome.Exit
 }
 
 // createPaychInfo constructs a PaymentChannelInfo so we can easily compare it to the result of GetPaymentChannel
-func createPaychInfo(id types.Destination, outcome outcome.Exit, status query.ChannelStatus) query.PaymentChannelInfo {
+func createPaychInfo(id types.Destination, outcome outcome.Exit, status query.ChannelStatus, assetAddress common.Address) query.PaymentChannelInfo {
 	payer, _ := outcome[0].Allocations[0].Destination.ToAddress()
 	payee, _ := outcome[0].Allocations[1].Destination.ToAddress()
 
@@ -407,7 +407,7 @@ func createPaychInfo(id types.Destination, outcome outcome.Exit, status query.Ch
 		ID:     id,
 		Status: status,
 		Balance: query.PaymentChannelBalance{
-			AssetAddress:   types.Address{},
+			AssetAddress:   assetAddress,
 			Payee:          payee,
 			Payer:          payer,
 			RemainingFunds: (*hexutil.Big)(outcome[0].Allocations[0].Amount),
@@ -429,6 +429,7 @@ func createPaychStory(
 			id,
 			simpleOutcome(payerAddr, payeeAddr, state.clientA, state.clientB),
 			state.status,
+			common.Address{},
 		)
 	}
 	return story

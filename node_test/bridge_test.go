@@ -84,10 +84,10 @@ func TestBridgedFund(t *testing.T) {
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
 		// Create virtual channel on mirrored ledger channel on L2
-		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, types.Address{})
+		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, infraL1.anvilChain.ContractAddresses.TokenAddress)
 		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{}, bridgeAddress, uint32(tcL2.ChallengeDuration), virtualOutcome)
 		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
-		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeAPrime)
+		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, infraL1.anvilChain.ContractAddresses.TokenAddress, nodeAPrime)
 
 		// APrime pays BPrime
 		err := nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
@@ -160,7 +160,7 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 	}
 	oldL2SignedState := cc.SupportedSignedState()
 
-	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration)
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddress)
 
 	t.Run("Clear the registered challenge using checkpoint and exit L2 using latest L2 state", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
@@ -232,7 +232,7 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 	}
 	oldL2SignedState := cc.SupportedSignedState()
 
-	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration)
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddress)
 
 	t.Run("Counter the registered challenge by challenging with new L2 state and exit L2 using the new L2 state", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
@@ -340,7 +340,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 	})
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments via bridge as intermediary", func(t *testing.T) {
-		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, *nodeCPrime.Address, types.Address{})
+		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, *nodeCPrime.Address, infraL1.anvilChain.ContractAddresses.TokenAddress)
 		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{bridgeAddress}, *nodeCPrime.Address, uint32(tcL2.ChallengeDuration), virtualOutcome)
 		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
 
@@ -434,7 +434,7 @@ func TestBridgedFundWithChallenge(t *testing.T) {
 	infraL1 := utils.infraL1
 
 	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddress)
-	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration)
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddress)
 
 	t.Run("Unilaterally exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
 		cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
@@ -731,7 +731,7 @@ func createL2VirtualChannel(t *testing.T, nodeAPrime node.Node, nodeBPrime node.
 	virtualResponse, _ := nodeBPrime.CreatePaymentChannel([]types.Address{}, *nodeAPrime.Address, uint32(tcL2.ChallengeDuration), virtualOutcome)
 	waitForObjectives(t, nodeBPrime, nodeAPrime, []node.Node{}, []protocols.ObjectiveId{virtualResponse.Id})
 
-	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeBPrime, nodeAPrime)
+	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, types.Address{}, nodeBPrime, nodeAPrime)
 
 	virtualChannel, _ := L2bridgeStore.GetChannelById(virtualResponse.ChannelId)
 
@@ -944,9 +944,9 @@ func createMirrorChannel(t *testing.T, node node.Node, bridge *bridge.Bridge, ch
 	return l1LedgerChannelId, l2LedgerChannelId
 }
 
-func createVirtualChannelAndMakePayment(t *testing.T, node node.Node, counterParty common.Address, challengeDuration uint) {
+func createVirtualChannelAndMakePayment(t *testing.T, node node.Node, counterParty common.Address, challengeDuration uint, assetAddress common.Address) {
 	// Create virtual channel
-	virtualOutcome := initialPaymentOutcome(*node.Address, counterParty, types.Address{})
+	virtualOutcome := initialPaymentOutcome(*node.Address, counterParty, assetAddress)
 	virtualResponse, _ := node.CreatePaymentChannel([]types.Address{}, counterParty, uint32(challengeDuration), virtualOutcome)
 	<-node.ObjectiveCompleteChan(virtualResponse.Id)
 

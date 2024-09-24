@@ -167,22 +167,24 @@ export class NitroRpcClient implements RpcClientApi {
   public async CreateSwapChannel(
     counterParty: string,
     intermediaries: string[],
-    amount: number
+    assetsData: AssetData[]
   ): Promise<ObjectiveResponse> {
-    const asset = `0x${"00".repeat(20)}`;
+    // As payment channel is simplex, only alpha node can pay beta node and not vice-versa hence beta node's allocation amount is 0
+    const modifiedAssetsData = assetsData.map((assetData) => {
+      assetData.betaAmount = 0;
+      return assetData;
+    });
+
     const payload: SwapFundPayload = {
       CounterParty: counterParty,
       Intermediaries: intermediaries,
       ChallengeDuration: 0,
-      Outcome: createOutcome(await this.GetAddress(), counterParty, [
-        {
-          assetAddress: asset,
-          alphaAmount: amount,
-          // As payment channel is simplex, only alpha node can pay beta node and not vice-versa hence beta node's allocation amount is 0
-          betaAmount: 0,
-        },
-      ]),
-      AppDefinition: asset,
+      Outcome: createOutcome(
+        await this.GetAddress(),
+        counterParty,
+        modifiedAssetsData
+      ),
+      AppDefinition: ZERO_ETHEREUM_ADDRESS,
       Nonce: Date.now(),
     };
 

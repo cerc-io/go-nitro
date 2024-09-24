@@ -782,7 +782,7 @@ func (a Add) RightDeposit() *big.Int {
 }
 
 func (a Add) equal(a2 Add) bool {
-	return a.Guarantee.equal(a2.Guarantee) && types.Equal(a.LeftDeposit, a2.LeftDeposit)
+	return a.Guarantee.equal(a2.Guarantee) && types.Equal(a.LeftDeposit, a2.LeftDeposit) && a.AssetAddress == a2.AssetAddress
 }
 
 func (r Remove) equal(r2 Remove) bool {

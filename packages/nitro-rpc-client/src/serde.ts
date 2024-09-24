@@ -184,6 +184,7 @@ export function getAndValidateResult<T extends RequestMethod>(
   switch (method) {
     case "create_ledger_channel":
     case "create_payment_channel":
+    case "create_swap_channel":
       return validateAndConvertResult(
         objectiveSchema,
         result,

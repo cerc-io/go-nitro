@@ -513,6 +513,7 @@ yargs(hideBin(process.argv))
           demandOption: true,
         })
         .array("intermediaries")
+        .array("assets")
         .option("amount", {
           describe: "The amount to fund the channel with",
           type: "number",
@@ -538,15 +539,28 @@ yargs(hideBin(process.argv))
           return intermediary.toString(16);
         }) ?? [];
 
+      if (!yargs.assets) {
+        throw new Error("assets are required");
+      }
+
+      const assets = yargs.assets?.map((asset) => {
+        if (typeof asset === "string") {
+          return asset;
+        }
+        throw new Error("Incorrect asset type");
+      });
+
+      const assetsData = parseAssetsData(assets);
+
       const sfObjective = await rpcClient.CreateSwapChannel(
         yargs.counterparty,
         intermediaries,
-        yargs.amount
+        assetsData
       );
 
       const { Id } = sfObjective;
       console.log(`Objective started ${Id}`);
-
+      // TODO: Wait for swapfund to complete
       await rpcClient.Close();
       process.exit(0);
     }

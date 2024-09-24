@@ -30,6 +30,7 @@ const (
 	ClosePaymentChannelRequestMethod  RequestMethod = "close_payment_channel"
 	PayRequestMethod                  RequestMethod = "pay"
 	GetPaymentChannelRequestMethod    RequestMethod = "get_payment_channel"
+	GetSwapChannelRequestMethod       RequestMethod = "get_swap_channel"
 	GetVoucherRequestMethod           RequestMethod = "get_voucher"
 	GetLedgerChannelRequestMethod     RequestMethod = "get_ledger_channel"
 	GetPaymentChannelsByLedgerMethod  RequestMethod = "get_payment_channels_by_ledger"
@@ -91,6 +92,11 @@ type CounterChallengeRequest struct {
 type GetPaymentChannelRequest struct {
 	Id types.Destination
 }
+
+type GetSwapChannelRequest struct {
+	Id types.Destination
+}
+
 type GetVoucherRequest struct {
 	Id types.Destination
 }
@@ -146,6 +152,7 @@ type RequestPayload interface {
 		PaymentRequest |
 		GetLedgerChannelRequest |
 		GetPaymentChannelRequest |
+		GetSwapChannelRequest |
 		GetPaymentChannelsByLedgerRequest |
 		GetSignedStateRequest |
 		GetVoucherRequest |
@@ -198,6 +205,7 @@ type ResponsePayload interface {
 		PaymentRequest |
 		query.PaymentChannelInfo |
 		query.LedgerChannelInfo |
+		query.SwapChannelInfo |
 		GetAllLedgersResponse |
 		GetPaymentChannelsByLedgerResponse |
 		payments.Voucher |

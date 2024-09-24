@@ -1,6 +1,7 @@
 package query
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -54,6 +55,30 @@ func getPaymentChannelBalance(participants []types.Address, outcome outcome.Exit
 		PaidSoFar:      (*hexutil.Big)(paidSoFar),
 		RemainingFunds: (*hexutil.Big)(remaining),
 	}
+}
+
+func getSwapChannelBalances(participants []types.Address, outcome outcome.Exit) []SwapChannelBalance {
+	numParticipants := len(participants)
+	// TODO: We assume single asset outcomes
+
+	var scb []SwapChannelBalance
+
+	for _, sao := range outcome {
+		asset := sao.Asset
+		payer := participants[0]
+		payee := participants[numParticipants-1]
+		paidSoFar := big.NewInt(0).Set(sao.Allocations[1].Amount)
+		remaining := big.NewInt(0).Set(sao.Allocations[0].Amount)
+		scb = append(scb, SwapChannelBalance{
+			AssetAddress:   asset,
+			Payer:          payer,
+			Payee:          payee,
+			PaidSoFar:      (*hexutil.Big)(paidSoFar),
+			RemainingFunds: (*hexutil.Big)(remaining),
+		})
+	}
+
+	return scb
 }
 
 // getLatestSupportedOrPreFund returns the latest supported state of the channel
@@ -148,6 +173,30 @@ func GetPaymentChannelInfo(id types.Destination, store store.Store, vm *payments
 		return ConstructPaymentInfo(c, paid, remaining)
 	}
 	return PaymentChannelInfo{}, fmt.Errorf("could not find channel with id %v", id)
+}
+
+func GetSwapChannelInfo(id types.Destination, store store.Store) (string, error) {
+	if (id == types.Destination{}) {
+		return "", errors.New("a valid channel id must be provided")
+	}
+
+	c, channelFound := store.GetChannelById(id)
+
+	if channelFound {
+		SwapChannelInfo, err := ConstructSwapInfo(c)
+		if err != nil {
+			return "", err
+		}
+
+		marshalledSwapChannelInfo, err := json.Marshal(SwapChannelInfo)
+		if err != nil {
+			return "", err
+		}
+
+		return string(marshalledSwapChannelInfo), nil
+	}
+
+	return "", fmt.Errorf("could not find channel with id %v", id)
 }
 
 // GetAllLedgerChannels returns a `LedgerChannelInfo` for each ledger channel in the store.
@@ -298,5 +347,21 @@ func ConstructPaymentInfo(c *channel.Channel, paid, remaining *big.Int) (Payment
 		ID:      c.Id,
 		Status:  status,
 		Balance: balance,
+	}, nil
+}
+
+func ConstructSwapInfo(c *channel.Channel) (SwapChannelInfo, error) {
+	status := getStatusFromChannel(c)
+
+	latest, err := getLatestSupportedOrPreFund(c)
+	if err != nil {
+		return SwapChannelInfo{}, err
+	}
+	balances := getSwapChannelBalances(c.Participants, latest.Outcome)
+
+	return SwapChannelInfo{
+		ID:       c.Id,
+		Status:   status,
+		Balances: balances,
 	}, nil
 }

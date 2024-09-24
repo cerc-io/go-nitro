@@ -701,6 +701,31 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "get-swap-channel <channelId>",
+    "Gets information about a swap channel",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("channelId", {
+        describe: "The channel ID of the payment channel",
+        type: "string",
+        demandOption: true,
+      });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+      const swapChannelInfo = await rpcClient.GetSwapChannel(yargs.channelId);
+      console.log(swapChannelInfo);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "pay <channelId> <amount>",
     "Sends a payment on the given channel",
     (yargsBuilder) => {

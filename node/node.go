@@ -354,6 +354,10 @@ func (n *Node) GetPaymentChannel(id types.Destination) (query.PaymentChannelInfo
 	return query.GetPaymentChannelInfo(id, n.store, n.vm)
 }
 
+func (n *Node) GetSwapChannel(id types.Destination) (string, error) {
+	return query.GetSwapChannelInfo(id, n.store)
+}
+
 // GetPaymentChannelsByLedger returns all active payment channels that are funded by the given ledger channel.
 func (n *Node) GetPaymentChannelsByLedger(ledgerId types.Destination) ([]query.PaymentChannelInfo, error) {
 	return query.GetPaymentChannelsByLedger(ledgerId, n.store, n.vm)

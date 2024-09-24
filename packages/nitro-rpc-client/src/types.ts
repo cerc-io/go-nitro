@@ -166,6 +166,10 @@ export type GetPaymentChannelRequest = JsonRpcRequest<
   "get_payment_channel",
   GetChannelRequest
 >;
+export type GetSwapChannelRequest = JsonRpcRequest<
+  "get_swap_channel",
+  GetChannelRequest
+>;
 export type GetVoucherRequest = JsonRpcRequest<
   "get_voucher",
   GetChannelRequest
@@ -232,6 +236,7 @@ export type GetNodeInfoRequest = JsonRpcRequest<
  */
 export type GetAuthTokenResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelResponse = JsonRpcResponse<PaymentChannelInfo>;
+export type GetSwapChannelResponse = JsonRpcResponse<string>;
 export type GetVoucherResponse = JsonRpcResponse<Voucher>;
 export type PaymentResponse = JsonRpcResponse<PaymentPayload>;
 export type CounterChallengeResponse = JsonRpcResponse<CounterChallengeResult>;
@@ -280,6 +285,7 @@ export type RPCRequestAndResponses = {
   get_address: [GetAddressRequest, GetAddressResponse];
   get_ledger_channel: [GetLedgerChannelRequest, GetLedgerChannelResponse];
   get_payment_channel: [GetPaymentChannelRequest, GetPaymentChannelResponse];
+  get_swap_channel: [GetSwapChannelRequest, GetSwapChannelResponse];
   get_voucher: [GetVoucherRequest, GetVoucherResponse];
   pay: [PaymentRequest, PaymentResponse];
   counter_challenge: [CounterChallengeRequest, CounterChallengeResponse];
@@ -389,10 +395,24 @@ export type PaymentChannelBalance = {
   RemainingFunds: bigint;
 };
 
+export type SwapChannelBalance = {
+  AssetAddress: string;
+  Payee: string;
+  Payer: string;
+  PaidSoFar: bigint;
+  RemainingFunds: bigint;
+};
+
 export type PaymentChannelInfo = {
   ID: string;
   Status: ChannelStatus;
   Balance: PaymentChannelBalance;
+};
+
+export type SwapChannelInfo = {
+  ID: string;
+  Status: ChannelStatus;
+  Balances: SwapChannelBalance[];
 };
 
 export type Outcome = SingleAssetOutcome[];

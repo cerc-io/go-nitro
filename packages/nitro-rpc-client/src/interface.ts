@@ -9,6 +9,7 @@ import {
   Voucher,
 } from "./types";
 
+// TODO: Check and add interfaces for remaining methods
 interface ledgerChannelApi {
   /**
    * CreateLedgerChannel creates a directly funded ledger channel with the counterparty.

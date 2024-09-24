@@ -21,6 +21,13 @@ func ValidateGetPaymentChannelRequest(req GetPaymentChannelRequest) error {
 	return nil
 }
 
+func ValidateGetSwapChannelRequest(req GetSwapChannelRequest) error {
+	if (req.Id == types.Destination{}) {
+		return InvalidParamsError
+	}
+	return nil
+}
+
 func ValidateGetPaymentChannelsByLedgerRequest(req GetPaymentChannelsByLedgerRequest) error {
 	if (req.LedgerId == types.Destination{}) {
 		return InvalidParamsError

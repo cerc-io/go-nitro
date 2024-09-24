@@ -191,6 +191,13 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 				}
 				return nrs.node.GetPaymentChannel(req.Id)
 			})
+		case serde.GetSwapChannelRequestMethod:
+			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetSwapChannelRequest) (string, error) {
+				if err := serde.ValidateGetSwapChannelRequest(req); err != nil {
+					return "", err
+				}
+				return nrs.node.GetSwapChannel(req.Id)
+			})
 		case serde.GetLedgerChannelRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetLedgerChannelRequest) (query.LedgerChannelInfo, error) {
 				return nrs.node.GetLedgerChannel(req.Id)

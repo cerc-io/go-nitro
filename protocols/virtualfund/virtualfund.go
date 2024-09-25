@@ -638,14 +638,14 @@ func (c *Connection) expectedProposal() consensus_channel.Proposal {
 	g := c.getExpectedGuarantee()
 
 	var leftAmount *big.Int
-	var assetAddress common.Address
 
-	for asset, val := range c.GuaranteeInfo.LeftAmount {
+	for _, val := range c.GuaranteeInfo.LeftAmount {
 		leftAmount = val
-		assetAddress = asset
 		break
 	}
-	proposal := consensus_channel.NewAddProposal(c.Channel.Id, g, leftAmount, assetAddress)
+
+	consensusState := c.Channel.SupportedSignedState().State()
+	proposal := consensus_channel.NewAddProposal(c.Channel.Id, g, leftAmount, consensusState.Outcome[0].Asset)
 
 	return proposal
 }

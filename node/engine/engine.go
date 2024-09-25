@@ -1021,7 +1021,6 @@ func (e *Engine) generateNotifications(o protocols.Objective) (EngineEvent, erro
 			outgoing.LedgerChannelUpdates = append(outgoing.LedgerChannelUpdates, l)
 		case *channel.SwapChannel:
 			// TODO: Add notification for swap channel
-			// TODO: Implement query swap channel info
 		default:
 			return outgoing, fmt.Errorf("handleNotifications: Unknown related type %T", c)
 		}
@@ -1248,7 +1247,6 @@ func fromMsgErr(id protocols.ObjectiveId, err error) error {
 	return fmt.Errorf("could not create objective from message.\n\ttarget objective: %s\n\terr: %w", id, err)
 }
 
-// TODO: Add proposal methods for swap fund
 // getProposalObjectiveId returns the objectiveId for a proposal.
 func getProposalObjectiveId(p consensus_channel.Proposal, channelType channel.ChannelType) protocols.ObjectiveId {
 	switch p.Type() {

@@ -14,7 +14,6 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
-// TODO: Check if swapfund functions required here
 type channelCollection struct {
 	// MockConsensusChannel constructs and returns a ledger channel
 	MockConsensusChannel virtualfund.GetTwoPartyConsensusLedgerFunction

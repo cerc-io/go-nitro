@@ -59,8 +59,6 @@ func getPaymentChannelBalance(participants []types.Address, outcome outcome.Exit
 
 func getSwapChannelBalances(participants []types.Address, outcome outcome.Exit) []SwapChannelBalance {
 	numParticipants := len(participants)
-	// TODO: We assume single asset outcomes
-
 	var scb []SwapChannelBalance
 
 	for _, sao := range outcome {
@@ -119,8 +117,6 @@ func getLedgerBalanceFromState(latest state.State, myAddress types.Address) (Led
 		TheirBalance: (*hexutil.Big)(theirBalance),
 	}, nil
 }
-
-// TODO: Check if swapfund getter function is required
 
 // GetVirtualFundObjective returns the virtual fund objective for the given channel if it exists.
 func GetVirtualFundObjective(id types.Destination, store store.Store) (*virtualfund.Objective, bool) {

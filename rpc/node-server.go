@@ -25,7 +25,10 @@ import (
 	"github.com/statechannels/go-nitro/types"
 )
 
-const DISABLE_BRIDGE_DEFUND = true
+const (
+	DISABLE_BRIDGE_DEFUND = true
+	DISABLE_SWAP_FUND     = true
+)
 
 type NodeRpcServer struct {
 	*BaseRpcServer
@@ -161,6 +164,10 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 			})
 		case serde.CreateSwapChannelRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req swapfund.ObjectiveRequest) (swapfund.ObjectiveResponse, error) {
+				if DISABLE_SWAP_FUND {
+					return swapfund.ObjectiveResponse{}, fmt.Errorf("swap fund is currently disabled")
+				}
+
 				return nrs.node.CreateSwapChannel(req.Intermediaries, req.CounterParty, req.ChallengeDuration, req.Outcome)
 			})
 		case serde.CreatePaymentChannelRequestMethod:

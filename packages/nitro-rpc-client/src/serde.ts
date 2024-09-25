@@ -10,6 +10,7 @@ import {
   RPCNotification,
   RPCRequestAndResponses,
   RequestMethod,
+  SwapChannelInfo,
 } from "./types";
 
 const ajv = new Ajv();
@@ -90,18 +91,19 @@ const paymentChannelSchema = {
 } as const;
 type PaymentChannelSchemaType = JTDDataType<typeof paymentChannelSchema>;
 
-// TODO: Use swap channel schema instead of string schema
 const swapChannelSchema = {
   properties: {
     ID: { type: "string" },
     Status: { type: "string" },
     Balances: {
-      properties: {
-        AssetAddress: { type: "string" },
-        Payee: { type: "string" },
-        Payer: { type: "string" },
-        PaidSoFar: { type: "string" },
-        RemainingFunds: { type: "string" },
+      elements: {
+        properties: {
+          AssetAddress: { type: "string" },
+          NodeA: { type: "string" },
+          NodeB: { type: "string" },
+          AmountNodeA: { type: "string" },
+          AmountNodeB: { type: "string" },
+        },
       },
     },
   },
@@ -166,6 +168,7 @@ type ResponseSchema =
   | typeof ledgerChannelsSchema
   | typeof paymentChannelSchema
   | typeof paymentChannelsSchema
+  | typeof swapChannelSchema
   | typeof paymentSchema
   | typeof voucherSchema
   | typeof receiveVoucherSchema
@@ -222,7 +225,6 @@ export function getAndValidateResult<T extends RequestMethod>(
     case "get_address":
     case "get_signed_state":
     case "close_payment_channel":
-    case "get_swap_channel":
       return validateAndConvertResult(
         stringSchema,
         result,
@@ -251,6 +253,12 @@ export function getAndValidateResult<T extends RequestMethod>(
         ledgerChannelsSchema,
         result,
         convertToInternalLedgerChannelsType
+      );
+    case "get_swap_channel":
+      return validateAndConvertResult(
+        swapChannelSchema,
+        result,
+        convertToInternalSwapChannelType
       );
     case "get_payment_channel":
       return validateAndConvertResult(
@@ -411,6 +419,22 @@ function convertToInternalPaymentChannelType(
       PaidSoFar: BigInt(result.Balance.PaidSoFar ?? 0),
       RemainingFunds: BigInt(result.Balance.RemainingFunds ?? 0),
     },
+  };
+}
+
+function convertToInternalSwapChannelType(
+  result: SwapChannelSchemaType
+): SwapChannelInfo {
+  return {
+    ...result,
+    Status: result.Status as ChannelStatus,
+    Balances: result.Balances.map((balance) => {
+      return {
+        ...balance,
+        AmountNodeA: BigInt(balance.AmountNodeA),
+        AmountNodeB: BigInt(balance.AmountNodeB),
+      };
+    }),
   };
 }
 

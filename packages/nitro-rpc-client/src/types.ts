@@ -236,7 +236,7 @@ export type GetNodeInfoRequest = JsonRpcRequest<
  */
 export type GetAuthTokenResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelResponse = JsonRpcResponse<PaymentChannelInfo>;
-export type GetSwapChannelResponse = JsonRpcResponse<string>;
+export type GetSwapChannelResponse = JsonRpcResponse<SwapChannelInfo>;
 export type GetVoucherResponse = JsonRpcResponse<Voucher>;
 export type PaymentResponse = JsonRpcResponse<PaymentPayload>;
 export type CounterChallengeResponse = JsonRpcResponse<CounterChallengeResult>;
@@ -397,10 +397,10 @@ export type PaymentChannelBalance = {
 
 export type SwapChannelBalance = {
   AssetAddress: string;
-  Payee: string;
-  Payer: string;
-  PaidSoFar: bigint;
-  RemainingFunds: bigint;
+  NodeA: string;
+  NodeB: string;
+  AmountNodeA: bigint;
+  AmountNodeB: bigint;
 };
 
 export type PaymentChannelInfo = {

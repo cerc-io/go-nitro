@@ -27,7 +27,7 @@ import (
 
 const (
 	DISABLE_BRIDGE_DEFUND = true
-	DISABLE_SWAP_FUND     = true
+	DISABLE_SWAP_FUND     = false
 )
 
 type NodeRpcServer struct {

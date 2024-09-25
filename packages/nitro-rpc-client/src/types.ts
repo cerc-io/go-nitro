@@ -147,7 +147,7 @@ export type VirtualFundRequest = JsonRpcRequest<
   VirtualFundPayload
 >;
 export type SwapFundRequest = JsonRpcRequest<
-  "create_payment_channel",
+  "create_swap_channel",
   SwapFundPayload
 >;
 export type GetLedgerChannelRequest = JsonRpcRequest<

@@ -1,6 +1,8 @@
 import {
   AssetData,
   ChannelStatus,
+  CounterChallengeAction,
+  CounterChallengeResult,
   LedgerChannelInfo,
   ObjectiveResponse,
   PaymentChannelInfo,
@@ -9,7 +11,6 @@ import {
   Voucher,
 } from "./types";
 
-// TODO: Check and add interfaces for remaining methods
 interface ledgerChannelApi {
   /**
    * CreateLedgerChannel creates a directly funded ledger channel with the counterparty.
@@ -102,6 +103,37 @@ interface paymentApi {
   Pay(channelId: string, amount: number): Promise<PaymentPayload>;
 }
 
+interface bridgeAPI {
+  CloseBridgeChannel(channelId: string): Promise<string>;
+  MirrorBridgedDefund(
+    channelId: string,
+    stringifiedL2SignedState: string,
+    isChallenge: boolean
+  ): Promise<string>;
+  GetAllL2Channels(): Promise<LedgerChannelInfo[]>;
+  GetL2ObjectiveFromL1(l1ObjectiveId: string): Promise<string>;
+  GetPendingBridgeTxs(channelId: string): Promise<string>;
+}
+
+interface swapAPI {
+  CreateSwapChannel(
+    counterParty: string,
+    intermediaries: string[],
+    assetsData: AssetData[]
+  ): Promise<ObjectiveResponse>;
+  GetSwapChannel(channelId: string): Promise<string>;
+}
+
+interface commonAPI {
+  RetryObjectiveTx(objectiveId: string): Promise<string>;
+  RetryTx(txHash: string): Promise<string>;
+  CounterChallenge(
+    channelId: string,
+    action: CounterChallengeAction,
+    signedState?: string
+  ): Promise<CounterChallengeResult>;
+}
+
 interface syncAPI {
   /**
    * WaitForLedgerChannelStatus blocks until the ledger channel with the given ID to have the given status.
@@ -133,13 +165,18 @@ interface syncAPI {
     channelId: string,
     callback: (info: PaymentChannelInfo) => void
   ): () => void;
+
+  WaitForObjectiveToComplete(objectiveId: string): Promise<void>;
 }
 
 export interface RpcClientApi
   extends ledgerChannelApi,
     paymentChannelApi,
     paymentApi,
-    syncAPI {
+    syncAPI,
+    bridgeAPI,
+    swapAPI,
+    commonAPI {
   /**
    * GetVersion queries the API server for it's version.
    *

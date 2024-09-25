@@ -686,15 +686,6 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 		if err != nil {
 			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not create swapfund objective for %+v: %w", request, err)
 		}
-		// Only Alice or Bob care about registering the objective and keeping track of vouchers
-		lastParticipant := uint(len(sfo.S.Participants) - 1)
-		if sfo.MyRole == lastParticipant || sfo.MyRole == payments.PAYER_INDEX {
-			// TODO: Complete function to register swap channels
-			err = e.registerSwapChannel(sfo)
-			if err != nil {
-				return failedEngineEvent, fmt.Errorf("could not register channel with swap manager: %w", err)
-			}
-		}
 
 		if err != nil {
 			return failedEngineEvent, fmt.Errorf("could not register channel with swap manager: %w", err)
@@ -1037,12 +1028,6 @@ func (e Engine) registerPaymentChannel(vfo virtualfund.Objective) error {
 	return e.vm.Register(vfo.V.Id, payments.GetPayer(postfund.Participants), payments.GetPayee(postfund.Participants), startingBalance)
 }
 
-func (e Engine) registerSwapChannel(sfo swapfund.Objective) error {
-	// TODO: Add function to register swap channel
-	// TODO: Add swapManager similar to voucher mananger
-	return nil
-}
-
 // spawnConsensusChannel will attempt to create and store a ConsensusChannel derived from the supplied Objective if it is a directfund.Objective or bridgedfund.Objective.
 // The associated Channel will remain in the store.
 func (e Engine) spawnConsensusChannel(crankedObjective protocols.Objective, createChannelFunc func() (*consensus_channel.ConsensusChannel, error)) error {
@@ -1183,11 +1168,7 @@ func (e *Engine) constructObjectiveFromMessage(id protocols.ObjectiveId, p proto
 		if err != nil {
 			return &swapfund.Objective{}, fromMsgErr(id, err)
 		}
-		// TODO: Complete function
-		err = e.registerSwapChannel(sfo)
-		if err != nil {
-			return &swapfund.Objective{}, fmt.Errorf("could not register channel with swap manager.\n\ttarget channel: %s\n\terr: %w", id, err)
-		}
+
 		return &sfo, nil
 	case virtualdefund.IsVirtualDefundObjective(id):
 		vId, err := virtualdefund.GetVirtualChannelFromObjectiveId(id)
@@ -1254,10 +1235,10 @@ func getProposalObjectiveId(p consensus_channel.Proposal, channelType channel.Ch
 		{
 			var prefix string
 
-			if channelType == channel.Virtual {
-				prefix = virtualfund.ObjectivePrefix
-			} else if channelType == channel.Swap {
+			if channelType == channel.Swap {
 				prefix = swapfund.ObjectivePrefix
+			} else {
+				prefix = virtualfund.ObjectivePrefix
 			}
 
 			channelId := p.ToAdd.Guarantee.Target().String()

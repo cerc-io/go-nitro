@@ -513,11 +513,11 @@ yargs(hideBin(process.argv))
           demandOption: true,
         })
         .array("intermediaries")
-        .array("assets")
-        .option("amount", {
-          describe: "The amount to fund the channel with",
-          type: "number",
-          default: 1000,
+        .option("asset", {
+          describe:
+            "Asset data in the format '0xAddress:alphaAmount,betaAmount'",
+          type: "array",
+          string: true,
         });
     },
     async (yargs) => {
@@ -539,13 +539,13 @@ yargs(hideBin(process.argv))
           return intermediary.toString(16);
         }) ?? [];
 
-      if (!yargs.assets) {
+      if (!yargs.asset) {
         throw new Error("assets are required");
       }
 
-      const assets = yargs.assets?.map((asset) => {
-        if (typeof asset === "string") {
-          return asset;
+      const assets = yargs.asset.map((a) => {
+        if (typeof a === "string") {
+          return a;
         }
         throw new Error("Incorrect asset type");
       });

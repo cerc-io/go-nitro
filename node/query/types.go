@@ -26,11 +26,11 @@ type PaymentChannelBalance struct {
 }
 
 type SwapChannelBalance struct {
-	AssetAddress   types.Address
-	Payee          types.Address
-	Payer          types.Address
-	PaidSoFar      *hexutil.Big
-	RemainingFunds *hexutil.Big
+	AssetAddress types.Address
+	NodeA        types.Address
+	NodeB        types.Address
+	AmountNodeA  *hexutil.Big
+	AmountNodeB  *hexutil.Big
 }
 
 // PaymentChannelInfo contains balance and status info about a payment channel

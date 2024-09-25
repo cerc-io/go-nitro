@@ -164,6 +164,7 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 			})
 		case serde.CreateSwapChannelRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req swapfund.ObjectiveRequest) (swapfund.ObjectiveResponse, error) {
+				// TODO: Remove after implementing swap defund
 				if DISABLE_SWAP_FUND {
 					return swapfund.ObjectiveResponse{}, fmt.Errorf("swap fund is currently disabled")
 				}

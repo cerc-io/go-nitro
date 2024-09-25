@@ -195,7 +195,6 @@ func (c *Node) ReceiveVoucher(v payments.Voucher) (payments.ReceiveVoucherSummar
 	return payments.ReceiveVoucherSummary{Total: total, Delta: delta}, err
 }
 
-// TODO: Add function to create swap channel
 func (n *Node) CreateSwapChannel(Intermediaries []types.Address, CounterParty types.Address, ChallengeDuration uint32, Outcome outcome.Exit) (swapfund.ObjectiveResponse, error) {
 	objectiveRequest := swapfund.NewObjectiveRequest(
 		Intermediaries,

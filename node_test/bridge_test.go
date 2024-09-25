@@ -160,7 +160,7 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 	}
 	oldL2SignedState := cc.SupportedSignedState()
 
-	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration)
 
 	t.Run("Clear the registered challenge using checkpoint and exit L2 using latest L2 state", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
@@ -232,7 +232,7 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 	}
 	oldL2SignedState := cc.SupportedSignedState()
 
-	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration)
 
 	t.Run("Counter the registered challenge by challenging with new L2 state and exit L2 using the new L2 state", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
@@ -434,7 +434,7 @@ func TestBridgedFundWithChallenge(t *testing.T) {
 	infraL1 := utils.infraL1
 
 	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
-	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration)
 
 	t.Run("Unilaterally exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
 		cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
@@ -944,9 +944,9 @@ func createMirrorChannel(t *testing.T, node node.Node, bridge *bridge.Bridge, ch
 	return l1LedgerChannelId, l2LedgerChannelId
 }
 
-func createVirtualChannelAndMakePayment(t *testing.T, node node.Node, counterParty common.Address, challengeDuration uint, assetAddress common.Address) {
+func createVirtualChannelAndMakePayment(t *testing.T, node node.Node, counterParty common.Address, challengeDuration uint) {
 	// Create virtual channel
-	virtualOutcome := initialPaymentOutcome(*node.Address, counterParty, assetAddress)
+	virtualOutcome := initialPaymentOutcome(*node.Address, counterParty, types.Address{})
 	virtualResponse, _ := node.CreatePaymentChannel([]types.Address{}, counterParty, uint32(challengeDuration), virtualOutcome)
 	<-node.ObjectiveCompleteChan(virtualResponse.Id)
 

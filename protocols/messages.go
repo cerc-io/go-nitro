@@ -65,11 +65,16 @@ func (se *SideEffects) Merge(other SideEffects) {
 }
 
 // GetProposalObjectiveId returns the objectiveId for a proposal.
-func GetProposalObjectiveId(p consensus_channel.Proposal) (ObjectiveId, error) {
+func GetProposalObjectiveId(p consensus_channel.Proposal, channelType int) (ObjectiveId, error) {
 	switch p.Type() {
 	case "AddProposal":
 		{
-			const prefix = "VirtualFund-"
+			var prefix string
+			if channelType == 2 {
+				prefix = "SwapFund-"
+			} else {
+				prefix = "VirtualFund-"
+			}
 			channelId := p.ToAdd.Guarantee.Target().String()
 			return ObjectiveId(prefix + channelId), nil
 
@@ -188,7 +193,7 @@ func (m Message) Summarize() MessageSummary {
 
 	s.ProposalSummaries = make([]ProposalSummary, len(m.LedgerProposals))
 	for i, p := range m.LedgerProposals {
-		objId, err := GetProposalObjectiveId(p.Proposal)
+		objId, err := GetProposalObjectiveId(p.Proposal, 1)
 		objIdString := string(objId)
 		if err != nil {
 			objIdString = err.Error() // Use error message as objective id

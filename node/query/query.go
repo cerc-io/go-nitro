@@ -63,16 +63,16 @@ func getSwapChannelBalances(participants []types.Address, outcome outcome.Exit) 
 
 	for _, sao := range outcome {
 		asset := sao.Asset
-		payer := participants[0]
-		payee := participants[numParticipants-1]
-		paidSoFar := big.NewInt(0).Set(sao.Allocations[1].Amount)
-		remaining := big.NewInt(0).Set(sao.Allocations[0].Amount)
+		nodeA := participants[0]
+		nodeB := participants[numParticipants-1]
+		amountNodeA := big.NewInt(0).Set(sao.Allocations[0].Amount)
+		amountNodeB := big.NewInt(0).Set(sao.Allocations[1].Amount)
 		scb = append(scb, SwapChannelBalance{
-			AssetAddress:   asset,
-			Payer:          payer,
-			Payee:          payee,
-			PaidSoFar:      (*hexutil.Big)(paidSoFar),
-			RemainingFunds: (*hexutil.Big)(remaining),
+			AssetAddress: asset,
+			NodeA:        nodeA,
+			NodeB:        nodeB,
+			AmountNodeA:  (*hexutil.Big)(amountNodeA),
+			AmountNodeB:  (*hexutil.Big)(amountNodeB),
 		})
 	}
 

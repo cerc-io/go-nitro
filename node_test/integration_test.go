@@ -115,7 +115,7 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 	<-chA
 	<-chB
 
-	multiassetVirtualChannelOutcome := outcome.Exit{
+	multiassetSwapChannelOutcome := outcome.Exit{
 		outcome.SingleAssetExit{
 			Asset: common.Address{},
 			Allocations: outcome.Allocations{
@@ -161,7 +161,7 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 		nil,
 		*nodeB.Address,
 		0,
-		multiassetVirtualChannelOutcome,
+		multiassetSwapChannelOutcome,
 	)
 	if err != nil {
 		t.Fatal(err)

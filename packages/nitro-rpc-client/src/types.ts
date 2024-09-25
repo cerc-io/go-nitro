@@ -236,7 +236,7 @@ export type GetNodeInfoRequest = JsonRpcRequest<
  */
 export type GetAuthTokenResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelResponse = JsonRpcResponse<PaymentChannelInfo>;
-export type GetSwapChannelResponse = JsonRpcResponse<SwapChannelInfo>;
+export type GetSwapChannelResponse = JsonRpcResponse<string>;
 export type GetVoucherResponse = JsonRpcResponse<Voucher>;
 export type PaymentResponse = JsonRpcResponse<PaymentPayload>;
 export type CounterChallengeResponse = JsonRpcResponse<CounterChallengeResult>;

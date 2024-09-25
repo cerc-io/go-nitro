@@ -8,7 +8,6 @@ import {
   PaymentChannelInfo,
   PaymentPayload,
   ReceiveVoucherResult,
-  SwapChannelInfo,
   Voucher,
 } from "./types";
 
@@ -122,7 +121,7 @@ interface swapAPI {
     intermediaries: string[],
     assetsData: AssetData[]
   ): Promise<ObjectiveResponse>;
-  GetSwapChannel(channelId: string): Promise<SwapChannelInfo>;
+  GetSwapChannel(channelId: string): Promise<string>;
 }
 
 interface commonAPI {

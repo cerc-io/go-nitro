@@ -10,7 +10,6 @@ import {
   RPCNotification,
   RPCRequestAndResponses,
   RequestMethod,
-  SwapChannelInfo,
 } from "./types";
 
 const ajv = new Ajv();
@@ -96,6 +95,7 @@ const swapChannelSchema = {
     ID: { type: "string" },
     Status: { type: "string" },
     Balances: {
+      // TODO: Check array inside properties
       elements: {
         properties: {
           AssetAddress: { type: "string" },
@@ -225,6 +225,7 @@ export function getAndValidateResult<T extends RequestMethod>(
     case "get_address":
     case "get_signed_state":
     case "close_payment_channel":
+    case "get_swap_channel":
       return validateAndConvertResult(
         stringSchema,
         result,
@@ -253,12 +254,6 @@ export function getAndValidateResult<T extends RequestMethod>(
         ledgerChannelsSchema,
         result,
         convertToInternalLedgerChannelsType
-      );
-    case "get_swap_channel":
-      return validateAndConvertResult(
-        swapChannelSchema,
-        result,
-        convertToInternalSwapChannelType
       );
     case "get_payment_channel":
       return validateAndConvertResult(
@@ -419,22 +414,6 @@ function convertToInternalPaymentChannelType(
       PaidSoFar: BigInt(result.Balance.PaidSoFar ?? 0),
       RemainingFunds: BigInt(result.Balance.RemainingFunds ?? 0),
     },
-  };
-}
-
-function convertToInternalSwapChannelType(
-  result: SwapChannelSchemaType
-): SwapChannelInfo {
-  return {
-    ...result,
-    Status: result.Status as ChannelStatus,
-    Balances: result.Balances.map((balance) => {
-      return {
-        ...balance,
-        AmountNodeA: BigInt(balance.AmountNodeA),
-        AmountNodeB: BigInt(balance.AmountNodeB),
-      };
-    }),
   };
 }
 

@@ -64,7 +64,7 @@ func TestBridgedFund(t *testing.T) {
 
 	t.Run("Create ledger channel on L1 and mirror it on L2", func(t *testing.T) {
 		// Alice create ledger channel with bridge
-		outcome := CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, infraL1.anvilChain.ContractAddresses.TokenAddress)
+		outcome := CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 		l1LedgerChannelResponse, err := nodeA.CreateLedgerChannel(bridgeAddress, uint32(tcL1.ChallengeDuration), outcome)
 		if err != nil {
 			t.Fatal(err)
@@ -78,16 +78,16 @@ func TestBridgedFund(t *testing.T) {
 		createdMirrorChannel := <-bridge.CreatedMirrorChannels()
 		l2LedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
 		testhelpers.Assert(t, createdMirrorChannel == l2LedgerChannelId, "Expects mirror channel id to be %v", l2LedgerChannelId)
-		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeA)
-		checkLedgerChannel(t, l2LedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
+		checkLedgerChannel(t, l1LedgerChannelResponse.ChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, 0, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Open, nodeA)
+		checkLedgerChannel(t, l2LedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, 0, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Open, nodeAPrime)
 	})
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
 		// Create virtual channel on mirrored ledger channel on L2
-		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, infraL1.anvilChain.ContractAddresses.TokenAddress)
+		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{}, bridgeAddress, uint32(tcL2.ChallengeDuration), virtualOutcome)
 		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
-		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, infraL1.anvilChain.ContractAddresses.TokenAddress, nodeAPrime)
+		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, infraL1.anvilChain.ContractAddresses.TokenAddresses[0], nodeAPrime)
 
 		// APrime pays BPrime
 		err := nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
@@ -130,7 +130,7 @@ func TestBridgedFund(t *testing.T) {
 			}
 		}
 
-		checkLedgerChannel(t, l1LedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit-payAmount, payAmount, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Complete, nodeA)
+		checkLedgerChannel(t, l1LedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit-payAmount, payAmount, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Complete, nodeA)
 
 		balanceNodeA, _ := utils.l1TokenBinding.BalanceOf(nil, tcL1.Participants[0].Address())
 		balanceBridge, _ := utils.l1TokenBinding.BalanceOf(nil, tcL1.Participants[1].Address())
@@ -152,7 +152,7 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 	storeA, storeAPrime := utils.storeA, utils.storeAPrime
 	infraL1 := utils.infraL1
 
-	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddress)
+	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 
 	cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
 	if err != nil {
@@ -160,7 +160,7 @@ func TestBridgedFundWithCheckpoint(t *testing.T) {
 	}
 	oldL2SignedState := cc.SupportedSignedState()
 
-	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddress)
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 
 	t.Run("Clear the registered challenge using checkpoint and exit L2 using latest L2 state", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
@@ -224,7 +224,7 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 	storeA, storeAPrime := utils.storeA, utils.storeAPrime
 	infraL1 := utils.infraL1
 
-	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddress)
+	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 
 	cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
 	if err != nil {
@@ -232,7 +232,7 @@ func TestBridgedFundWithCounterChallenge(t *testing.T) {
 	}
 	oldL2SignedState := cc.SupportedSignedState()
 
-	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddress)
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 
 	t.Run("Counter the registered challenge by challenging with new L2 state and exit L2 using the new L2 state", func(t *testing.T) {
 		ledgerUpdatesChannelNodeA := nodeA.LedgerUpdatedChan(l1LedgerChannelId)
@@ -299,7 +299,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 
 	t.Run("Create ledger channels on L1 and mirror it on L2", func(t *testing.T) {
 		// Alice create ledger channel with bridge
-		outcome := CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress)
+		outcome := CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 		l1LedgerChannelResponse, err := nodeA.CreateLedgerChannel(bridgeAddress, uint32(tcL1.ChallengeDuration), outcome)
 		if err != nil {
 			t.Fatal(err)
@@ -315,11 +315,11 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		l2AliceBridgeLedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
 		testhelpers.Assert(t, createdMirrorChannel == l2AliceBridgeLedgerChannelId, "Expects mirror channel id to be %v", l2AliceBridgeLedgerChannelId)
 
-		checkLedgerChannel(t, l1AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeA)
-		checkLedgerChannel(t, l2AliceBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
+		checkLedgerChannel(t, l1AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Open, nodeA)
+		checkLedgerChannel(t, l2AliceBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeAPrime.Address, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Open, nodeAPrime)
 
 		// Irene create ledger channel with bridge
-		outcome = CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress)
+		outcome = CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 		l1LedgerChannelResponse, err = nodeC.CreateLedgerChannel(bridgeAddress, uint32(tcL1.ChallengeDuration), outcome)
 		if err != nil {
 			t.Fatal(err)
@@ -335,12 +335,12 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		l2CharlieBridgeLedgerChannelId, _ = bridge.GetL2ChannelIdByL1ChannelId(l1LedgerChannelResponse.ChannelId)
 		testhelpers.Assert(t, createdMirrorChannel == l2CharlieBridgeLedgerChannelId, "Expects mirror channel id to be %v", l2CharlieBridgeLedgerChannelId)
 
-		checkLedgerChannel(t, l1CharlieBridgeLedgerChannelId, CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeC)
-		checkLedgerChannel(t, l2CharlieBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeCPrime.Address, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeCPrime)
+		checkLedgerChannel(t, l1CharlieBridgeLedgerChannelId, CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Open, nodeC)
+		checkLedgerChannel(t, l2CharlieBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeCPrime.Address, ledgerChannelDeposit, ledgerChannelDeposit, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Open, nodeCPrime)
 	})
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments via bridge as intermediary", func(t *testing.T) {
-		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, *nodeCPrime.Address, infraL1.anvilChain.ContractAddresses.TokenAddress)
+		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, *nodeCPrime.Address, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{bridgeAddress}, *nodeCPrime.Address, uint32(tcL2.ChallengeDuration), virtualOutcome)
 		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
 
@@ -362,8 +362,8 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 		<-nodeAPrimeObjCompleteChan
 		<-nodeCPrimeObjCompleteChan
 
-		checkLedgerChannel(t, l2AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeAPrime.Address, bridgeAddress, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeAPrime)
-		checkLedgerChannel(t, l2CharlieBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeCPrime.Address, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Open, nodeCPrime)
+		checkLedgerChannel(t, l2AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeAPrime.Address, bridgeAddress, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Open, nodeAPrime)
+		checkLedgerChannel(t, l2CharlieBridgeLedgerChannelId, CreateLedgerOutcome(bridgeAddress, *nodeCPrime.Address, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Open, nodeCPrime)
 	})
 
 	t.Run("Exit to L1 using updated L2 ledger channel states after making payments", func(t *testing.T) {
@@ -388,7 +388,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 			}
 		}
 
-		checkLedgerChannel(t, l1AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Complete, nodeA)
+		checkLedgerChannel(t, l1AliceBridgeLedgerChannelId, CreateLedgerOutcome(*nodeA.Address, bridgeAddress, ledgerChannelDeposit-payAmount, ledgerChannelDeposit+payAmount, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Complete, nodeA)
 
 		completedObjectiveChannel = nodeC.CompletedObjectives()
 		// Charlie exits
@@ -411,7 +411,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 			}
 		}
 
-		checkLedgerChannel(t, l1CharlieBridgeLedgerChannelId, CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit+payAmount, ledgerChannelDeposit-payAmount, infraL1.anvilChain.ContractAddresses.TokenAddress), query.Complete, nodeC)
+		checkLedgerChannel(t, l1CharlieBridgeLedgerChannelId, CreateLedgerOutcome(*nodeC.Address, bridgeAddress, ledgerChannelDeposit+payAmount, ledgerChannelDeposit-payAmount, infraL1.anvilChain.ContractAddresses.TokenAddresses[0]), query.Complete, nodeC)
 
 		balanceNodeA, _ := utils.l1TokenBinding.BalanceOf(nil, tcL1.Participants[0].Address())
 		balanceNodeC, _ := utils.l1TokenBinding.BalanceOf(nil, tcL1.Participants[2].Address())
@@ -433,8 +433,8 @@ func TestBridgedFundWithChallenge(t *testing.T) {
 	storeA, storeAPrime := utils.storeA, utils.storeAPrime
 	infraL1 := utils.infraL1
 
-	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddress)
-	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddress)
+	l1LedgerChannelId, l2LedgerChannelId := createMirrorChannel(t, nodeA, bridge, tcL1.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
+	createVirtualChannelAndMakePayment(t, nodeAPrime, bridgeAddress, tcL2.ChallengeDuration, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 
 	t.Run("Unilaterally exit to L1 using updated L2 ledger channel state after making payments", func(t *testing.T) {
 		cc, err := storeAPrime.GetConsensusChannelById(l2LedgerChannelId)
@@ -860,7 +860,7 @@ func initializeUtilsWithBridge(t *testing.T, closeBridge bool) (UtilsWithBridge,
 
 	infraL2 := setupSharedInfra(tcL2)
 
-	l1TokenBinding, err := Token.NewToken(infraL1.anvilChain.ContractAddresses.TokenAddress, infraL1.anvilChain.EthClient)
+	l1TokenBinding, err := Token.NewToken(infraL1.anvilChain.ContractAddresses.TokenAddresses[0], infraL1.anvilChain.EthClient)
 	if err != nil {
 		t.Fatal(err)
 	}

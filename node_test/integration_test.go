@@ -83,7 +83,7 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 	defer infra.Close(t)
 
 	// TokenBinding
-	_, err := Token.NewToken(infra.anvilChain.ContractAddresses.TokenAddress, infra.anvilChain.EthClient)
+	_, err := Token.NewToken(infra.anvilChain.ContractAddresses.TokenAddresses[0], infra.anvilChain.EthClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,9 +95,12 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 	defer nodeB.Close()
 
 	outcomeEth := CreateLedgerOutcome(*nodeA.Address, *nodeB.Address, ledgerChannelDeposit, ledgerChannelDeposit, common.Address{})
-	outcomeCustomToken := CreateLedgerOutcome(*nodeA.Address, *nodeB.Address, ledgerChannelDeposit, ledgerChannelDeposit, infra.anvilChain.ContractAddresses.TokenAddress)
+	outcomeCustomToken := CreateLedgerOutcome(*nodeA.Address, *nodeB.Address, ledgerChannelDeposit, ledgerChannelDeposit, infra.anvilChain.ContractAddresses.TokenAddresses[0])
+
+	outcomeCustomToken2 := CreateLedgerOutcome(*nodeA.Address, *nodeB.Address, ledgerChannelDeposit, ledgerChannelDeposit, infra.anvilChain.ContractAddresses.TokenAddresses[1])
 
 	multiAssetOutcome := append(outcomeEth, outcomeCustomToken...)
+	multiAssetOutcome = append(multiAssetOutcome, outcomeCustomToken2...)
 
 	// Create ledger channel
 	ledgerResponse, err := nodeA.CreateLedgerChannel(*nodeB.Address, uint32(testCase.ChallengeDuration), multiAssetOutcome)
@@ -127,7 +130,7 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 			},
 		},
 		outcome.SingleAssetExit{
-			Asset: infra.anvilChain.ContractAddresses.TokenAddress,
+			Asset: infra.anvilChain.ContractAddresses.TokenAddresses[0],
 			Allocations: outcome.Allocations{
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*nodeA.Address),
@@ -136,6 +139,19 @@ func TestMultiAssetLedgerChannel(t *testing.T) {
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*nodeB.Address),
 					Amount:      big.NewInt(int64(502)),
+				},
+			},
+		},
+		outcome.SingleAssetExit{
+			Asset: infra.anvilChain.ContractAddresses.TokenAddresses[1],
+			Allocations: outcome.Allocations{
+				outcome.Allocation{
+					Destination: types.AddressToDestination(*nodeA.Address),
+					Amount:      big.NewInt(int64(601)),
+				},
+				outcome.Allocation{
+					Destination: types.AddressToDestination(*nodeB.Address),
+					Amount:      big.NewInt(int64(602)),
 				},
 			},
 		},

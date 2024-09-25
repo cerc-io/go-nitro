@@ -29,6 +29,11 @@ const (
 	TEST_INITIAL_SUPPLY = 100_000_000
 )
 
+const (
+	TEST_2_TOKEN_NAME   = "TestToken2"
+	TEST_2_TOKEN_SYMBOL = "TEST2"
+)
+
 var ErrUnableToAssignBigInt = errors.New("simulated_backend_chainservice: unable to assign BigInt")
 
 type binding[T any] struct {

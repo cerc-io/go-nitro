@@ -8,7 +8,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/safesync"
@@ -204,7 +203,7 @@ func (n *Node) CreateSwapChannel(Intermediaries []types.Address, CounterParty ty
 		rand.Uint64(),
 		// Since no contract present for swap channels yet
 		// TODO: Handle sad path for swap channels
-		common.Address{},
+		n.engine.GetConsensusAppAddress(),
 	)
 
 	// Send the event to the engine

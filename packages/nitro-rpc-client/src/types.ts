@@ -397,10 +397,10 @@ export type PaymentChannelBalance = {
 
 export type SwapChannelBalance = {
   AssetAddress: string;
-  NodeA: string;
-  NodeB: string;
-  AmountNodeA: bigint;
-  AmountNodeB: bigint;
+  Me: string;
+  Them: string;
+  MyBalance: bigint;
+  TheirBalance: bigint;
 };
 
 export type PaymentChannelInfo = {

@@ -66,10 +66,15 @@ func (se *SideEffects) Merge(other SideEffects) {
 
 // GetProposalObjectiveId returns the objectiveId for a proposal.
 func GetProposalObjectiveId(p consensus_channel.Proposal, channelType int) (ObjectiveId, error) {
+	if channelType == -1 {
+		return "", errors.New("invalid channel type")
+	}
+
 	switch p.Type() {
 	case "AddProposal":
 		{
 			var prefix string
+			// According to `ChannelType` enum present in `channel` package, `2` corresponds to swap channel
 			if channelType == 2 {
 				prefix = "SwapFund-"
 			} else {
@@ -180,8 +185,10 @@ type PaymentSummary struct {
 	ChannelId string
 }
 
+type getChannelByIdFn func(channelId types.Destination) int
+
 // Summarize returns a MessageSummary for the message that is suitable for logging
-func (m Message) Summarize() MessageSummary {
+func (m Message) Summarize(getChannelById getChannelByIdFn) MessageSummary {
 	s := MessageSummary{}
 	s.To = m.To.String()[0:8]
 	s.From = m.From.String()[0:8]
@@ -193,7 +200,8 @@ func (m Message) Summarize() MessageSummary {
 
 	s.ProposalSummaries = make([]ProposalSummary, len(m.LedgerProposals))
 	for i, p := range m.LedgerProposals {
-		objId, err := GetProposalObjectiveId(p.Proposal, 1)
+		t := getChannelById(p.Proposal.Target())
+		objId, err := GetProposalObjectiveId(p.Proposal, t)
 		objIdString := string(objId)
 		if err != nil {
 			objIdString = err.Error() // Use error message as objective id

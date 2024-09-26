@@ -882,7 +882,7 @@ func (e *Engine) sendMessages(msgs []protocols.Message) {
 		message.From = *e.store.GetAddress()
 		err := e.msg.Send(message)
 		if err != nil {
-			e.logger.Error("could not send message", "message", message.Summarize())
+			e.logger.Error("could not send message", "message", message.Summarize(e.getChannelTypeById))
 			e.logger.Error(err.Error())
 
 			return
@@ -1280,9 +1280,9 @@ const (
 // logMessage logs a message to the engine's logger
 func (e *Engine) logMessage(msg protocols.Message, direction messageDirection) {
 	if direction == Incoming {
-		e.logger.Debug("Received message", "msg", msg.Summarize())
+		e.logger.Debug("Received message", "msg", msg.Summarize(e.getChannelTypeById))
 	} else {
-		e.logger.Debug("Sent message", "msg", msg.Summarize())
+		e.logger.Debug("Sent message", "msg", msg.Summarize(e.getChannelTypeById))
 	}
 }
 
@@ -1354,4 +1354,13 @@ func (e *Engine) GetNodeInfo() types.NodeInfo {
 		SCAddress:            e.store.GetAddress().String(),
 		MessageServicePeerId: e.msg.Id().String(),
 	}
+}
+
+func (e *Engine) getChannelTypeById(channelId types.Destination) int {
+	c, ok := e.store.GetChannelById(channelId)
+	if ok {
+		return int(c.Type)
+	}
+
+	return -1
 }

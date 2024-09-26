@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
@@ -57,26 +58,38 @@ func getPaymentChannelBalance(participants []types.Address, outcome outcome.Exit
 	}
 }
 
-func getSwapChannelBalances(participants []types.Address, outcome outcome.Exit) []SwapChannelBalance {
+func getSwapChannelBalances(participants []types.Address, outcome outcome.Exit, myAddress common.Address) ([]SwapChannelBalance, error) {
 	numParticipants := len(participants)
 	var scb []SwapChannelBalance
 
 	for _, sao := range outcome {
 		asset := sao.Asset
-		nodeA := participants[0]
-		nodeB := participants[numParticipants-1]
-		amountNodeA := big.NewInt(0).Set(sao.Allocations[0].Amount)
-		amountNodeB := big.NewInt(0).Set(sao.Allocations[1].Amount)
+		var me, them common.Address
+		var myBalance, theirBalance *big.Int
+		if participants[0] == myAddress {
+			me = participants[0]
+			them = participants[numParticipants-1]
+			myBalance = big.NewInt(0).Set(sao.Allocations[0].Amount)
+			theirBalance = big.NewInt(0).Set(sao.Allocations[1].Amount)
+		} else if participants[numParticipants-1] == myAddress {
+			me = participants[numParticipants-1]
+			them = participants[0]
+			myBalance = big.NewInt(0).Set(sao.Allocations[1].Amount)
+			theirBalance = big.NewInt(0).Set(sao.Allocations[0].Amount)
+		} else {
+			return []SwapChannelBalance{}, fmt.Errorf("could not find my address %v in participants %v", myAddress, participants)
+		}
+
 		scb = append(scb, SwapChannelBalance{
 			AssetAddress: asset,
-			NodeA:        nodeA,
-			NodeB:        nodeB,
-			AmountNodeA:  (*hexutil.Big)(amountNodeA),
-			AmountNodeB:  (*hexutil.Big)(amountNodeB),
+			Me:           me,
+			Them:         them,
+			MyBalance:    (*hexutil.Big)(myBalance),
+			TheirBalance: (*hexutil.Big)(theirBalance),
 		})
 	}
 
-	return scb
+	return scb, nil
 }
 
 // getLatestSupportedOrPreFund returns the latest supported state of the channel
@@ -179,7 +192,7 @@ func GetSwapChannelInfo(id types.Destination, store store.Store) (string, error)
 	c, channelFound := store.GetChannelById(id)
 
 	if channelFound {
-		SwapChannelInfo, err := ConstructSwapInfo(c)
+		SwapChannelInfo, err := ConstructSwapInfo(c, *store.GetAddress())
 		if err != nil {
 			return "", err
 		}
@@ -346,14 +359,17 @@ func ConstructPaymentInfo(c *channel.Channel, paid, remaining *big.Int) (Payment
 	}, nil
 }
 
-func ConstructSwapInfo(c *channel.Channel) (SwapChannelInfo, error) {
+func ConstructSwapInfo(c *channel.Channel, myAddress common.Address) (SwapChannelInfo, error) {
 	status := getStatusFromChannel(c)
 
 	latest, err := getLatestSupportedOrPreFund(c)
 	if err != nil {
 		return SwapChannelInfo{}, err
 	}
-	balances := getSwapChannelBalances(c.Participants, latest.Outcome)
+	balances, err := getSwapChannelBalances(c.Participants, latest.Outcome, myAddress)
+	if err != nil {
+		return SwapChannelInfo{}, err
+	}
 
 	return SwapChannelInfo{
 		ID:       c.Id,

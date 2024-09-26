@@ -124,16 +124,6 @@ interface swapAPI {
   GetSwapChannel(channelId: string): Promise<string>;
 }
 
-interface commonAPI {
-  RetryObjectiveTx(objectiveId: string): Promise<string>;
-  RetryTx(txHash: string): Promise<string>;
-  CounterChallenge(
-    channelId: string,
-    action: CounterChallengeAction,
-    signedState?: string
-  ): Promise<CounterChallengeResult>;
-}
-
 interface syncAPI {
   /**
    * WaitForLedgerChannelStatus blocks until the ledger channel with the given ID to have the given status.
@@ -175,8 +165,7 @@ export interface RpcClientApi
     paymentApi,
     syncAPI,
     bridgeAPI,
-    swapAPI,
-    commonAPI {
+    swapAPI {
   /**
    * GetVersion queries the API server for it's version.
    *
@@ -193,4 +182,12 @@ export interface RpcClientApi
    * Close closes the RPC client and stops listening for notifications.
    */
   Close(): Promise<void>;
+
+  RetryObjectiveTx(objectiveId: string): Promise<string>;
+  RetryTx(txHash: string): Promise<string>;
+  CounterChallenge(
+    channelId: string,
+    action: CounterChallengeAction,
+    signedState?: string
+  ): Promise<CounterChallengeResult>;
 }

@@ -272,6 +272,11 @@ export class NitroRpcClient implements RpcClientApi {
     return this.sendRequest("close_payment_channel", payload);
   }
 
+  public async CloseSwapChannel(channelId: string): Promise<string> {
+    const payload: DefundObjectiveRequest = { ChannelId: channelId };
+    return this.sendRequest("close_swap_channel", payload);
+  }
+
   public async GetVersion(): Promise<string> {
     return this.sendRequest("version", {});
   }

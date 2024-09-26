@@ -566,6 +566,36 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "swap-defund <channelId>",
+    "Defunds a swap channel",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("channelId", {
+        describe: "The id of the swap channel to defund",
+        type: "string",
+        demandOption: true,
+      });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+
+      if (yargs.n) logOutChannelUpdates(rpcClient);
+
+      const id = await rpcClient.CloseSwapChannel(yargs.channelId);
+
+      console.log(`Objective started ${id}`);
+      // TODO: Wait for swap-defund to complete
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "virtual-fund <counterparty> [intermediaries...]",
     "Creates a virtually funded payment channel",
     (yargsBuilder) => {

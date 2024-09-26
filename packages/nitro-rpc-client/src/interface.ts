@@ -166,6 +166,7 @@ interface swapAPI {
    * @returns A JSON object containing the channel's information
    */
   GetSwapChannel(channelId: string): Promise<string>;
+  CloseSwapChannel(channelId: string): Promise<string>;
 }
 
 interface syncAPI {

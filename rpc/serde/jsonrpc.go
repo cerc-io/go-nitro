@@ -9,6 +9,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/bridgeddefund"
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
+	"github.com/statechannels/go-nitro/protocols/swapdefund"
 	"github.com/statechannels/go-nitro/protocols/swapfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
@@ -28,6 +29,7 @@ const (
 	CreateSwapChannelRequestMethod    RequestMethod = "create_swap_channel"
 	CreatePaymentChannelRequestMethod RequestMethod = "create_payment_channel"
 	ClosePaymentChannelRequestMethod  RequestMethod = "close_payment_channel"
+	CloseSwapChannelRequestMethod     RequestMethod = "close_swap_channel"
 	PayRequestMethod                  RequestMethod = "pay"
 	GetPaymentChannelRequestMethod    RequestMethod = "get_payment_channel"
 	GetSwapChannelRequestMethod       RequestMethod = "get_swap_channel"
@@ -148,6 +150,7 @@ type RequestPayload interface {
 		virtualfund.ObjectiveRequest |
 		virtualdefund.ObjectiveRequest |
 		swapfund.ObjectiveRequest |
+		swapdefund.ObjectiveRequest |
 		AuthRequest |
 		PaymentRequest |
 		GetLedgerChannelRequest |

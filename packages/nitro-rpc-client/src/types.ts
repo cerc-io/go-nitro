@@ -219,6 +219,11 @@ export type VirtualDefundRequest = JsonRpcRequest<
   DefundObjectiveRequest
 >;
 
+export type SwapDefundRequest = JsonRpcRequest<
+  "close_swap_channel",
+  DefundObjectiveRequest
+>;
+
 export type CreateVoucherRequest = JsonRpcRequest<
   "create_voucher",
   PaymentPayload
@@ -253,6 +258,7 @@ export type DirectDefundResponse = JsonRpcResponse<string>;
 export type MirrorBridgedDefundResponse = JsonRpcResponse<string>;
 export type BridgedDefundResponse = JsonRpcResponse<string>;
 export type VirtualDefundResponse = JsonRpcResponse<string>;
+export type SwapDefundResponse = JsonRpcResponse<string>;
 export type GetAllLedgerChannelsResponse = JsonRpcResponse<LedgerChannelInfo[]>;
 export type GetSignedStateResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelsByLedgerResponse = JsonRpcResponse<
@@ -290,6 +296,7 @@ export type RPCRequestAndResponses = {
   pay: [PaymentRequest, PaymentResponse];
   counter_challenge: [CounterChallengeRequest, CounterChallengeResponse];
   close_payment_channel: [VirtualDefundRequest, VirtualDefundResponse];
+  close_swap_channel: [SwapDefundRequest, SwapDefundResponse];
   get_all_ledger_channels: [
     GetAllLedgerChannelsRequest,
     GetAllLedgerChannelsResponse

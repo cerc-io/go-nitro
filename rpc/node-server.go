@@ -17,6 +17,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/bridgeddefund"
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
+	"github.com/statechannels/go-nitro/protocols/swapdefund"
 	"github.com/statechannels/go-nitro/protocols/swapfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
@@ -170,6 +171,10 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 				}
 
 				return nrs.node.CreateSwapChannel(req.Intermediaries, req.CounterParty, req.ChallengeDuration, req.Outcome)
+			})
+		case serde.CloseSwapChannelRequestMethod:
+			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req swapdefund.ObjectiveRequest) (protocols.ObjectiveId, error) {
+				return nrs.node.CloseSwapChannel(req.ChannelId)
 			})
 		case serde.CreatePaymentChannelRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req virtualfund.ObjectiveRequest) (virtualfund.ObjectiveResponse, error) {

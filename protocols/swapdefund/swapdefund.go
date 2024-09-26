@@ -32,10 +32,6 @@ const (
 	RequestFinalStatePayload protocols.PayloadType = "RequestFinalStatePayload"
 )
 
-// TODO: Check final turn num usage
-// The turn number used for the final state
-const FinalTurnNum = 2
-
 // Objective contains relevant information for the defund objective
 type Objective struct {
 	Status protocols.ObjectiveStatus
@@ -179,7 +175,7 @@ func IsSwapDefundObjective(id protocols.ObjectiveId) bool {
 
 // finalState returns the final state for the swap channel
 func (o *Objective) finalState() state.State {
-	return o.V.OffChain.SignedStateForTurnNum[FinalTurnNum].State()
+	return o.V.OffChain.SignedStateForTurnNum[o.V.OffChain.LatestSupportedStateTurnNum].State()
 }
 
 func (o *Objective) initialOutcome() (outcome.Exit, error) {
@@ -197,7 +193,7 @@ func (o *Objective) generateFinalState() (state.State, error) {
 	if err != nil {
 		return state.State{}, err
 	}
-	vp := state.VariablePart{Outcome: exit, TurnNum: FinalTurnNum, IsFinal: true}
+	vp := state.VariablePart{Outcome: exit, TurnNum: o.V.OffChain.LatestSupportedStateTurnNum, IsFinal: true}
 	return state.StateFromFixedAndVariablePart(o.V.FixedPart, vp), nil
 }
 
@@ -288,7 +284,7 @@ func (o *Objective) otherParticipants() []types.Address {
 }
 
 func (o *Objective) hasFinalStateFromAlice() bool {
-	ss, ok := o.V.OffChain.SignedStateForTurnNum[FinalTurnNum]
+	ss, ok := o.V.OffChain.SignedStateForTurnNum[o.V.OffChain.LatestSupportedStateTurnNum]
 	return ok && ss.State().IsFinal && !isZero(ss.Signatures()[0])
 }
 

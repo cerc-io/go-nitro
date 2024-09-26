@@ -32,7 +32,7 @@ const (
 	RequestFinalStatePayload protocols.PayloadType = "RequestFinalStatePayload"
 )
 
-const FinalTurnNum = 2
+var FinalTurnNum = 0
 
 // Objective contains relevant information for the defund objective
 type Objective struct {
@@ -79,6 +79,16 @@ func NewObjective(request ObjectiveRequest,
 	if !found {
 		return Objective{}, fmt.Errorf("could not find channel %s", request.ChannelId)
 	}
+
+	if FinalTurnNum == 0 {
+		latestSupportedSignedState, err := c.LatestSupportedSignedState()
+		if err != nil {
+			return Objective{}, err
+		}
+
+		FinalTurnNum = int(latestSupportedSignedState.State().TurnNum) + 1
+	}
+
 	S := &channel.SwapChannel{Channel: *c}
 
 	alice := S.Participants[0]
@@ -177,7 +187,7 @@ func IsSwapDefundObjective(id protocols.ObjectiveId) bool {
 
 // finalState returns the final state for the swap channel
 func (o *Objective) finalState() state.State {
-	return o.S.OffChain.SignedStateForTurnNum[FinalTurnNum].State()
+	return o.S.OffChain.SignedStateForTurnNum[uint64(FinalTurnNum)].State()
 }
 
 func (o *Objective) initialOutcome() (outcome.Exit, error) {
@@ -195,7 +205,7 @@ func (o *Objective) generateFinalState() (state.State, error) {
 	if err != nil {
 		return state.State{}, err
 	}
-	vp := state.VariablePart{Outcome: exit, TurnNum: FinalTurnNum, IsFinal: true}
+	vp := state.VariablePart{Outcome: exit, TurnNum: uint64(FinalTurnNum), IsFinal: true}
 	return state.StateFromFixedAndVariablePart(o.S.FixedPart, vp), nil
 }
 
@@ -286,7 +296,7 @@ func (o *Objective) otherParticipants() []types.Address {
 }
 
 func (o *Objective) hasFinalStateFromAlice() bool {
-	ss, ok := o.S.OffChain.SignedStateForTurnNum[FinalTurnNum]
+	ss, ok := o.S.OffChain.SignedStateForTurnNum[uint64(FinalTurnNum)]
 	return ok && ss.State().IsFinal && !isZero(ss.Signatures()[0])
 }
 
@@ -386,7 +396,7 @@ func (o *Objective) ledgerProposal(ledger *consensus_channel.ConsensusChannel) [
 	for i, out := range ledger.ConsensusVars().Outcome {
 		for _, a := range out.AsOutcome()[0].Allocations {
 			if a.AllocationType == outcome.GuaranteeAllocationType {
-				left := o.S.OffChain.SignedStateForTurnNum[FinalTurnNum].State().Outcome[i].Allocations[0].Amount
+				left := o.S.OffChain.SignedStateForTurnNum[uint64(FinalTurnNum)].State().Outcome[i].Allocations[0].Amount
 				p := consensus_channel.NewRemoveProposal(ledger.Id, o.VId(), left, out.AsOutcome()[0].Asset)
 
 				proposals = append(proposals, p)

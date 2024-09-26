@@ -380,8 +380,18 @@ func (o *Objective) isBob() bool {
 
 // ledgerProposal generates a ledger proposal to remove the guarantee for V for ledger
 func (o *Objective) ledgerProposal(ledger *consensus_channel.ConsensusChannel) consensus_channel.Proposal {
-	left := o.finalState().Outcome[0].Allocations[0].Amount
-	return consensus_channel.NewRemoveProposal(ledger.Id, o.VId(), left)
+	var assetAddress common.Address
+	var left *big.Int
+	for _, out := range o.finalState().Outcome {
+		for _, a := range out.Allocations {
+			if a.AllocationType == outcome.GuaranteeAllocationType {
+				assetAddress = out.Asset
+				left = out.Allocations[0].Amount
+				break
+			}
+		}
+	}
+	return consensus_channel.NewRemoveProposal(ledger.Id, o.VId(), left, assetAddress)
 }
 
 // updateLedgerToRemoveGuarantee updates the ledger channel to remove the guarantee that funds V.

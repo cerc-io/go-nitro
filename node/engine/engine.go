@@ -31,6 +31,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/mirrorbridgeddefund"
+	"github.com/statechannels/go-nitro/protocols/swapdefund"
 	"github.com/statechannels/go-nitro/protocols/swapfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
@@ -707,6 +708,13 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 		}
 		return e.attemptProgress(&vdfo)
 
+	case swapdefund.ObjectiveRequest:
+		sdfo, err := swapdefund.NewObjective(request, true, myAddress, e.store.GetChannelById, e.store.GetConsensusChannel)
+		if err != nil {
+			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not create swapdefund objective for %+v: %w", request, err)
+		}
+		return e.attemptProgress(&sdfo)
+
 	case directfund.ObjectiveRequest:
 		dfo, err := directfund.NewObjective(request, true, myAddress, chainId, e.store.GetChannelsByParticipant, e.store.GetConsensusChannel)
 		if err != nil {
@@ -1189,6 +1197,12 @@ func (e *Engine) constructObjectiveFromMessage(id protocols.ObjectiveId, p proto
 			return &virtualfund.Objective{}, fromMsgErr(id, err)
 		}
 		return &vdfo, nil
+	case swapdefund.IsSwapDefundObjective(id):
+		sdfo, err := swapdefund.ConstructObjectiveFromPayload(p, false, *e.store.GetAddress(), e.store.GetChannelById, e.store.GetConsensusChannel)
+		if err != nil {
+			return &virtualfund.Objective{}, fromMsgErr(id, err)
+		}
+		return &sdfo, nil
 	case directdefund.IsDirectDefundObjective(id):
 		ddfo, err := directdefund.ConstructObjectiveFromPayload(p, false, e.store.GetConsensusChannelById, e.store.GetChannelById, e.vm.GetVoucherIfAmountPresent)
 		if err != nil {
@@ -1247,8 +1261,14 @@ func getProposalObjectiveId(p consensus_channel.Proposal, channelType types.Chan
 		}
 	case consensus_channel.RemoveProposal:
 		{
-			// TODO: Handle swap defund
-			const prefix = virtualdefund.ObjectivePrefix
+			var prefix string
+
+			if channelType == channel.Swap {
+				prefix = swapdefund.ObjectivePrefix
+			} else {
+				prefix = virtualdefund.ObjectivePrefix
+			}
+
 			channelId := p.ToRemove.Target.String()
 			return protocols.ObjectiveId(prefix + channelId)
 

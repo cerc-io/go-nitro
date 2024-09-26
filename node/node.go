@@ -24,6 +24,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/mirrorbridgeddefund"
+	"github.com/statechannels/go-nitro/protocols/swapdefund"
 	"github.com/statechannels/go-nitro/protocols/swapfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
@@ -235,6 +236,15 @@ func (n *Node) CreatePaymentChannel(Intermediaries []types.Address, CounterParty
 // ClosePaymentChannel attempts to close and defund the given virtually funded channel.
 func (n *Node) ClosePaymentChannel(channelId types.Destination) (protocols.ObjectiveId, error) {
 	objectiveRequest := virtualdefund.NewObjectiveRequest(channelId)
+
+	// Send the event to the engine
+	n.engine.ObjectiveRequestsFromAPI <- objectiveRequest
+	objectiveRequest.WaitForObjectiveToStart()
+	return objectiveRequest.Id(*n.Address, n.chainId), nil
+}
+
+func (n *Node) CloseSwapChannel(channelId types.Destination) (protocols.ObjectiveId, error) {
+	objectiveRequest := swapdefund.NewObjectiveRequest(channelId)
 
 	// Send the event to the engine
 	n.engine.ObjectiveRequestsFromAPI <- objectiveRequest

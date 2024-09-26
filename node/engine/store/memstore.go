@@ -17,6 +17,7 @@ import (
 	"github.com/statechannels/go-nitro/protocols/directdefund"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/mirrorbridgeddefund"
+	"github.com/statechannels/go-nitro/protocols/swapdefund"
 	"github.com/statechannels/go-nitro/protocols/swapfund"
 	"github.com/statechannels/go-nitro/protocols/virtualdefund"
 	"github.com/statechannels/go-nitro/protocols/virtualfund"
@@ -523,6 +524,35 @@ func (ms *MemStore) populateChannelData(obj protocols.Objective) error {
 		}
 
 		return nil
+
+	case *swapdefund.Objective:
+		v, err := ms.getChannelById(o.V.Id)
+		if err != nil {
+			return fmt.Errorf("error retrieving virtual channel data for objective %s: %w", id, err)
+		}
+		o.V = &channel.SwapChannel{Channel: v}
+
+		zeroAddress := types.Destination{}
+
+		if o.ToMyLeft != nil &&
+			o.ToMyLeft.Id != zeroAddress {
+
+			left, err := ms.GetConsensusChannelById(o.ToMyLeft.Id)
+			if err != nil {
+				return fmt.Errorf("error retrieving left ledger channel data for objective %s: %w", id, err)
+			}
+			o.ToMyLeft = left
+		}
+
+		if o.ToMyRight != nil &&
+			o.ToMyRight.Id != zeroAddress {
+			right, err := ms.GetConsensusChannelById(o.ToMyRight.Id)
+			if err != nil {
+				return fmt.Errorf("error retrieving right ledger channel data for objective %s: %w", id, err)
+			}
+			o.ToMyRight = right
+		}
+		return nil
 	case *bridgedfund.Objective:
 		ch, err := ms.getChannelById(o.C.Id)
 		if err != nil {
@@ -594,6 +624,10 @@ func decodeObjective(id protocols.ObjectiveId, data []byte) (protocols.Objective
 		sfo := swapfund.Objective{}
 		err := sfo.UnmarshalJSON(data)
 		return &sfo, err
+	case swapdefund.IsSwapDefundObjective(id):
+		sdfo := swapdefund.Objective{}
+		err := sdfo.UnmarshalJSON(data)
+		return &sdfo, err
 	default:
 		return nil, fmt.Errorf("objective id %s does not correspond to a known Objective type", id)
 

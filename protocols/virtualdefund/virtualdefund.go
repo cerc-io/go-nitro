@@ -410,7 +410,7 @@ func (o *Objective) isBob() bool {
 // ledgerProposal generates a ledger proposal to remove the guarantee for V for ledger
 func (o *Objective) ledgerProposal(ledger *consensus_channel.ConsensusChannel) consensus_channel.Proposal {
 	left := o.finalState().Outcome[0].Allocations[0].Amount
-	return consensus_channel.NewRemoveProposal(ledger.Id, o.VId(), left)
+	return consensus_channel.NewRemoveProposal(ledger.Id, o.VId(), left, o.finalState().Outcome[0].Asset)
 }
 
 // updateLedgerToRemoveGuarantee updates the ledger channel to remove the guarantee that funds V.

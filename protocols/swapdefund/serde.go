@@ -21,7 +21,7 @@ type jsonObjective struct {
 	MyRole    uint
 }
 
-// MarshalJSON returns a JSON representation of the VirtualDefundObjective
+// MarshalJSON returns a JSON representation of the SwapDefundObjective
 //
 // NOTE: Marshal -> Unmarshal is a lossy process. All channel data
 // (other than Id) from the fields ToMyLeft,ToMyRight are discarded
@@ -47,7 +47,7 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 	return json.Marshal(jsonVFO)
 }
 
-// UnmarshalJSON populates the calling VirtualDefundObjective with the
+// UnmarshalJSON populates the calling SwapDefundObjective with the
 // json-encoded data
 //
 // NOTE: Marshal -> Unmarshal is a lossy process. All channel data
@@ -59,7 +59,7 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 
 	var jsonVFO jsonObjective
 	if err := json.Unmarshal(data, &jsonVFO); err != nil {
-		return fmt.Errorf("failed to unmarshal the VirtualDefundObjective: %w", err)
+		return fmt.Errorf("failed to unmarshal the SwapDefundObjective: %w", err)
 	}
 	empty := types.Destination{}
 

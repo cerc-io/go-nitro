@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
 	"github.com/statechannels/go-nitro/channel/state"
@@ -237,7 +238,7 @@ type testdata struct {
 // generateRemoveProposal generates a remove proposal for the given channelId and test data
 func generateRemoveProposal(cId types.Destination, td testdata) consensus_channel.Proposal {
 	vId := td.vFinal.ChannelId()
-	return consensus_channel.NewRemoveProposal(cId, vId, big.NewInt(int64(td.finalAliceAmount)))
+	return consensus_channel.NewRemoveProposal(cId, vId, big.NewInt(int64(td.finalAliceAmount)), common.Address{})
 }
 
 // generateTestData generates some test data that can be used in a test

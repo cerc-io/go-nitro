@@ -103,6 +103,7 @@ func TestLeaderChannel(t *testing.T) {
 			chID,
 			target,
 			big.NewInt(int64(aAmount)),
+			common.Address{},
 		)
 	}
 
@@ -260,7 +261,7 @@ func TestLeaderChannel(t *testing.T) {
 		c := testChannel(startingOutcome, emptyQueue())
 
 		// LeftAmount > amountAdded
-		newRemove := NewRemoveProposal(cId, channel1Id, big.NewInt(int64(amountAdded+1)))
+		newRemove := NewRemoveProposal(cId, channel1Id, big.NewInt(int64(amountAdded+1)), common.Address{})
 
 		t.Run(msg, testPropose(c, newRemove, SignedProposal{}, ErrInvalidAmount))
 	}

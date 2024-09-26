@@ -763,13 +763,13 @@ func NewAddProposal(ledgerID types.Destination, g Guarantee, leftDeposit *big.In
 }
 
 // NewRemove constructs a new Remove proposal.
-func NewRemove(target types.Destination, leftAmount *big.Int) Remove {
-	return Remove{Target: target, LeftAmount: leftAmount}
+func NewRemove(target types.Destination, leftAmount *big.Int, assetAddress common.Address) Remove {
+	return Remove{Target: target, LeftAmount: leftAmount, AssetAddress: assetAddress}
 }
 
 // NewRemoveProposal constructs a proposal with a valid Remove proposal and empty Add proposal.
-func NewRemoveProposal(ledgerID types.Destination, target types.Destination, leftAmount *big.Int) Proposal {
-	return Proposal{ToRemove: NewRemove(target, leftAmount), LedgerID: ledgerID}
+func NewRemoveProposal(ledgerID types.Destination, target types.Destination, leftAmount *big.Int, assetAddress common.Address) Proposal {
+	return Proposal{ToRemove: NewRemove(target, leftAmount, assetAddress), LedgerID: ledgerID}
 }
 
 // RightDeposit computes the deposit from the right participant such that
@@ -935,7 +935,8 @@ type Remove struct {
 	//
 	// The amount for the "right" participant is calculated as the difference between the guarantee amount and LeftAmount.
 	// TODO: add assetAddress` similar to `Add` struct
-	LeftAmount *big.Int
+	LeftAmount   *big.Int
+	AssetAddress common.Address
 }
 
 // Clone returns a deep copy of the receiver

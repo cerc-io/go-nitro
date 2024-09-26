@@ -526,11 +526,11 @@ func (ms *MemStore) populateChannelData(obj protocols.Objective) error {
 		return nil
 
 	case *swapdefund.Objective:
-		v, err := ms.getChannelById(o.V.Id)
+		s, err := ms.getChannelById(o.S.Id)
 		if err != nil {
 			return fmt.Errorf("error retrieving virtual channel data for objective %s: %w", id, err)
 		}
-		o.V = &channel.SwapChannel{Channel: v}
+		o.S = &channel.SwapChannel{Channel: s}
 
 		zeroAddress := types.Destination{}
 

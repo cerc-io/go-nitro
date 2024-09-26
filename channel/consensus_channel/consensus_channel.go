@@ -894,7 +894,12 @@ func (vars *Vars) Add(p Add) error {
 func (vars *Vars) Remove(p Remove) error {
 	// CHECKS
 
-	o := vars.Outcome[0]
+	var o LedgerOutcome
+	for _, outcome := range vars.Outcome {
+		if outcome.assetAddress == p.AssetAddress {
+			o = outcome
+		}
+	}
 
 	guarantee, found := o.guarantees[p.Target]
 	if !found {

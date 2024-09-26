@@ -36,7 +36,7 @@ const (
 type Objective struct {
 	Status protocols.ObjectiveStatus
 
-	V *channel.SwapChannel
+	S *channel.SwapChannel
 
 	ToMyLeft  *consensus_channel.ConsensusChannel
 	ToMyRight *consensus_channel.ConsensusChannel
@@ -130,7 +130,7 @@ func NewObjective(request ObjectiveRequest,
 
 	return Objective{
 		Status:    status,
-		V:         S,
+		S:         S,
 		MyRole:    S.MyIndex,
 		ToMyLeft:  leftLedger,
 		ToMyRight: rightLedger,
@@ -175,11 +175,11 @@ func IsSwapDefundObjective(id protocols.ObjectiveId) bool {
 
 // finalState returns the final state for the swap channel
 func (o *Objective) finalState() state.State {
-	return o.V.OffChain.SignedStateForTurnNum[o.V.OffChain.LatestSupportedStateTurnNum].State()
+	return o.S.OffChain.SignedStateForTurnNum[o.S.OffChain.LatestSupportedStateTurnNum+1].State()
 }
 
 func (o *Objective) initialOutcome() (outcome.Exit, error) {
-	latestSupportedState, err := o.V.LatestSupportedState()
+	latestSupportedState, err := o.S.LatestSupportedState()
 	if err != nil {
 		return outcome.Exit{}, err
 	}
@@ -193,8 +193,8 @@ func (o *Objective) generateFinalState() (state.State, error) {
 	if err != nil {
 		return state.State{}, err
 	}
-	vp := state.VariablePart{Outcome: exit, TurnNum: o.V.OffChain.LatestSupportedStateTurnNum, IsFinal: true}
-	return state.StateFromFixedAndVariablePart(o.V.FixedPart, vp), nil
+	vp := state.VariablePart{Outcome: exit, TurnNum: o.S.OffChain.LatestSupportedStateTurnNum + 1, IsFinal: true}
+	return state.StateFromFixedAndVariablePart(o.S.FixedPart, vp), nil
 }
 
 // Id returns the objective id.
@@ -216,7 +216,7 @@ func (o *Objective) Reject() (protocols.Objective, protocols.SideEffects) {
 	updated := o.clone()
 	updated.Status = protocols.Rejected
 	peers := []common.Address{}
-	for i, peer := range o.V.Participants {
+	for i, peer := range o.S.Participants {
 		if i != int(o.MyRole) {
 			peers = append(peers, peer)
 		}
@@ -240,7 +240,7 @@ func (o *Objective) GetStatus() protocols.ObjectiveStatus {
 func (o *Objective) Related() []protocols.Storable {
 	related := []protocols.Storable{}
 
-	related = append(related, o.V)
+	related = append(related, o.S)
 
 	if o.ToMyLeft != nil {
 		related = append(related, o.ToMyLeft)
@@ -257,7 +257,7 @@ func (o *Objective) clone() Objective {
 	clone := Objective{}
 	clone.Status = o.Status
 
-	clone.V = o.V.Clone()
+	clone.S = o.S.Clone()
 
 	clone.MyRole = o.MyRole
 
@@ -275,7 +275,7 @@ func (o *Objective) clone() Objective {
 // otherParticipants returns the participants in the channel that are not the current participant.
 func (o *Objective) otherParticipants() []types.Address {
 	others := make([]types.Address, 0)
-	for i, p := range o.V.Participants {
+	for i, p := range o.S.Participants {
 		if i != int(o.MyRole) {
 			others = append(others, p)
 		}
@@ -284,7 +284,7 @@ func (o *Objective) otherParticipants() []types.Address {
 }
 
 func (o *Objective) hasFinalStateFromAlice() bool {
-	ss, ok := o.V.OffChain.SignedStateForTurnNum[o.V.OffChain.LatestSupportedStateTurnNum]
+	ss, ok := o.S.OffChain.SignedStateForTurnNum[o.S.OffChain.LatestSupportedStateTurnNum+1]
 	return ok && ss.State().IsFinal && !isZero(ss.Signatures()[0])
 }
 
@@ -292,7 +292,6 @@ func (o *Objective) hasFinalStateFromAlice() bool {
 func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.SideEffects, protocols.WaitingFor, error) {
 	updated := o.clone()
 	sideEffects := protocols.SideEffects{}
-
 	// Input validation
 	if updated.Status != protocols.Approved {
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
@@ -300,7 +299,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 
 	// If we don't know the amount yet we send a message to alice to request it
 	if !updated.isAlice() && !updated.hasFinalStateFromAlice() {
-		alice := o.V.Participants[0]
+		alice := o.S.Participants[0]
 		messages, err := protocols.CreateObjectivePayloadMessage(updated.Id(), o.VId(), RequestFinalStatePayload, alice)
 		if err != nil {
 			return &updated, sideEffects, WaitingForNothing, err
@@ -310,7 +309,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	}
 
 	// Signing of the final state
-	if !updated.V.FinalSignedByMe() {
+	if !updated.S.FinalSignedByMe() {
 		var s state.State
 		var err error
 		if updated.isAlice() {
@@ -322,7 +321,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 			s = updated.finalState()
 		}
 		// Sign and store:
-		ss, err := updated.V.SignAndAddState(s, secretKey)
+		ss, err := updated.S.SignAndAddState(s, secretKey)
 		if err != nil {
 			return &updated, sideEffects, WaitingForNothing, fmt.Errorf("could not sign final state: %w", err)
 		}
@@ -335,7 +334,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	}
 
 	// Check if all participants have signed the final state
-	if !updated.V.FinalCompleted() {
+	if !updated.S.FinalCompleted() {
 		return &updated, sideEffects, WaitingForSupportedFinalState, nil
 	}
 
@@ -375,23 +374,20 @@ func (o *Objective) isAlice() bool {
 
 // isBob returns true if the receiver represents the last participant in the swapdefund protocol.
 func (o *Objective) isBob() bool {
-	return int(o.MyRole) == len(o.V.Participants)-1
+	return int(o.MyRole) == len(o.S.Participants)-1
 }
 
 // ledgerProposal generates a ledger proposal to remove the guarantee for V for ledger
-func (o *Objective) ledgerProposal(ledger *consensus_channel.ConsensusChannel) consensus_channel.Proposal {
-	var assetAddress common.Address
-	var left *big.Int
-	for _, out := range o.finalState().Outcome {
-		for _, a := range out.Allocations {
-			if a.AllocationType == outcome.GuaranteeAllocationType {
-				assetAddress = out.Asset
-				left = out.Allocations[0].Amount
-				break
-			}
-		}
+func (o *Objective) ledgerProposal(ledger *consensus_channel.ConsensusChannel) []consensus_channel.Proposal {
+	var proposals []consensus_channel.Proposal
+
+	for i, out := range ledger.ConsensusVars().Outcome {
+		left := o.S.OffChain.SignedStateForTurnNum[o.S.OffChain.LatestSupportedStateTurnNum].State().Outcome[i].Allocations[0].Amount
+		p := consensus_channel.NewRemoveProposal(ledger.Id, o.VId(), left, out.AsOutcome()[0].Asset)
+		proposals = append(proposals, p)
 	}
-	return consensus_channel.NewRemoveProposal(ledger.Id, o.VId(), left, assetAddress)
+
+	return proposals
 }
 
 // updateLedgerToRemoveGuarantee updates the ledger channel to remove the guarantee that funds V.
@@ -405,10 +401,15 @@ func (o *Objective) updateLedgerToRemoveGuarantee(ledger *consensus_channel.Cons
 			return protocols.SideEffects{}, nil
 		}
 
-		_, err := ledger.Propose(o.ledgerProposal(ledger), *sk)
-		if err != nil {
-			return protocols.SideEffects{}, fmt.Errorf("error proposing ledger update: %w", err)
+		proposals := o.ledgerProposal(ledger)
+
+		for _, p := range proposals {
+			_, err := ledger.Propose(p, *sk)
+			if err != nil {
+				return protocols.SideEffects{}, fmt.Errorf("error proposing ledger update: %w", err)
+			}
 		}
+
 		recipient := ledger.Follower()
 
 		// Since the proposal queue is constructed with consecutive turn numbers, we can pass it straight in
@@ -421,19 +422,22 @@ func (o *Objective) updateLedgerToRemoveGuarantee(ledger *consensus_channel.Cons
 		// If the proposal is next in the queue we accept it
 		proposedNext := ledger.HasRemovalBeenProposedNext(o.VId())
 		if proposedNext {
-			sp, err := ledger.SignNextProposal(o.ledgerProposal(ledger), *sk)
-			if err != nil {
-				return protocols.SideEffects{}, fmt.Errorf("could not sign proposal: %w", err)
-			}
-			// ledger sideEffect
-			if proposals := ledger.ProposalQueue(); len(proposals) != 0 {
-				sideEffects.ProposalsToProcess = append(sideEffects.ProposalsToProcess, proposals[0].Proposal)
-			}
+			proposals := o.ledgerProposal(ledger)
+			for _, p := range proposals {
+				sp, err := ledger.SignNextProposal(p, *sk)
+				if err != nil {
+					return protocols.SideEffects{}, fmt.Errorf("could not sign proposal: %w", err)
+				}
+				// ledger sideEffect
+				if proposals := ledger.ProposalQueue(); len(proposals) != 0 {
+					sideEffects.ProposalsToProcess = append(sideEffects.ProposalsToProcess, proposals[0].Proposal)
+				}
 
-			// messaging sideEffect
-			recipient := ledger.Leader()
-			message := protocols.CreateSignedProposalMessage(recipient, sp)
-			sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, message)
+				// messaging sideEffect
+				recipient := ledger.Leader()
+				message := protocols.CreateSignedProposalMessage(recipient, sp)
+				sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, message)
+			}
 		}
 	}
 
@@ -442,7 +446,7 @@ func (o *Objective) updateLedgerToRemoveGuarantee(ledger *consensus_channel.Cons
 
 // VId returns the channel id of the swap channel.
 func (o *Objective) VId() types.Destination {
-	return o.V.ChannelId()
+	return o.S.ChannelId()
 }
 
 // rightHasDefunded returns whether the ledger channel ToMyRight has removed
@@ -506,7 +510,7 @@ func (o *Objective) Update(op protocols.ObjectivePayload) (protocols.Objective, 
 		}
 		updated := o.clone()
 
-		ok := updated.V.AddSignedState(ss)
+		ok := updated.S.AddSignedState(ss)
 		if !ok {
 			return o, fmt.Errorf("could not add signed state %v", ss)
 		}

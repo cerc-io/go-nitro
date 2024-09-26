@@ -14,7 +14,7 @@ import (
 // with the channel's respective IDs, making jsonObjective suitable for serialization
 type jsonObjective struct {
 	Status protocols.ObjectiveStatus
-	V      types.Destination
+	S      types.Destination
 
 	ToMyLeft  types.Destination
 	ToMyRight types.Destination
@@ -39,7 +39,7 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 
 	jsonVFO := jsonObjective{
 		Status:    o.Status,
-		V:         o.VId(),
+		S:         o.VId(),
 		ToMyLeft:  left,
 		ToMyRight: right,
 		MyRole:    o.MyRole,
@@ -76,8 +76,8 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 
 	o.MyRole = jsonVFO.MyRole
 
-	o.V = &channel.SwapChannel{}
-	o.V.Id = jsonVFO.V
+	o.S = &channel.SwapChannel{}
+	o.S.Id = jsonVFO.S
 
 	return nil
 }

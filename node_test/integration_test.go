@@ -2,6 +2,7 @@ package node_test
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -174,6 +175,28 @@ func TestSwapFund(t *testing.T) {
 	t.Log("Completed swap-fund objective")
 
 	checkSwapChannel(t, swapChannelresponse.ChannelId, multiassetSwapChannelOutcome, query.Open, nodeA, nodeB)
+
+	// Close crated swap channel
+	res, err := nodeA.CloseSwapChannel(swapChannelresponse.ChannelId)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	t.Log("Started swap-defund objective", "objectiveId", res)
+
+	// Wait for swap-defund objectives to complete
+	chA = nodeA.ObjectiveCompleteChan(res)
+	chB = nodeB.ObjectiveCompleteChan(res)
+	<-chA
+	<-chB
+
+	t.Log("Completed swap-defund objective")
+
+	currentLedgerState, err := nodeA.GetSignedState(ledgerResponse.ChannelId)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	fmt.Printf("New state %+v", currentLedgerState.State())
 }
 
 // RunIntegrationTestCase runs the integration test case.

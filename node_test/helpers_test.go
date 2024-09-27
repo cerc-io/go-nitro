@@ -1,6 +1,7 @@
 package node_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -415,6 +416,67 @@ func createPaychInfo(id types.Destination, outcome outcome.Exit, status query.Ch
 			RemainingFunds: (*hexutil.Big)(outcome[0].Allocations[0].Amount),
 			PaidSoFar:      (*hexutil.Big)(outcome[0].Allocations[1].Amount),
 		},
+	}
+}
+
+func createSwapChInfo(id types.Destination, outcome outcome.Exit, status query.ChannelStatus, user types.Address) query.SwapChannelInfo {
+	firstParticipant, err := outcome[0].Allocations[0].Destination.ToAddress()
+	if err != nil {
+		panic(err)
+	}
+	secondParticipant, err := outcome[0].Allocations[1].Destination.ToAddress()
+	if err != nil {
+		panic(err)
+	}
+
+	var me, them types.Address
+	var myBalance, theirBalance *big.Int
+	var balances []query.SwapChannelBalance
+
+	for i, sao := range outcome {
+		if user == firstParticipant {
+			me = firstParticipant
+			myBalance = outcome[i].Allocations[0].Amount
+			them = secondParticipant
+			theirBalance = outcome[i].Allocations[1].Amount
+		} else if user == secondParticipant {
+			me = secondParticipant
+			myBalance = outcome[i].Allocations[1].Amount
+			them = firstParticipant
+			theirBalance = outcome[i].Allocations[0].Amount
+		} else {
+			panic("User not in channel") // test helper - panic OK
+		}
+		balances = append(balances, query.SwapChannelBalance{
+			AssetAddress: sao.Asset,
+			Me:           me,
+			Them:         them,
+			MyBalance:    (*hexutil.Big)(myBalance),
+			TheirBalance: (*hexutil.Big)(theirBalance),
+		})
+	}
+	return query.SwapChannelInfo{
+		ID:       id,
+		Status:   status,
+		Balances: balances,
+	}
+}
+
+func checkSwapChannel(t *testing.T, swapId types.Destination, o outcome.Exit, status query.ChannelStatus, clients ...node.Node) {
+	for _, c := range clients {
+		expected := createSwapChInfo(swapId, o, status, *c.Address)
+		marshalledExpected, err := json.Marshal(expected)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		swap, err := c.GetSwapChannel(swapId)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(string(marshalledExpected), swap, cmp.AllowUnexported(big.Int{})); diff != "" {
+			t.Errorf("swap diff mismatch (-want +got):\n%s", diff)
+		}
 	}
 }
 

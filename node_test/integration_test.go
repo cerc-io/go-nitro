@@ -172,6 +172,8 @@ func TestSwapFund(t *testing.T) {
 	<-chB
 
 	t.Log("Completed swap-fund objective")
+
+	checkSwapChannel(t, swapChannelresponse.ChannelId, multiassetSwapChannelOutcome, query.Open, nodeA, nodeB)
 }
 
 // RunIntegrationTestCase runs the integration test case.

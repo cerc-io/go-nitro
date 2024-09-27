@@ -1263,7 +1263,7 @@ func getProposalObjectiveId(p consensus_channel.Proposal, channelType types.Chan
 		{
 			var prefix string
 
-			if channelType == channel.Swap {
+			if channelType == types.Swap {
 				prefix = swapdefund.ObjectivePrefix
 			} else {
 				prefix = virtualdefund.ObjectivePrefix

@@ -246,7 +246,7 @@ export interface RpcClientApi
    */
   RetryTx(txHash: string): Promise<string>;
   /**
-   * CounterChallenge responds to the ongoing challenge with either `challenge` or `checkpoint`.
+   * CounterChallenge responds to the ongoing challenge on a channel with either `challenge` or `checkpoint` actions.
    *
    * @param channelId - Channel Id of the channel to counter challenge
    * @param action - The action to respond with (either checkpoint or challenge)

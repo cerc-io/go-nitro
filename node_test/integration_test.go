@@ -95,10 +95,10 @@ func TestSwapFund(t *testing.T) {
 	nodeB, _, _, _, _ := setupIntegrationNode(testCase, testCase.Participants[1], infra, []string{}, dataFolder)
 	defer nodeB.Close()
 
-	outcomeEth := CreateLedgerOutcome(*nodeA.Address, *nodeB.Address, ledgerChannelDeposit+1, ledgerChannelDeposit+2, common.Address{})
-	outcomeCustomToken := CreateLedgerOutcome(*nodeA.Address, *nodeB.Address, ledgerChannelDeposit+3, ledgerChannelDeposit+4, infra.anvilChain.ContractAddresses.TokenAddresses[0])
+	outcomeEth := CreateLedgerOutcome(*nodeA.Address, *nodeB.Address, ledgerChannelDeposit, ledgerChannelDeposit+10, common.Address{})
+	outcomeCustomToken := CreateLedgerOutcome(*nodeA.Address, *nodeB.Address, ledgerChannelDeposit+20, ledgerChannelDeposit+30, infra.anvilChain.ContractAddresses.TokenAddresses[0])
 
-	outcomeCustomToken2 := CreateLedgerOutcome(*nodeA.Address, *nodeB.Address, ledgerChannelDeposit+5, ledgerChannelDeposit+6, infra.anvilChain.ContractAddresses.TokenAddresses[1])
+	outcomeCustomToken2 := CreateLedgerOutcome(*nodeA.Address, *nodeB.Address, ledgerChannelDeposit+40, ledgerChannelDeposit+50, infra.anvilChain.ContractAddresses.TokenAddresses[1])
 
 	multiAssetOutcome := append(outcomeEth, outcomeCustomToken...)
 	multiAssetOutcome = append(multiAssetOutcome, outcomeCustomToken2...)

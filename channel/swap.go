@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/statechannels/go-nitro/channel/state"
+	"github.com/statechannels/go-nitro/types"
 )
 
 type SwapChannel struct {
@@ -21,7 +22,7 @@ func NewSwapChannel(s state.State, myIndex uint) (*SwapChannel, error) {
 		}
 	}
 
-	c, err := New(s, myIndex, Swap)
+	c, err := New(s, myIndex, types.Swap)
 
 	return &SwapChannel{*c}, err
 }

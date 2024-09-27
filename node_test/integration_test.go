@@ -61,7 +61,7 @@ func TestComplexIntegrationScenario(t *testing.T) {
 	RunIntegrationTestCase(complexCase, t)
 }
 
-func TestMultiAssetLedgerChannel(t *testing.T) {
+func TestSwapFund(t *testing.T) {
 	testCase := TestCase{
 		Description:       "Direct defund with Challenge",
 		Chain:             AnvilChain,
@@ -279,7 +279,6 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 				virtualIds[i],
 				initialPaymentOutcome(*clientA.Address, *clientB.Address, asset),
 				query.Open,
-				common.Address{},
 				clientA, clientB)
 		}
 
@@ -308,7 +307,6 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 				virtualIds[i],
 				finalPaymentOutcome(*clientA.Address, *clientB.Address, asset, tc.NumOfPayments, 1),
 				query.Open,
-				common.Address{},
 				clientA, clientB)
 		}
 

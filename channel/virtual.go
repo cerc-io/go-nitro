@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/statechannels/go-nitro/channel/state"
+	"github.com/statechannels/go-nitro/types"
 )
 
 type VirtualChannel struct {
@@ -27,7 +28,7 @@ func NewVirtualChannel(s state.State, myIndex uint) (*VirtualChannel, error) {
 		}
 	}
 
-	c, err := New(s, myIndex, Virtual)
+	c, err := New(s, myIndex, types.Virtual)
 
 	return &VirtualChannel{*c}, err
 }

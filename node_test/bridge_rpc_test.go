@@ -184,7 +184,6 @@ func TestBridgeFlow(t *testing.T) {
 			virtualChannelResponse.ChannelId,
 			outcomeAfterPayment,
 			query.Open,
-			common.Address{},
 		)
 		actualVirtualChannel, err := nodeAPrimeRpcClient.GetPaymentChannel(virtualChannelResponse.ChannelId)
 		checkError(t, err, "client.GetPaymentChannel")

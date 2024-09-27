@@ -150,7 +150,7 @@ func TestCheckpoint(t *testing.T) {
 	ledgerUpdatesChannelNodeB := nodeB.LedgerUpdatedChan(ledgerChannel)
 
 	// Conduct virtual fund, make payment and virtual defund
-	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, infra.anvilChain.ContractAddresses.TokenAddresses[0])
+	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, common.BigToAddress(common.Big0))
 	response, err := nodeA.CreatePaymentChannel([]common.Address{}, *nodeB.Address, uint32(testCase.ChallengeDuration), virtualOutcome)
 	if err != nil {
 		t.Error(err)
@@ -268,7 +268,7 @@ func TestCounterChallenge(t *testing.T) {
 	ledgerUpdatesChannelNodeB := nodeB.LedgerUpdatedChan(ledgerChannel)
 
 	// Conduct virtual fund, make payment and virtual defund
-	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, infra.anvilChain.ContractAddresses.TokenAddresses[0])
+	virtualOutcome := initialPaymentOutcome(*nodeA.Address, *nodeB.Address, common.BigToAddress(common.Big0))
 	response, err := nodeA.CreatePaymentChannel([]common.Address{}, *nodeB.Address, uint32(testCase.ChallengeDuration), virtualOutcome)
 	if err != nil {
 		t.Error(err)
@@ -355,7 +355,7 @@ func TestVirtualPaymentChannel(t *testing.T) {
 
 	// Wait for objective to complete
 	waitForObjectives(t, nodeA, nodeB, []node.Node{}, []protocols.ObjectiveId{virtualResponse.Id})
-	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, common.Address{}, nodeA, nodeB)
+	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeA, nodeB)
 
 	// Alice pays Bob
 	err := nodeA.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))

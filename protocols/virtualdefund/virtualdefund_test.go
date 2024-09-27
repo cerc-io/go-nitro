@@ -13,6 +13,7 @@ import (
 	ta "github.com/statechannels/go-nitro/internal/testactors"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
 	"github.com/statechannels/go-nitro/protocols"
+	"github.com/statechannels/go-nitro/types"
 )
 
 var (
@@ -196,7 +197,7 @@ func TestConstructObjectiveFromState(t *testing.T) {
 	left, right := generateLedgers(alice.Role, vId)
 
 	s := state.StateFromFixedAndVariablePart(data.vFinal.FixedPart(), data.vInitial.VariablePart())
-	v, err := channel.New(s, 0, channel.Virtual)
+	v, err := channel.New(s, 0, types.Virtual)
 	testhelpers.Ok(t, err)
 
 	want := Objective{

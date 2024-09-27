@@ -3,7 +3,6 @@ package messageservice
 import (
 	"testing"
 
-	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/consensus_channel"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
 	"github.com/statechannels/go-nitro/protocols"
@@ -38,7 +37,7 @@ func TestConnect(t *testing.T) {
 
 	prop := got.LedgerProposals[0]
 
-	objId, err := protocols.GetProposalObjectiveId(prop.Proposal, int(channel.Virtual))
+	objId, err := protocols.GetProposalObjectiveId(prop.Proposal, types.Virtual)
 
 	testhelpers.Ok(t, err)
 

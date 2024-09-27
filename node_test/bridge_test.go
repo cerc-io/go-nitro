@@ -84,10 +84,10 @@ func TestBridgedFund(t *testing.T) {
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
 		// Create virtual channel on mirrored ledger channel on L2
-		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
+		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, types.Address{})
 		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{}, bridgeAddress, uint32(tcL2.ChallengeDuration), virtualOutcome)
 		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
-		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, infraL1.anvilChain.ContractAddresses.TokenAddresses[0], nodeAPrime)
+		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeAPrime)
 
 		// APrime pays BPrime
 		err := nodeAPrime.Pay(virtualResponse.ChannelId, big.NewInt(payAmount))
@@ -340,7 +340,7 @@ func TestBridgedFundWithIntermediary(t *testing.T) {
 	})
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments via bridge as intermediary", func(t *testing.T) {
-		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, *nodeCPrime.Address, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
+		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, *nodeCPrime.Address, types.Address{})
 		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{bridgeAddress}, *nodeCPrime.Address, uint32(tcL2.ChallengeDuration), virtualOutcome)
 		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
 
@@ -731,7 +731,7 @@ func createL2VirtualChannel(t *testing.T, nodeAPrime node.Node, nodeBPrime node.
 	virtualResponse, _ := nodeBPrime.CreatePaymentChannel([]types.Address{}, *nodeAPrime.Address, uint32(tcL2.ChallengeDuration), virtualOutcome)
 	waitForObjectives(t, nodeBPrime, nodeAPrime, []node.Node{}, []protocols.ObjectiveId{virtualResponse.Id})
 
-	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, types.Address{}, nodeBPrime, nodeAPrime)
+	checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeBPrime, nodeAPrime)
 
 	virtualChannel, _ := L2bridgeStore.GetChannelById(virtualResponse.ChannelId)
 

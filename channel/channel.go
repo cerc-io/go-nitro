@@ -32,7 +32,7 @@ type Channel struct {
 	state.FixedPart
 	Id      types.Destination
 	MyIndex uint
-	Type    ChannelType
+	Type    types.ChannelType
 
 	OnChain  OnChainData
 	OffChain OffChainData
@@ -52,7 +52,7 @@ func (c *Channel) isNewChainEvent(event chainservice.Event) bool {
 }
 
 // New constructs a new Channel from the supplied state.
-func New(s state.State, myIndex uint, channelType ChannelType) (*Channel, error) {
+func New(s state.State, myIndex uint, channelType types.ChannelType) (*Channel, error) {
 	c := Channel{}
 	var err error = s.Validate()
 
@@ -99,7 +99,7 @@ type jsonChannel struct {
 	state.FixedPart
 	OnChain  OnChainData
 	OffChain OffChainData
-	Type     ChannelType
+	Type     types.ChannelType
 }
 
 // MarshalJSON returns a JSON representation of the Channel

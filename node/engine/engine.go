@@ -554,7 +554,7 @@ func (e *Engine) handleChainEvent(chainEvent chainservice.Event) (EngineEvent, e
 	// When a challenge is registered on a virtual channel, identify the related ledger channel and its associated objective, and then process it.
 	// Challenge registered on virtual channels are handled only by the one who raised the challenge
 	_, isChallengeRegisteredEvent := chainEvent.(chainservice.ChallengeRegisteredEvent)
-	if isChallengeRegisteredEvent && c.Type == channel.Virtual && c.OnChain.IsChallengeInitiatedByMe {
+	if isChallengeRegisteredEvent && c.Type == types.Virtual && c.OnChain.IsChallengeInitiatedByMe {
 		myAddress := *e.store.GetAddress()
 		counterParty := common.Address{}
 
@@ -1229,13 +1229,13 @@ func fromMsgErr(id protocols.ObjectiveId, err error) error {
 }
 
 // getProposalObjectiveId returns the objectiveId for a proposal.
-func getProposalObjectiveId(p consensus_channel.Proposal, channelType channel.ChannelType) protocols.ObjectiveId {
+func getProposalObjectiveId(p consensus_channel.Proposal, channelType types.ChannelType) protocols.ObjectiveId {
 	switch p.Type() {
 	case consensus_channel.AddProposal:
 		{
 			var prefix string
 
-			if channelType == channel.Swap {
+			if channelType == types.Swap {
 				prefix = swapfund.ObjectivePrefix
 			} else {
 				prefix = virtualfund.ObjectivePrefix
@@ -1305,7 +1305,7 @@ func (e *Engine) processStoreChannels(latestblock chainservice.Block) error {
 		}
 
 		// Liquidate assets for finalized ledger channels
-		if ch.Type == channel.Ledger && ch.OnChain.ChannelMode == channel.Finalized {
+		if ch.Type == types.Ledger && ch.OnChain.ChannelMode == channel.Finalized {
 			obj, ok := e.store.GetObjectiveByChannelId(ch.Id)
 
 			if !ok {
@@ -1356,11 +1356,11 @@ func (e *Engine) GetNodeInfo() types.NodeInfo {
 	}
 }
 
-func (e *Engine) getChannelTypeById(channelId types.Destination) int {
+func (e *Engine) getChannelTypeById(channelId types.Destination) (types.ChannelType, error) {
 	c, ok := e.store.GetChannelById(channelId)
 	if ok {
-		return int(c.Type)
+		return c.Type, nil
 	}
 
-	return -1
+	return -1, fmt.Errorf("Could not find channel for given chanel ID", "channelId", channelId)
 }

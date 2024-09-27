@@ -344,7 +344,7 @@ func (o *Objective) ReceiveProposal(sp consensus_channel.SignedProposal) (protoc
 		return o, fmt.Errorf("invalid proposal type")
 	}
 
-	pId, err := protocols.GetProposalObjectiveId(sp.Proposal, int(channel.Swap))
+	pId, err := protocols.GetProposalObjectiveId(sp.Proposal, types.Swap)
 	if err != nil {
 		return o, err
 	}

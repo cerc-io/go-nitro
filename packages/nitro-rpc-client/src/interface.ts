@@ -166,6 +166,12 @@ interface swapAPI {
    * @returns A JSON object containing the channel's information
    */
   GetSwapChannel(channelId: string): Promise<string>;
+  /**
+   * CloseSwapChannel defunds a swap channel.
+   *
+   * @param channelId - The ID of the channel to defund
+   * @returns The ID of the objective that was created
+   */
   CloseSwapChannel(channelId: string): Promise<string>;
 }
 

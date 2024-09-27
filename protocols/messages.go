@@ -82,8 +82,7 @@ func GetProposalObjectiveId(p consensus_channel.Proposal, channelType types.Chan
 	case "RemoveProposal":
 		{
 			var prefix string
-			// According to `ChannelType` enum present in `channel` package, `2` corresponds to swap channel
-			if channelType == 2 {
+			if channelType == types.Swap {
 				prefix = "SwapDefund-"
 			} else {
 				prefix = "VirtualDefund-"

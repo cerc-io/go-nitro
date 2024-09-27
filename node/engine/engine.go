@@ -1362,5 +1362,5 @@ func (e *Engine) getChannelTypeById(channelId types.Destination) (types.ChannelT
 		return c.Type, nil
 	}
 
-	return -1, fmt.Errorf("Could not find channel for given chanel ID", "channelId", channelId)
+	return -1, fmt.Errorf("could not find channel for given channel ID: %v", channelId)
 }

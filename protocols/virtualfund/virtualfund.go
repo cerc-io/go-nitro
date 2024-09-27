@@ -644,6 +644,7 @@ func (c *Connection) expectedProposal() consensus_channel.Proposal {
 		break
 	}
 
+	// Use first asset from outcome array for creating virtual channel
 	consensusState := c.Channel.SupportedSignedState().State()
 	proposal := consensus_channel.NewAddProposal(c.Channel.Id, g, leftAmount, consensusState.Outcome[0].Asset)
 

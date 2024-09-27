@@ -104,23 +104,67 @@ interface paymentApi {
 }
 
 interface bridgeAPI {
+  /**
+   * CloseBridgeChannel defunds a mirrored ledger channel.
+   *
+   * @param channelId - The ID of the channel to defund
+   * @returns The ID of the objective that was created
+   */
   CloseBridgeChannel(channelId: string): Promise<string>;
+  /**
+   * MirrorBridgedDefund defunds ledger channel from which mirrored channel was created.
+   *
+   * @param channelId - The ID of the channel to defund
+   * @param stringifiedL2SignedState - The stringified state of mirrored channel
+   * @param isChallenge - Boolean flag to defund with challenge
+   * @returns The ID of the objective that was created
+   */
   MirrorBridgedDefund(
     channelId: string,
     stringifiedL2SignedState: string,
     isChallenge: boolean
   ): Promise<string>;
+  /**
+   * GetAllL2Channels gets all mirrored ledger channels.
+   *
+   * @returns A `LedgerChannelInfo` object containing the channel's information for each ledger channel
+   */
   GetAllL2Channels(): Promise<LedgerChannelInfo[]>;
+  /**
+   * GetL2ObjectiveFromL1 gets corresponding L2 objective based on l1 objective ID.
+   *
+   * @param l1ObjectiveId - ID of Objective on L1
+   * @returns L2 Objective info
+   */
   GetL2ObjectiveFromL1(l1ObjectiveId: string): Promise<string>;
+  /**
+   * GetPendingBridgeTxs gets array of transactions that are not yet confirmed.
+   *
+   * @param channelId - ID of channel to get pending txs
+   * @returns Array of pending txs
+   */
   GetPendingBridgeTxs(channelId: string): Promise<string>;
 }
 
 interface swapAPI {
+  /**
+   * CreateSwapChannel creates a swap channel with the counterparty.
+   *
+   * @param counterParty - The counterparty to create the channel with
+   * @param intermediaries - The intermerdiaries to use
+   * @returns A promise that resolves to an objective response, containing the ID of the objective and the channel id.
+   */
   CreateSwapChannel(
     counterParty: string,
     intermediaries: string[],
     assetsData: AssetData[]
   ): Promise<ObjectiveResponse>;
+  /**
+   * GetSwapChannel gets swap channel info.
+   *
+   * @param channelId - The ID of the channel to query for
+   * @returns A JSON object containing the channel's information
+   */
   GetSwapChannel(channelId: string): Promise<string>;
 }
 
@@ -156,6 +200,9 @@ interface syncAPI {
     callback: (info: PaymentChannelInfo) => void
   ): () => void;
 
+  /**
+   * WaitForObjectiveToComplete blocks until the objective with the given ID is complete.
+   */
   WaitForObjectiveToComplete(objectiveId: string): Promise<void>;
 }
 
@@ -183,8 +230,28 @@ export interface RpcClientApi
    */
   Close(): Promise<void>;
 
+  /**
+   * RetryObjectiveTx retries failed txs related to given objective.
+   *
+   * @param objectiveId - The objective to retry failed txs
+   * @returns objectiveId of the objective for which tx was retried
+   */
   RetryObjectiveTx(objectiveId: string): Promise<string>;
+  /**
+   * RetryTx retries tx with given tx hash if it is failed.
+   *
+   * @param txHash - Hash of the tx to retry
+   * @returns objectiveId of the objective for which tx was retried
+   */
   RetryTx(txHash: string): Promise<string>;
+  /**
+   * CounterChallenge responds to the ongoing challenge with either `challenge` or `checkpoint`.
+   *
+   * @param channelId - Channel Id of the channel to counter challenge
+   * @param action - The action to respond with (either checkpoint or challenge)
+   * @param signedState - Optional param required to counter challenge a mirrored channel on L1
+   * @returns A `CounterChallengeResult` object
+   */
   CounterChallenge(
     channelId: string,
     action: CounterChallengeAction,

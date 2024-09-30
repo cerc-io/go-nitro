@@ -442,6 +442,7 @@ export const convertSwapChannelInfoBalances = (
     ...swapChannelInfo,
     Balances: swapChannelInfo.Balances.map((balance) => ({
       ...balance,
+      // TODO: Use big int instead of parse int
       MyBalance: parseInt(balance.MyBalance, 16).toString(),
       TheirBalance: parseInt(balance.TheirBalance, 16).toString(),
     })),

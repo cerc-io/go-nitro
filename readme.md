@@ -43,7 +43,9 @@ go test ./... -count=2 -shuffle=on -timeout 1m -v -failfast
 
 The on-chain component of Nitro (i.e. the solidity contracts) are housed in the [`nitro-protocol`](./packages/nitro-protocol/readme.md) directory. This directory contains an yarn workspace with a hardhat / typechain / jest toolchain.
 
-## Setup
+## Demo
+
+### Setup
 
 - Follow this [doc](https://book.getfoundry.sh/getting-started/installation) to set up foundry to run anvil chain
 
@@ -96,7 +98,12 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     # Deploy contracts
     yarn contracts:deploy-geth
 
-    # Deploy custom token
+    # Deploy custom token 1
+    # Note the address of custom token
+    yarn contracts:deploy-token-geth
+
+    <!-- TODO: Figure out how to deploy multiple token -->
+    # Deploy custom token 2
     # Note the address of custom token
     yarn contracts:deploy-token-geth
     ```
@@ -111,11 +118,13 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 
     ```bash
     # Export variables for token address and Bob address
-    export ASSET_ADDRESS="<Custom token Address>"
+    export ASSET_ADDRESS_1="<Custom token 1 Address>"
+    export ASSET_ADDRESS_2="<Custom token 2 Address>"
     export B_CHAIN_ADDRESS="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
 
     # Send tokens to Bob
-    yarn hardhat transfer --contract $ASSET_ADDRESS --to $B_CHAIN_ADDRESS --amount 1000 --network geth
+    yarn hardhat transfer --contract $ASSET_ADDRESS_1 --to $B_CHAIN_ADDRESS --amount 1000 --network geth
+    yarn hardhat transfer --contract $ASSET_ADDRESS_2 --to $B_CHAIN_ADDRESS --amount 1000 --network geth
     ```
 
   - Change directory to root directory
@@ -491,13 +500,15 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 
   ```bash
   export BOB_ADDRESS="0xBBB676f9cFF8D242e9eaC39D063848807d3D1D94"
-  export ASSET_ADDRESS=<deployed custom token address>
+  export ASSET_ADDRESS_1=<deployed custom token address 1>
+  export ASSET_ADDRESS_2=<deployed custom token address 2>
+
   ```
 
 - Create a multi assets ledger channel
 
   ```bash
-  nitro-rpc-client direct-fund $BOB_ADDRESS --asset "0x0000000000000000000000000000000000000000:1001,1002" --asset "$ASSET_ADDRESS:501,502" -p 4006
+  nitro-rpc-client direct-fund $BOB_ADDRESS --asset "0x0000000000000000000000000000000000000000:1000,1000" --asset "$ASSET_ADDRESS_1:500,500" --asset "$ASSET_ADDRESS_2:500,500" -p 4006
 
   export LEDGER_CHANNEL_ID=<ledger-channel-id>
   ```
@@ -511,7 +522,7 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 - Create a multi assets swap channel
 
   ```bash
-  nitro-rpc-client swap-fund $BOB_ADDRESS --asset "0x0000000000000000000000000000000000000000:200,200" --asset "$ASSET_ADDRESS:100,100" -p 4006
+  nitro-rpc-client swap-fund $BOB_ADDRESS --asset "$ASSET_ADDRESS_1:200,200" --asset "$ASSET_ADDRESS_2:100,100" -p 4006
 
   export SWAP_CHANNEL_ID=<swap-channel-id>
   ```
@@ -525,21 +536,32 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 - Conduct swap through swap channel
 
   ```bash
-  nitro-rpc-client swap $SWAP_CHANNEL_ID  --AssetIn "0x0000000000000000000000000000000000000000:20" --AssetOut "$ASSET_ADDRESS:10" -p 4006
+  nitro-rpc-client swap $SWAP_CHANNEL_ID  --AssetIn "$ASSET_ADDRESS_1:20" --AssetOut "$ASSET_ADDRESS_2:10" -p 4006
   ```
 
 - Check current swap in process
 
   ```bash
-  nitro-rpc-client get-current-swap $SWAP_CHANNEL_ID  -p 4006
+  nitro-rpc-client get-current-swap $SWAP_CHANNEL_ID  -p 4007
+
+  # Get current swap id
+  export SWAP_ID=<swap id>
   ```
 
-<!-- TODO: CLI step to accept/reject  -->
+- Bob decides to accept / reject the incoming swap
+
+  ```bash
+  # To accept incoming swap
+  nitro-rpc-client confirm-swap $SWAP_ID accepted -p 4007
+
+  # To reject incoming swap
+  nitro-rpc-client confirm-swap $SWAP_ID rejected -p 4007
+  ```
 
 - Check swap channel info
 
   ```bash
-  nitro-rpc-client get-swap-channel $SWAP_CHANNEL_ID -p 4006
+  nitro-rpc-client get-swap-channel $SWAP_CHANNEL_ID -p 4007
   ```
 
 - Defund the swap channel

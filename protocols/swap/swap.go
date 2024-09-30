@@ -170,8 +170,8 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 		} else {
 			// Rejected
 			updated.Status = protocols.Completed
-			fmt.Println("Swap rejected")
-			return &updated, sideEffects, WaitingForNothing, nil
+			o, sideEffects := updated.Reject()
+			return o, sideEffects, WaitingForNothing, nil
 		}
 	}
 

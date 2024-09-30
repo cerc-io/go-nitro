@@ -32,6 +32,7 @@ const (
 	CloseSwapChannelRequestMethod     RequestMethod = "close_swap_channel"
 	PayRequestMethod                  RequestMethod = "pay"
 	SwapRequestMethod                 RequestMethod = "swap"
+	ConfirmSwapRequestMethod          RequestMethod = "confirm_swap"
 	GetPaymentChannelRequestMethod    RequestMethod = "get_payment_channel"
 	GetSwapChannelRequestMethod       RequestMethod = "get_swap_channel"
 	GetVoucherRequestMethod           RequestMethod = "get_voucher"
@@ -91,6 +92,11 @@ type SwapAssetsData struct {
 type SwapRequest struct {
 	SwapAssetsData SwapAssetsData
 	Channel        types.Destination
+}
+
+type ConfirmSwapRequest struct {
+	ObjectiveId protocols.ObjectiveId
+	Action      types.SwapStatus
 }
 
 type MirrorBridgedDefundRequest struct {
@@ -168,6 +174,7 @@ type RequestPayload interface {
 		AuthRequest |
 		PaymentRequest |
 		SwapRequest |
+		ConfirmSwapRequest |
 		GetLedgerChannelRequest |
 		GetPaymentChannelRequest |
 		GetSwapChannelRequest |
@@ -222,6 +229,7 @@ type ResponsePayload interface {
 		swapfund.ObjectiveResponse |
 		PaymentRequest |
 		SwapRequest |
+		ConfirmSwapRequest |
 		query.PaymentChannelInfo |
 		query.LedgerChannelInfo |
 		query.SwapChannelInfo |

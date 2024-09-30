@@ -468,8 +468,20 @@ func (n *Node) CounterChallenge(id types.Destination, action types.CounterChalle
 	n.engine.CounterChallengeRequestsFromAPI <- engine.CounterChallengeRequest{ChannelId: id, Action: action, Payload: payload}
 }
 
-func (n *Node) ConfirmSwap(objectiveId protocols.ObjectiveId, action types.SwapStatus) {
+func (n *Node) ConfirmSwap(objectiveId protocols.ObjectiveId, action types.SwapStatus) error {
+	obj, err := n.store.GetObjectiveById(objectiveId)
+	if err != nil {
+		return err
+	}
+
+	_, ok := obj.(*swap.Objective)
+	if !ok {
+		return fmt.Errorf("not a swap objective")
+	}
+
 	n.engine.ConfirmSwapRequestFromAPI <- types.ConfirmSwapRequest{ObjectiveId: string(objectiveId), Action: action}
+
+	return nil
 }
 
 func (n *Node) RetryObjectiveTx(objectiveId protocols.ObjectiveId) {

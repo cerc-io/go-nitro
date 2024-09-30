@@ -3,6 +3,8 @@ import Ajv, { JTDDataType } from "ajv/dist/jtd";
 import {
   ChannelMode,
   ChannelStatus,
+  ConfirmSwapAction,
+  ConfirmSwapResult,
   CounterChallengeAction,
   CounterChallengeResult,
   LedgerChannelInfo,
@@ -54,6 +56,14 @@ const counterChallengeSchema = {
   },
 } as const;
 type CounterChallengeSchemaType = JTDDataType<typeof counterChallengeSchema>;
+
+const confirmSwapSchema = {
+  properties: {
+    ObjectiveId: { type: "string" },
+    Action: { type: "int32" },
+  },
+} as const;
+type ConfirmSwapSchemaType = JTDDataType<typeof confirmSwapSchema>;
 
 const ledgerChannelSchema = {
   properties: {
@@ -189,6 +199,7 @@ type ResponseSchema =
   | typeof swapSchema
   | typeof receiveVoucherSchema
   | typeof counterChallengeSchema
+  | typeof confirmSwapSchema
   | typeof getNodeInfoSchema;
 
 type ResponseSchemaType =
@@ -204,6 +215,7 @@ type ResponseSchemaType =
   | swapSchemaType
   | ReceiveVoucherSchemaType
   | CounterChallengeSchemaType
+  | ConfirmSwapSchemaType
   | GetNodeInfoSchemaType;
 
 /**
@@ -261,6 +273,12 @@ export function getAndValidateResult<T extends RequestMethod>(
         counterChallengeSchema,
         result,
         convertToCounterChallengeResultType
+      );
+    case "confirm_swap":
+      return validateAndConvertResult(
+        confirmSwapSchema,
+        result,
+        convertToConfirmSwapResultType
       );
     case "get_all_ledger_channels":
       return validateAndConvertResult(
@@ -418,6 +436,15 @@ function convertToCounterChallengeResultType(
     Action: CounterChallengeAction[
       result.Action
     ] as keyof typeof CounterChallengeAction,
+  };
+}
+
+function convertToConfirmSwapResultType(
+  result: ConfirmSwapSchemaType
+): ConfirmSwapResult {
+  return {
+    ObjectiveId: result.ObjectiveId,
+    Action: ConfirmSwapAction[result.Action] as keyof typeof ConfirmSwapAction,
   };
 }
 

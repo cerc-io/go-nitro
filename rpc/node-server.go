@@ -214,6 +214,11 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 				_, err := nrs.node.SwapAssets(req.Channel, req.SwapAssetsData.TokenIn, req.SwapAssetsData.TokenOut, big.NewInt(int64(req.SwapAssetsData.AmountIn)), big.NewInt(int64(req.SwapAssetsData.AmountOut)))
 				return req, err
 			})
+		case serde.ConfirmSwapRequestMethod:
+			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.ConfirmSwapRequest) (serde.ConfirmSwapRequest, error) {
+				err := nrs.node.ConfirmSwap(req.ObjectiveId, req.Action)
+				return req, err
+			})
 		case serde.GetPaymentChannelRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetPaymentChannelRequest) (query.PaymentChannelInfo, error) {
 				if err := serde.ValidateGetPaymentChannelRequest(req); err != nil {

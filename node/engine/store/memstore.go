@@ -322,6 +322,32 @@ func (ms *MemStore) GetChannelsByAppDefinition(appDef types.Address) ([]*channel
 	return toReturn, nil
 }
 
+func (ms *MemStore) GetCurrentSwapByChannelId(id types.Destination) (channel.Swap, error) {
+	var currentSwap channel.Swap
+	ms.objectives.Range(func(key string, objJSON []byte) bool {
+		objId := protocols.ObjectiveId(key)
+
+		if !swap.IsSwapObjective(objId) {
+			return true // objective not found, continue looking
+		}
+
+		var obj swap.Objective
+		err := json.Unmarshal(objJSON, &obj)
+		if err != nil {
+			return true // objective not found, continue looking
+		}
+
+		if obj.C.Id == id && obj.Status == protocols.Approved {
+			currentSwap = obj.Swap
+			return false // objective found, stop iteration
+		}
+
+		return true // objective not found: continue looking
+	})
+
+	return currentSwap, nil
+}
+
 // GetChannelsByParticipant returns any channels that include the given participant
 func (ms *MemStore) GetChannelsByParticipant(participant types.Address) ([]*channel.Channel, error) {
 	toReturn := []*channel.Channel{}

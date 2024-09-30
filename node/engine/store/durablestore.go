@@ -855,3 +855,8 @@ func (ds *DurableStore) DestroyObjective(id protocols.ObjectiveId) error {
 		return err
 	})
 }
+
+func (ds *DurableStore) GetCurrentSwapByChannelId(id types.Destination) (channel.Swap, error) {
+	var currentSwap channel.Swap
+	return currentSwap, nil
+}

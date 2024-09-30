@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/safesync"
@@ -386,6 +387,10 @@ func (n *Node) GetSwapChannel(id types.Destination) (string, error) {
 // GetPaymentChannelsByLedger returns all active payment channels that are funded by the given ledger channel.
 func (n *Node) GetPaymentChannelsByLedger(ledgerId types.Destination) ([]query.PaymentChannelInfo, error) {
 	return query.GetPaymentChannelsByLedger(ledgerId, n.store, n.vm)
+}
+
+func (n *Node) GetCurrentSwapByChannelId(swapChannelId types.Destination) (channel.Swap, error) {
+	return n.store.GetCurrentSwapByChannelId(swapChannelId)
 }
 
 func (n *Node) GetVoucher(id types.Destination) payments.Voucher {

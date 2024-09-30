@@ -43,7 +43,7 @@ go test ./... -count=2 -shuffle=on -timeout 1m -v -failfast
 
 The on-chain component of Nitro (i.e. the solidity contracts) are housed in the [`nitro-protocol`](./packages/nitro-protocol/readme.md) directory. This directory contains an yarn workspace with a hardhat / typechain / jest toolchain.
 
-## Steps to perform payments between two go-nitro nodes
+## Setup
 
 - Follow this [doc](https://book.getfoundry.sh/getting-started/installation) to set up foundry to run anvil chain
 
@@ -56,13 +56,17 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 - Start anvil chain:
 
   ```bash
-  anvil  --chain-id 1337 --block-time 1
+  anvil  --chain-id 1337 --block-time 1 --port 8545
   ```
 
 - Install dependencies
 
   ```bash
-  yarn
+  # Install Node.js dependencies and build the repo
+  yarn && yarn build
+
+  # Install go dependencies
+  go mod tidy && go build
   ```
 
 - Deploy the Nitro protocol contracts:
@@ -73,16 +77,45 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     cd packages/nitro-protocol
     ```
 
-  - Deploy nitro contracts
+  - Deploy nitro contracts and custom token
 
     ```bash
-    yarn contracts:deploy-localhost
+    # Set environment variables
+    export GETH_URL="http://127.0.0.1:8545"
+    export GETH_CHAIN_ID=1337
+    export GETH_DEPLOYER_PK=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+    export DISABLE_DETERMINISTIC_DEPLOYMENT=true
+
+    # variables for token name, token symbol and initial supply
+    export TOKEN_NAME="TestToken"
+    export TOKEN_SYMBOL="TT"
+
+    # Note: Token supply denotes actual number of tokens and not the supply in Wei
+    export INITIAL_TOKEN_SUPPLY="10000000"
+
+    # Deploy contracts
+    yarn contracts:deploy-geth
+
+    # Deploy custom token
+    # Note the address of custom token
+    yarn contracts:deploy-token-geth
     ```
 
     Note: On restarting the chain, make sure to remove `packages/nitro-protocol/hardhat-deployments` when redeploying contracts
 
     ```bash
     rm -rf hardhat-deployments
+    ```
+
+  - Send custom tokens to Bob
+
+    ```bash
+    # Export variables for token address and Bob address
+    export ASSET_ADDRESS="<Custom token Address>"
+    export B_CHAIN_ADDRESS="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+
+    # Send tokens to Bob
+    yarn hardhat transfer --contract $ASSET_ADDRESS --to $B_CHAIN_ADDRESS --amount 1000 --network geth
     ```
 
   - Change directory to root directory
@@ -107,45 +140,64 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     cd ../
     ```
 
-- Run go-nitro node for Alice:
+- Install nitro-rpc-client package globally:
 
-  - Load contract addresses from environment file to current shell session
+  ```bash
+  # In go-nitro
+  npm install -g ./packages/nitro-rpc-client
+
+  # Confirm global installation by running
+  nitro-rpc-client --version
+  ```
+
+- Run go-nitro node for Alice in new terminal:
+
+  - Create Alice node config
 
     ```bash
-    source packages/nitro-protocol/hardhat-deployments/localhost/.contracts.env
+    cat <<EOF > cmd/test-configs/alice.toml
+    usedurablestore = true
+    msgport = 3006
+    rpcport = 4006
+    pk = "2d999770f7b5d49b694080f987b82bbc9fc9ac2b4dcc10b0f8aba7d700f69c6d"
+    chainpk = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+    chainurl = "ws://127.0.0.1:8545"
+    EOF
     ```
 
-  - Run node for Alice
+  - Start Alice node
 
-    ```bash
-    export NITRO_CHAIN_URL=ws://127.0.0.1:8545
-    export ALICE_ADDRESS=0xAAA6628Ec44A8a742987EF3A114dDFE2D4F7aDCE
-    export ALICE_PK=2d999770f7b5d49b694080f987b82bbc9fc9ac2b4dcc10b0f8aba7d700f69c6d
-    export ALICE_CHAIN_PK=ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+    ```
+    source ./packages/nitro-protocol/hardhat-deployments/geth/.contracts.env
 
-    go run . -chainurl ${NITRO_CHAIN_URL} -msgport 3006 -rpcport 4006 -pk $ALICE_PK -chainpk $ALICE_CHAIN_PK -naaddress $NA_ADDRESS -vpaaddress $VPA_ADDRESS -caaddress $CA_ADDRESS -tlskeyfilepath ./tls/statechannels.org_key.pem -tlscertfilepath ./tls/statechannels.org.pem
+    ./go-nitro -config cmd/test-configs/alice.toml -naaddress $NA_ADDRESS -vpaaddress $VPA_ADDRESS -caaddress $CA_ADDRESS
     ```
 
 - Run go-nitro node for Bob in new terminal:
 
-  - Load contract addresses from environment file to current shell session
+  - Create Bob node config
 
     ```bash
-    source packages/nitro-protocol/hardhat-deployments/localhost/.contracts.env
+    cat <<EOF > cmd/test-configs/bob.toml
+    usedurablestore = true
+    msgport = 3007
+    rpcport = 4007
+    pk = "0279651921cd800ac560c21ceea27aab0107b67daf436cdd25ce84cad30159b4"
+    chainpk = "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+    chainurl = "ws://127.0.0.1:8545"
+    bootpeers = "/ip4/127.0.0.1/tcp/3006/p2p/16Uiu2HAmSjXJqsyBJgcBUU2HQmykxGseafSatbpq5471XmuaUqyv"
+    EOF
     ```
 
-  - Run node for Bob
+  - Start Bob node
 
-    ```bash
-    export NITRO_CHAIN_URL=ws://127.0.0.1:8545
-    export BOB_ADDRESS=0xBBB676f9cFF8D242e9eaC39D063848807d3D1D94
-    export BOB_PK=0279651921cd800ac560c21ceea27aab0107b67daf436cdd25ce84cad30159b4
-    export BOB_CHAIN_PK=59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+    ```
+    source ./packages/nitro-protocol/hardhat-deployments/geth/.contracts.env
 
-    go run . -chainurl ${NITRO_CHAIN_URL} -msgport 3007 -rpcport 4007 -pk $BOB_PK -chainpk $BOB_CHAIN_PK -naaddress $NA_ADDRESS -vpaaddress $VPA_ADDRESS -caaddress $CA_ADDRESS  -bootpeers "/ip4/127.0.0.1/tcp/3006/p2p/16Uiu2HAmSjXJqsyBJgcBUU2HQmykxGseafSatbpq5471XmuaUqyv" -tlskeyfilepath ./tls/statechannels.org_key.pem -tlscertfilepath ./tls/statechannels.org.pem
+    ./go-nitro -config cmd/test-configs/bob.toml -naaddress $NA_ADDRESS -vpaaddress $VPA_ADDRESS -caaddress $CA_ADDRESS
     ```
 
-    Note: Alice's P2P multiaddr is provided as bootpeer to Bob
+### Steps to demo payment between two go-nitro nodes
 
 - In a new terminal change directory to `packages/nitro-rpc-client`
 
@@ -425,6 +477,87 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 
   ```bash
   Result: 1000050
+  ```
+
+### Steps to demo swap between two go-nitro nodes
+
+- In a new terminal, set `NODE_EXTRA_CA_CERTS` environment variable to the path of a root certificate file (rootCA.pem) generated by mkcert
+
+  ```bash
+  export NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem"
+  ```
+
+- Set environment variables
+
+  ```bash
+  export BOB_ADDRESS="0xBBB676f9cFF8D242e9eaC39D063848807d3D1D94"
+  export ASSET_ADDRESS=<deployed custom token address>
+  ```
+
+- Create a multi assets ledger channel
+
+  ```bash
+  nitro-rpc-client direct-fund $BOB_ADDRESS --asset "0x0000000000000000000000000000000000000000:1001,1002" --asset "$ASSET_ADDRESS:501,502" -p 4006
+
+  export LEDGER_CHANNEL_ID=<ledger-channel-id>
+  ```
+
+- Check ledger channel info
+
+  ```bash
+  nitro-rpc-client get-ledger-channel $LEDGER_CHANNEL_ID -p 4006
+  ```
+
+- Create a multi assets swap channel
+
+  ```bash
+  nitro-rpc-client swap-fund $BOB_ADDRESS --asset "0x0000000000000000000000000000000000000000:200,200" --asset "$ASSET_ADDRESS:100,100" -p 4006
+
+  export SWAP_CHANNEL_ID=<swap-channel-id>
+  ```
+
+- Check swap channel info
+
+  ```bash
+  nitro-rpc-client get-swap-channel $SWAP_CHANNEL_ID -p 4006
+  ```
+
+- Conduct swap through swap channel
+
+  ```bash
+  nitro-rpc-client swap $SWAP_CHANNEL_ID  --AssetIn "0x0000000000000000000000000000000000000000:20" --AssetOut "$ASSET_ADDRESS:10" -p 4006
+  ```
+
+- Check current swap in process
+
+  ```bash
+  nitro-rpc-client get-current-swap $SWAP_CHANNEL_ID  -p 4006
+  ```
+
+<!-- TODO: CLI step to accept/reject  -->
+
+- Check swap channel info
+
+  ```bash
+  nitro-rpc-client get-swap-channel $SWAP_CHANNEL_ID -p 4006
+  ```
+
+- Defund the swap channel
+
+  ```bash
+  nitro-rpc-client swap-defund $SWAP_CHANNEL_ID -p 4006
+  ```
+
+- Defund the ledger channel
+
+  ```bash
+  nitro-rpc-client direct-defund $LEDGER_CHANNEL_ID -p 4006
+  ```
+
+- Check ledger channel info
+
+  ```bash
+  nitro-rpc-client get-ledger-channel $LEDGER_CHANNEL_ID -p 4006
   ```
 
 ## Steps to retry dropped txs

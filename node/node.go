@@ -242,6 +242,15 @@ func (n *Node) SwapAssets(channelId types.Destination, tokenIn common.Address, t
 		return swap.ObjectiveResponse{}, fmt.Errorf("no swap channel found for channel ID %v", channelId)
 	}
 
+	s, err := n.store.GetCurrentSwapByChannelId(channelId)
+	if err != nil {
+		return swap.ObjectiveResponse{}, err
+	}
+
+	if !s.ChannelId.IsZero() {
+		return swap.ObjectiveResponse{}, fmt.Errorf("swap objective exists for the given channel %+v", channelId)
+	}
+
 	objectiveRequest := swap.NewObjectiveRequest(channelId, tokenIn, tokenOut, amountIn, amountOut, swapChannel.FixedPart, rand.Uint64())
 
 	// Send the event to the engine

@@ -858,5 +858,31 @@ func (ds *DurableStore) DestroyObjective(id protocols.ObjectiveId) error {
 
 func (ds *DurableStore) GetCurrentSwapByChannelId(id types.Destination) (channel.Swap, error) {
 	var currentSwap channel.Swap
+	err := ds.objectives.View(func(tx *buntdb.Tx) error {
+		err := tx.Ascend("", func(key, objJSON string) bool {
+			objId := protocols.ObjectiveId(key)
+			if !swap.IsSwapObjective(objId) {
+				return true // objective not found, continue looking
+			}
+
+			var obj swap.Objective
+			err := json.Unmarshal([]byte(objJSON), &obj)
+			if err != nil {
+				return true // objective not found, continue looking
+			}
+
+			if obj.C.Id == id && obj.Status == protocols.Approved {
+				currentSwap = obj.Swap
+				return false // objective found, stop iteration
+			}
+
+			return true // objective not found: continue looking
+		})
+		return err
+	})
+	if err != nil {
+		return channel.Swap{}, err
+	}
+
 	return currentSwap, nil
 }

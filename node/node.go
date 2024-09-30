@@ -468,6 +468,10 @@ func (n *Node) CounterChallenge(id types.Destination, action types.CounterChalle
 	n.engine.CounterChallengeRequestsFromAPI <- engine.CounterChallengeRequest{ChannelId: id, Action: action, Payload: payload}
 }
 
+func (n *Node) ConfirmSwap(objectiveId protocols.ObjectiveId, action types.SwapStatus) {
+	n.engine.ConfirmSwapRequestFromAPI <- types.ConfirmSwapRequest{ObjectiveId: string(objectiveId), Action: action}
+}
+
 func (n *Node) RetryObjectiveTx(objectiveId protocols.ObjectiveId) {
 	n.engine.RetryObjectiveTxRequestFromAPI <- types.RetryObjectiveTxRequest{ObjectiveId: string(objectiveId)}
 }

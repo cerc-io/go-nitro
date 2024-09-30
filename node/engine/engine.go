@@ -80,6 +80,7 @@ type Engine struct {
 	PaymentRequestsFromAPI          chan PaymentRequest
 	CounterChallengeRequestsFromAPI chan CounterChallengeRequest
 	RetryObjectiveTxRequestFromAPI  chan types.RetryObjectiveTxRequest
+	ConfirmSwapRequestFromAPI       chan types.ConfirmSwapRequest
 
 	fromChain             <-chan chainservice.Event
 	droppedEventFromChain <-chan protocols.DroppedEventInfo
@@ -165,6 +166,7 @@ func New(vm *payments.VoucherManager, msg messageservice.MessageService, chain c
 	e.PaymentRequestsFromAPI = make(chan PaymentRequest)
 	e.CounterChallengeRequestsFromAPI = make(chan CounterChallengeRequest)
 	e.RetryObjectiveTxRequestFromAPI = make(chan types.RetryObjectiveTxRequest)
+	e.ConfirmSwapRequestFromAPI = make(chan types.ConfirmSwapRequest)
 
 	e.fromChain = chain.EventEngineFeed()
 	e.droppedEventFromChain = chain.DroppedEventEngineFeed()
@@ -236,6 +238,8 @@ func (e *Engine) run(ctx context.Context) {
 			err = e.handleCounterChallengeRequest(counterChallengeReq)
 		case retryObjectiveTxReq := <-e.RetryObjectiveTxRequestFromAPI:
 			err = e.handleRetryObjectiveTxRequest(retryObjectiveTxReq)
+		case confirmSwapReq := <-e.ConfirmSwapRequestFromAPI:
+			err = e.handleConfirmSwapRequest(confirmSwapReq)
 		case <-blockTicker:
 			blockNum := e.chain.GetLastConfirmedBlockNum()
 			err = e.store.SetLastBlockNumSeen(blockNum)
@@ -851,6 +855,26 @@ func (e *Engine) handleCounterChallengeRequest(request CounterChallengeRequest) 
 	}
 
 	_, err := e.attemptProgress(obj)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (e *Engine) handleConfirmSwapRequest(request types.ConfirmSwapRequest) error {
+	objective, err := e.store.GetObjectiveById(protocols.ObjectiveId(request.ObjectiveId))
+	if err != nil {
+		return err
+	}
+	o, ok := objective.(*swap.Objective)
+	if !ok {
+		return fmt.Errorf("not a swap objective")
+	}
+
+	o.SwapStatus = request.Action
+
+	_, err = e.attemptProgress(o)
 	if err != nil {
 		return err
 	}

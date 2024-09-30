@@ -21,6 +21,7 @@ const (
 )
 
 const (
+	WaitingForConsensus    protocols.WaitingFor = "WaitingForConsensus"
 	WaitingForConfirmation protocols.WaitingFor = "WaitingForConfirmation"
 	WaitingForNothing      protocols.WaitingFor = "WaitingForNothing" // Finished
 )
@@ -34,11 +35,11 @@ type SwapPayload struct {
 
 // Objective is a cache of data computed by reading from the store. It stores (potentially) infinite data.
 type Objective struct {
-	Status    protocols.ObjectiveStatus
-	C         *channel.SwapChannel
-	Swap      channel.Swap
-	StateSigs map[uint]state.Signature
-
+	Status     protocols.ObjectiveStatus
+	C          *channel.SwapChannel
+	Swap       channel.Swap
+	StateSigs  map[uint]state.Signature
+	SwapStatus types.SwapStatus
 	// Index of participant who initiated the swap in participants array
 	SwapperIndex uint
 }
@@ -163,28 +164,38 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	// TODO: Both participant checks whether swap operation is valid
 
 	// TODO: Swapee check whether to accept or reject
+	if updated.SwapperIndex != o.C.MyIndex && updated.SwapStatus != types.Accepted {
+		if updated.SwapStatus == types.PendingConfirmation {
+			return &updated, sideEffects, WaitingForConfirmation, nil
+		} else {
+			// Rejected
+			updated.Status = protocols.Completed
+			fmt.Println("Swap rejected")
+			return &updated, sideEffects, WaitingForNothing, nil
+		}
+	}
 
 	// Verify if I have signed it
 	// If not, sign it and send it to the counterparty
 	if !updated.HasSignatureForParticipant() {
 		sig, err := updated.Swap.Sign(*secretKey)
 		if err != nil {
-			return &updated, sideEffects, WaitingForConfirmation, err
+			return &updated, sideEffects, WaitingForConsensus, err
 		}
 
 		err = updated.Swap.AddSignature(sig, updated.C.MyIndex)
 		if err != nil {
-			return &updated, sideEffects, WaitingForConfirmation, err
+			return &updated, sideEffects, WaitingForConsensus, err
 		}
 
 		updatedState, err := updated.GetUpdatedSwapState()
 		if err != nil {
-			return &updated, protocols.SideEffects{}, WaitingForConfirmation, fmt.Errorf("error creating updated swap channel state %w", err)
+			return &updated, protocols.SideEffects{}, WaitingForConsensus, fmt.Errorf("error creating updated swap channel state %w", err)
 		}
 
 		stateSig, err := updatedState.Sign(*secretKey)
 		if err != nil {
-			return &updated, sideEffects, WaitingForConfirmation, fmt.Errorf("error signing swap channel state %w", err)
+			return &updated, sideEffects, WaitingForConsensus, fmt.Errorf("error signing swap channel state %w", err)
 		}
 
 		updated.StateSigs[updated.C.MyIndex] = stateSig
@@ -199,7 +210,7 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 			o.C.Participants[1-o.C.MyIndex],
 		)
 		if err != nil {
-			return &updated, protocols.SideEffects{}, WaitingForConfirmation, fmt.Errorf("could not create payload message %w", err)
+			return &updated, protocols.SideEffects{}, WaitingForConsensus, fmt.Errorf("could not create payload message %w", err)
 		}
 
 		sideEffects.MessagesToSend = append(sideEffects.MessagesToSend, messages...)
@@ -207,13 +218,13 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 
 	// Wait if all signatures are not available
 	if !updated.HasAllSignatures() {
-		return &updated, sideEffects, WaitingForConfirmation, nil
+		return &updated, sideEffects, WaitingForConsensus, nil
 	}
 
 	// If all signatures are available, update the swap channel according to the swap
 	err := updated.UpdateSwapChannelState()
 	if err != nil {
-		return &updated, protocols.SideEffects{}, WaitingForConfirmation, fmt.Errorf("error updating swap channel state %w", err)
+		return &updated, protocols.SideEffects{}, WaitingForConsensus, fmt.Errorf("error updating swap channel state %w", err)
 	}
 
 	// Add swap to swap channel
@@ -290,6 +301,7 @@ func (o *Objective) clone() Objective {
 	clone := Objective{}
 	clone.Status = o.Status
 	clone.SwapperIndex = o.SwapperIndex
+	clone.SwapStatus = o.SwapStatus
 	clone.C = o.C.Clone()
 	clone.Swap = o.Swap.Clone()
 
@@ -328,11 +340,16 @@ func (o *Objective) FindParticipantIndex(address common.Address) (int, error) {
 	return -1, fmt.Errorf("participant not found")
 }
 
+func (o *Objective) AcceptSwap() {
+	o.SwapStatus = types.Accepted
+}
+
 type jsonObjective struct {
 	Status                      protocols.ObjectiveStatus
 	C                           types.Destination
 	Swap                        channel.Swap
 	SwapperIndex                uint
+	SwapStatus                  types.SwapStatus
 	Nonce                       uint64
 	StateSigs                   map[uint]state.Signature
 	ProcessedSwapsInSwapChannel []types.Destination
@@ -349,6 +366,7 @@ func (o Objective) MarshalJSON() ([]byte, error) {
 		Status:                      o.Status,
 		C:                           o.C.Id,
 		Swap:                        o.Swap,
+		SwapStatus:                  o.SwapStatus,
 		SwapperIndex:                o.SwapperIndex,
 		StateSigs:                   o.StateSigs,
 		ProcessedSwapsInSwapChannel: swaps,
@@ -368,6 +386,7 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 
 	o.Status = jsonSo.Status
 	o.SwapperIndex = jsonSo.SwapperIndex
+	o.SwapStatus = jsonSo.SwapStatus
 	o.Swap = jsonSo.Swap
 	o.StateSigs = jsonSo.StateSigs
 

@@ -812,9 +812,9 @@ yargs(hideBin(process.argv))
         isSecure
       );
 
+      // TODO: Generate JSON schema for get current swap
       const currentSwap = await rpcClient.GetCurrentSwap(yargs.channelId);
-
-      console.log(currentSwap);
+      console.log(JSON.parse(currentSwap));
       await rpcClient.Close();
       process.exit(0);
     }

@@ -9,6 +9,7 @@ import {
   PaymentPayload,
   ReceiveVoucherResult,
   SwapAssetsData,
+  SwapChannelInfo,
   SwapPayload,
   Voucher,
 } from "./types";
@@ -167,7 +168,7 @@ interface swapAPI {
    * @param channelId - The ID of the channel to query for
    * @returns A JSON object containing the channel's information
    */
-  GetSwapChannel(channelId: string): Promise<string>;
+  GetSwapChannel(channelId: string): Promise<SwapChannelInfo>;
   /**
    * CloseSwapChannel defunds a swap channel.
    *

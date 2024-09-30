@@ -12,6 +12,7 @@ import {
   RPCNotification,
   RPCRequestAndResponses,
   RequestMethod,
+  SwapChannelInfo,
 } from "./types";
 
 const ajv = new Ajv();
@@ -256,11 +257,16 @@ export function getAndValidateResult<T extends RequestMethod>(
     case "close_payment_channel":
     case "close_swap_channel":
     case "get_current_swap":
-    case "get_swap_channel":
       return validateAndConvertResult(
         stringSchema,
         result,
         (result: StringSchemaType) => result
+      );
+    case "get_swap_channel":
+      return validateAndConvertResult(
+        stringSchema,
+        result,
+        convertSwapChannelInfoBalances
       );
     case "get_ledger_channel":
       return validateAndConvertResult(
@@ -427,6 +433,21 @@ function convertToInternalLedgerChannelType(
     },
   };
 }
+
+export const convertSwapChannelInfoBalances = (
+  result: string
+): SwapChannelInfo => {
+  const swapChannelInfo: SwapChannelInfo = JSON.parse(result);
+  const modifiedSwapChannelInfo: SwapChannelInfo = {
+    ...swapChannelInfo,
+    Balances: swapChannelInfo.Balances.map((balance) => ({
+      ...balance,
+      MyBalance: parseInt(balance.MyBalance, 16).toString(),
+      TheirBalance: parseInt(balance.TheirBalance, 16).toString(),
+    })),
+  };
+  return modifiedSwapChannelInfo;
+};
 
 function convertToCounterChallengeResultType(
   result: CounterChallengeSchemaType

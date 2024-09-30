@@ -96,6 +96,20 @@ export type CounterChallengeResult = {
   Action: keyof typeof CounterChallengeAction;
 };
 
+export interface Balance {
+  AssetAddress: string;
+  Me: string;
+  Them: string;
+  MyBalance: string;
+  TheirBalance: string;
+}
+
+export interface SwapChannelInfo {
+  ID: string;
+  Status: string;
+  Balances: Balance[];
+}
+
 export type Voucher = {
   ChannelId: string;
   // todo: this should be a bigint
@@ -276,7 +290,7 @@ export type GetNodeInfoRequest = JsonRpcRequest<
  */
 export type GetAuthTokenResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelResponse = JsonRpcResponse<PaymentChannelInfo>;
-export type GetSwapChannelResponse = JsonRpcResponse<string>;
+export type GetSwapChannelResponse = JsonRpcResponse<SwapChannelInfo>;
 export type GetVoucherResponse = JsonRpcResponse<Voucher>;
 export type GetCurrentSwapResponse = JsonRpcResponse<string>;
 export type PaymentResponse = JsonRpcResponse<PaymentPayload>;
@@ -455,12 +469,6 @@ export type PaymentChannelInfo = {
   ID: string;
   Status: ChannelStatus;
   Balance: PaymentChannelBalance;
-};
-
-export type SwapChannelInfo = {
-  ID: string;
-  Status: ChannelStatus;
-  Balances: SwapChannelBalance[];
 };
 
 export type Outcome = SingleAssetOutcome[];

@@ -216,7 +216,7 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 			})
 		case serde.ConfirmSwapRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.ConfirmSwapRequest) (serde.ConfirmSwapRequest, error) {
-				err := nrs.node.ConfirmSwap(req.ObjectiveId, req.Action)
+				err := nrs.node.ConfirmSwap(req.SwapId, req.Action)
 				return req, err
 			})
 		case serde.GetPaymentChannelRequestMethod:

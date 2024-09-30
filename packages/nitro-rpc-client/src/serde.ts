@@ -60,7 +60,7 @@ type CounterChallengeSchemaType = JTDDataType<typeof counterChallengeSchema>;
 
 const confirmSwapSchema = {
   properties: {
-    ObjectiveId: { type: "string" },
+    SwapId: { type: "string" },
     Action: { type: "int32" },
   },
 } as const;
@@ -464,7 +464,7 @@ function convertToConfirmSwapResultType(
   result: ConfirmSwapSchemaType
 ): ConfirmSwapResult {
   return {
-    ObjectiveId: result.ObjectiveId,
+    SwapId: result.SwapId,
     Action: ConfirmSwapAction[result.Action] as keyof typeof ConfirmSwapAction,
   };
 }

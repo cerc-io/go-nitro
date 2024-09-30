@@ -95,8 +95,8 @@ type SwapRequest struct {
 }
 
 type ConfirmSwapRequest struct {
-	ObjectiveId protocols.ObjectiveId
-	Action      types.SwapStatus
+	SwapId types.Destination
+	Action types.SwapStatus
 }
 
 type MirrorBridgedDefundRequest struct {

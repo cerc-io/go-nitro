@@ -864,12 +864,12 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "confirm-swap <objectiveId> <action>",
+    "confirm-swap <SwapId> <action>",
     "Confirm the received swap",
     (yargsBuilder) => {
       return yargsBuilder
-        .positional("objectiveId", {
-          describe: "The objective Id of swap",
+        .positional("SwapId", {
+          describe: "The Id of swap",
           type: "string",
           demandOption: true,
         })
@@ -892,7 +892,7 @@ yargs(hideBin(process.argv))
       if (yargs.n) logOutChannelUpdates(rpcClient);
 
       const response = await rpcClient.ConfirmSwap(
-        yargs.objectiveId,
+        yargs.SwapId,
         ConfirmSwapAction[yargs.action as keyof typeof ConfirmSwapAction]
       );
 

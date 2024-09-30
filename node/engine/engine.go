@@ -863,7 +863,7 @@ func (e *Engine) handleCounterChallengeRequest(request CounterChallengeRequest) 
 }
 
 func (e *Engine) handleConfirmSwapRequest(request types.ConfirmSwapRequest) error {
-	objective, err := e.store.GetObjectiveById(protocols.ObjectiveId(request.ObjectiveId))
+	objective, err := e.store.GetObjectiveById(protocols.ObjectiveId(swap.ObjectivePrefix + request.SwapId.String()))
 	if err != nil {
 		return err
 	}

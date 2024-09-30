@@ -42,6 +42,7 @@ type Store interface {
 	GetLastBlockNumSeen() (uint64, error)
 	SetLastBlockNumSeen(uint64) error
 	GetCurrentSwapByChannelId(id types.Destination) (channel.Swap, error)
+	GetSwapById(id types.Destination) (channel.Swap, error)
 
 	ConsensusChannelStore
 	payments.VoucherStore

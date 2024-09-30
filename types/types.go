@@ -53,8 +53,8 @@ const (
 )
 
 type ConfirmSwapRequest struct {
-	ObjectiveId string
-	Action      SwapStatus
+	SwapId Destination
+	Action SwapStatus
 }
 
 type NodeInfo struct {

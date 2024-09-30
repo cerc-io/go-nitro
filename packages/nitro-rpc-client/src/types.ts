@@ -71,12 +71,12 @@ export enum ConfirmSwapAction {
 }
 
 export type ConfirmSwapResult = {
-  ObjectiveId: string;
+  SwapId: string;
   Action: keyof typeof ConfirmSwapAction;
 };
 
 export type ConfirmSwapPayload = {
-  ObjectiveId: string;
+  SwapId: string;
   Action: ConfirmSwapAction;
 };
 

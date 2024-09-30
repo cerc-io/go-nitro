@@ -294,11 +294,11 @@ export class NitroRpcClient implements RpcClientApi {
   }
 
   public async ConfirmSwap(
-    objectiveId: string,
+    swapId: string,
     action: ConfirmSwapAction
   ): Promise<ConfirmSwapResult> {
     const payload = {
-      ObjectiveId: objectiveId,
+      SwapId: swapId,
       Action: action,
     };
 

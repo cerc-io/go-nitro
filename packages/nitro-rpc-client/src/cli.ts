@@ -793,6 +793,33 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "get-current-swap <channelId>",
+    "Gets the current processed swap of this swap channel",
+    (yargsBuilder) => {
+      return yargsBuilder.positional("channelId", {
+        describe: "The channel ID of the payment channel",
+        type: "string",
+        demandOption: true,
+      });
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+
+      const currentSwap = await rpcClient.GetCurrentSwap(yargs.channelId);
+
+      console.log(currentSwap);
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
     "swap <channelId>",
     "Swaps assets on a given swap channel",
     (yargsBuilder) => {

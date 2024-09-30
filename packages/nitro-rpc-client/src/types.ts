@@ -113,6 +113,9 @@ export type ReceiveVoucherResult = {
   Total: bigint;
   Delta: bigint;
 };
+export type GetCurrentSwap = {
+  Id: string;
+};
 
 /**
  * RPC Requests
@@ -181,6 +184,10 @@ export type GetSwapChannelRequest = JsonRpcRequest<
 export type GetVoucherRequest = JsonRpcRequest<
   "get_voucher",
   GetChannelRequest
+>;
+export type GetCurrentSwapRequest = JsonRpcRequest<
+  "get_current_swap",
+  GetCurrentSwap
 >;
 export type GetPaymentChannelsByLedgerRequest = JsonRpcRequest<
   "get_payment_channels_by_ledger",
@@ -251,6 +258,7 @@ export type GetAuthTokenResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelResponse = JsonRpcResponse<PaymentChannelInfo>;
 export type GetSwapChannelResponse = JsonRpcResponse<string>;
 export type GetVoucherResponse = JsonRpcResponse<Voucher>;
+export type GetCurrentSwapResponse = JsonRpcResponse<string>;
 export type PaymentResponse = JsonRpcResponse<PaymentPayload>;
 export type SwapResponse = JsonRpcResponse<SwapPayload>;
 export type CounterChallengeResponse = JsonRpcResponse<CounterChallengeResult>;
@@ -302,6 +310,7 @@ export type RPCRequestAndResponses = {
   get_payment_channel: [GetPaymentChannelRequest, GetPaymentChannelResponse];
   get_swap_channel: [GetSwapChannelRequest, GetSwapChannelResponse];
   get_voucher: [GetVoucherRequest, GetVoucherResponse];
+  get_current_swap: [GetCurrentSwapRequest, GetCurrentSwapResponse];
   pay: [PaymentRequest, PaymentResponse];
   swap: [SwapRequest, SwapResponse];
   counter_challenge: [CounterChallengeRequest, CounterChallengeResponse];

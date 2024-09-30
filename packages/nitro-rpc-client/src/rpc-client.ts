@@ -23,6 +23,7 @@ import {
   SwapFundPayload,
   SwapAssetsData,
   SwapPayload,
+  GetCurrentSwap,
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -194,6 +195,13 @@ export class NitroRpcClient implements RpcClientApi {
     const request = generateRequest("swap", payload, this.authToken || "");
     const res = await this.transport.sendRequest<"swap">(request);
     return getAndValidateResult(res, "swap");
+  }
+
+  public async GetCurrentSwap(channelId: string): Promise<string> {
+    const payload: GetCurrentSwap = {
+      Id: channelId,
+    };
+    return this.sendRequest("get_current_swap", payload);
   }
 
   public async CreatePaymentChannel(

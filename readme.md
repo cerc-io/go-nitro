@@ -99,11 +99,11 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     yarn contracts:deploy-geth
 
     # Deploy custom token 1
-    # Note the address of custom token
+    # Note the address of custom token 1
     yarn contracts:deploy-token-geth
 
     # Deploy custom token 2
-    # Note the address of custom token
+    # Note the address of custom token 2
     export TOKEN_NAME="TestToken2"
     yarn contracts:deploy-token-geth
     ```
@@ -117,7 +117,7 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
   - Send custom tokens to Bob
 
     ```bash
-    # Export variables for token address and Bob address
+    # Export variables for token addresses and Bob address
     export ASSET_ADDRESS_1="<Custom token 1 Address>"
     export ASSET_ADDRESS_2="<Custom token 2 Address>"
     export B_CHAIN_ADDRESS="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
@@ -161,7 +161,7 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 
 - Run go-nitro node for Alice in new terminal:
 
-  - Create Alice node config
+  - Create node config for Alice
 
     ```bash
     cat <<EOF > cmd/test-configs/alice.toml
@@ -184,7 +184,7 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 
 - Run go-nitro node for Bob in new terminal:
 
-  - Create Bob node config
+  - Create node config for Bob
 
     ```bash
     cat <<EOF > cmd/test-configs/bob.toml
@@ -508,15 +508,48 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 - Create a multi assets ledger channel
 
   ```bash
-  nitro-rpc-client direct-fund $BOB_ADDRESS --asset "0x0000000000000000000000000000000000000000:1000,1000" --asset "$ASSET_ADDRESS_1:500,500" --asset "$ASSET_ADDRESS_2:500,500" -p 4006
+  nitro-rpc-client direct-fund $BOB_ADDRESS --asset "$ASSET_ADDRESS_1:500,500" --asset "$ASSET_ADDRESS_2:500,500" -p 4006
 
   export LEDGER_CHANNEL_ID=<ledger-channel-id>
+  ```
+
+  Example ouput
+
+  ```bash
+  Objective started DirectFunding-0xc7b652e6c0a5e2c1c691597397d44fc0d40a73297f9997062299b102cc8d4e96
+  Channel Open 0xc7b652e6c0a5e2c1c691597397d44fc0d40a73297f9997062299b102cc8d4e96
   ```
 
 - Check ledger channel info
 
   ```bash
   nitro-rpc-client get-ledger-channel $LEDGER_CHANNEL_ID -p 4006
+  ```
+
+  Example output
+
+  ```bash
+  {
+    ID: '0xc7b652e6c0a5e2c1c691597397d44fc0d40a73297f9997062299b102cc8d4e96',
+    Status: 'Open',
+    Balances: [
+      {
+        AssetAddress: '0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9',
+        Me: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+        Them: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+        MyBalance: 500n,
+        TheirBalance: 500n
+      },
+      {
+        AssetAddress: '0xdc64a140aa3e981100a9beca4e685f962f0cf6c9',
+        Me: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+        Them: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+        MyBalance: 500n,
+        TheirBalance: 500n
+      }
+    ],
+    ChannelMode: 'Open'
+  }
   ```
 
 - Create a multi assets swap channel
@@ -527,10 +560,42 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
   export SWAP_CHANNEL_ID=<swap-channel-id>
   ```
 
+  Example output
+
+  ```bash
+  Objective started SwapFund-0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1
+  Objective complete SwapFund-0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1
+  ```
+
 - Check swap channel info
 
   ```bash
   nitro-rpc-client get-swap-channel $SWAP_CHANNEL_ID -p 4006
+  ```
+
+  Example output
+
+  ```bash
+  {
+   ID: '0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1',
+   Status: 'Open',
+   Balances: [
+     {
+       AssetAddress: '0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9',
+       Me: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+       Them: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+       MyBalance: 200n,
+       TheirBalance: 200n
+     },
+     {
+       AssetAddress: '0xdc64a140aa3e981100a9beca4e685f962f0cf6c9',
+       Me: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+       Them: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+       MyBalance: 100n,
+       TheirBalance: 100n
+     }
+   ]
+  }
   ```
 
 - Conduct swap through swap channel
@@ -539,14 +604,50 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
   nitro-rpc-client swap $SWAP_CHANNEL_ID  --AssetIn "$ASSET_ADDRESS_1:20" --AssetOut "$ASSET_ADDRESS_2:10" -p 4006
   ```
 
+  Example ouput
+
+  ```bash
+  {
+   SwapAssetsData: {
+     TokenIn: '0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9',
+     TokenOut: '0xdc64a140aa3e981100a9beca4e685f962f0cf6c9',
+     AmountIn: 20,
+     AmountOut: 10
+   },
+   Channel: '0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1'
+  }
+  ```
+
 - Check pending swap awaiting confirmation for this swap channel
 
   ```bash
   nitro-rpc-client get-pending-swap $SWAP_CHANNEL_ID  -p 4007
-
-  # Get current swap id
-  export SWAP_ID=<swap id>
   ```
+
+  Example ouput
+
+  ```bash
+  {
+   Id: '0xb9e809059a92be1c22339d1e6a6d58b908f4dbd0006c0722793b2eec21475614',
+   ChannelId: '0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1',
+   Exchange: {
+     TokenIn: '0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9',
+     TokenOut: '0xdc64a140aa3e981100a9beca4e685f962f0cf6c9',
+     AmountIn: 20,
+     AmountOut: 10
+   },
+   Sigs: {
+     '0': '0x8cfa6c7c8aec9089fc57b1fe649d64dcd8205905f92b1f6b6b104f64e8967e285d1d751620ef2757287993b6347237e26ab315d31ab98feaf98cd71022d0e4321c'
+   },
+   Nonce: 736609862712516500
+  }
+  ```
+
+  - Set environment variable for swap Id using Id field from the output above
+
+    ```bash
+    export SWAP_ID=<swap id>
+    ```
 
 - Bob decides to accept / reject the incoming swap
 
@@ -554,8 +655,14 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
   # To accept incoming swap
   nitro-rpc-client confirm-swap $SWAP_ID accepted -p 4007
 
+  # Example output
+  # Confirming Swap with accepted
+
   # To reject incoming swap
   nitro-rpc-client confirm-swap $SWAP_ID rejected -p 4007
+
+  # Example output
+  # Confirming Swap with rejected
   ```
 
 - Check swap channel info
@@ -564,10 +671,42 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
   nitro-rpc-client get-swap-channel $SWAP_CHANNEL_ID -p 4007
   ```
 
+  Example output
+
+  ```bash
+  {
+   ID: '0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1',
+   Status: 'Open',
+   Balances: [
+     {
+       AssetAddress: '0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9',
+       Me: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+       Them: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+       MyBalance: 220n,
+       TheirBalance: 180n
+     },
+     {
+       AssetAddress: '0xdc64a140aa3e981100a9beca4e685f962f0cf6c9',
+       Me: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+       Them: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+       MyBalance: 90n,
+       TheirBalance: 110n
+     }
+   ]
+  }
+  ```
+
 - Defund the swap channel
 
   ```bash
   nitro-rpc-client swap-defund $SWAP_CHANNEL_ID -p 4006
+  ```
+
+  Example output
+
+  ```bash
+  Objective started SwapDefund-0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1
+  Objective complete SwapDefund-0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1
   ```
 
 - Defund the ledger channel
@@ -576,10 +715,43 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
   nitro-rpc-client direct-defund $LEDGER_CHANNEL_ID -p 4006
   ```
 
+  Example output
+
+  ```bash
+  Objective started DirectDefunding-0xc7b652e6c0a5e2c1c691597397d44fc0d40a73297f9997062299b102cc8d4e96
+  Objective Complete 0xc7b652e6c0a5e2c1c691597397d44fc0d40a73297f9997062299b102cc8d4e96
+  ```
+
 - Check ledger channel info
 
   ```bash
   nitro-rpc-client get-ledger-channel $LEDGER_CHANNEL_ID -p 4006
+  ```
+
+  Example output
+
+  ```bash
+  {
+   ID: '0xc7b652e6c0a5e2c1c691597397d44fc0d40a73297f9997062299b102cc8d4e96',
+   Status: 'Complete',
+   Balances: [
+     {
+       AssetAddress: '0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9',
+       Me: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+       Them: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+       MyBalance: 480n,
+       TheirBalance: 520n
+     },
+     {
+       AssetAddress: '0xdc64a140aa3e981100a9beca4e685f962f0cf6c9',
+       Me: '0xaaa6628ec44a8a742987ef3a114ddfe2d4f7adce',
+       Them: '0xbbb676f9cff8d242e9eac39d063848807d3d1d94',
+       MyBalance: 510n,
+       TheirBalance: 490n
+     }
+   ],
+   ChannelMode: 'Open'
+  }
   ```
 
 ## Steps to retry dropped txs

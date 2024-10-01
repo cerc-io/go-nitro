@@ -322,8 +322,8 @@ func (ms *MemStore) GetChannelsByAppDefinition(appDef types.Address) ([]*channel
 	return toReturn, nil
 }
 
-func (ms *MemStore) GetCurrentSwapByChannelId(id types.Destination) (channel.Swap, error) {
-	var currentSwap channel.Swap
+func (ms *MemStore) GetPendingSwapByChannelId(id types.Destination) (channel.Swap, error) {
+	var pendingSwap channel.Swap
 	ms.objectives.Range(func(key string, objJSON []byte) bool {
 		objId := protocols.ObjectiveId(key)
 
@@ -337,15 +337,15 @@ func (ms *MemStore) GetCurrentSwapByChannelId(id types.Destination) (channel.Swa
 			return true // objective not found, continue looking
 		}
 
-		if obj.C.Id == id && obj.Status == protocols.Approved {
-			currentSwap = obj.Swap
+		if obj.C.Id == id && obj.SwapStatus == types.PendingConfirmation {
+			pendingSwap = obj.Swap
 			return false // objective found, stop iteration
 		}
 
 		return true // objective not found: continue looking
 	})
 
-	return currentSwap, nil
+	return pendingSwap, nil
 }
 
 // GetChannelsByParticipant returns any channels that include the given participant

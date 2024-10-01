@@ -100,8 +100,8 @@ export interface Balance {
   AssetAddress: string;
   Me: string;
   Them: string;
-  MyBalance: string;
-  TheirBalance: string;
+  MyBalance: string | bigint;
+  TheirBalance: string | bigint;
 }
 
 export interface SwapChannelInfo {
@@ -142,7 +142,7 @@ export type ReceiveVoucherResult = {
   Total: bigint;
   Delta: bigint;
 };
-export type GetCurrentSwap = {
+export type GetPendingSwap = {
   Id: string;
 };
 
@@ -219,9 +219,9 @@ export type GetVoucherRequest = JsonRpcRequest<
   "get_voucher",
   GetChannelRequest
 >;
-export type GetCurrentSwapRequest = JsonRpcRequest<
-  "get_current_swap",
-  GetCurrentSwap
+export type GetPendingSwapRequest = JsonRpcRequest<
+  "get_pending_swap",
+  GetPendingSwap
 >;
 export type GetPaymentChannelsByLedgerRequest = JsonRpcRequest<
   "get_payment_channels_by_ledger",
@@ -292,7 +292,7 @@ export type GetAuthTokenResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelResponse = JsonRpcResponse<PaymentChannelInfo>;
 export type GetSwapChannelResponse = JsonRpcResponse<SwapChannelInfo>;
 export type GetVoucherResponse = JsonRpcResponse<Voucher>;
-export type GetCurrentSwapResponse = JsonRpcResponse<string>;
+export type GetPendingSwapResponse = JsonRpcResponse<string>;
 export type PaymentResponse = JsonRpcResponse<PaymentPayload>;
 export type SwapResponse = JsonRpcResponse<SwapPayload>;
 export type CounterChallengeResponse = JsonRpcResponse<CounterChallengeResult>;
@@ -345,7 +345,7 @@ export type RPCRequestAndResponses = {
   get_payment_channel: [GetPaymentChannelRequest, GetPaymentChannelResponse];
   get_swap_channel: [GetSwapChannelRequest, GetSwapChannelResponse];
   get_voucher: [GetVoucherRequest, GetVoucherResponse];
-  get_current_swap: [GetCurrentSwapRequest, GetCurrentSwapResponse];
+  get_pending_swap: [GetPendingSwapRequest, GetPendingSwapResponse];
   pay: [PaymentRequest, PaymentResponse];
   swap: [SwapRequest, SwapResponse];
   confirm_swap: [ConfirmSwapRequest, ConfirmSwapResponse];

@@ -223,6 +223,7 @@ func (ds *DurableStore) SetObjective(obj protocols.Objective) error {
 				return fmt.Errorf("error setting virtual channel %s from objective %s: %w", ch.Id, obj.Id(), err)
 			}
 
+			// TODO: Remove old swaps from store
 			swaps := ch.Swaps.Values()
 			for _, swap := range swaps {
 				err := ds.SetSwap(swap)
@@ -674,7 +675,6 @@ func (ds *DurableStore) populateChannelData(obj protocols.Objective) error {
 		swaps := queue.NewFixedQueue[channel.Swap](channel.MAX_SWAP_STORAGE_LIMIT)
 
 		processedSwaps := o.C.Swaps.Values()
-		// TODO: Remove old swaps from store
 		for _, swap := range processedSwaps {
 			swap, err := ds.GetSwapById(swap.Id)
 			if err != nil {
@@ -856,8 +856,8 @@ func (ds *DurableStore) DestroyObjective(id protocols.ObjectiveId) error {
 	})
 }
 
-func (ds *DurableStore) GetCurrentSwapByChannelId(id types.Destination) (channel.Swap, error) {
-	var currentSwap channel.Swap
+func (ds *DurableStore) GetPendingSwapByChannelId(id types.Destination) (channel.Swap, error) {
+	var pendingSwap channel.Swap
 	err := ds.objectives.View(func(tx *buntdb.Tx) error {
 		err := tx.Ascend("", func(key, objJSON string) bool {
 			objId := protocols.ObjectiveId(key)
@@ -871,8 +871,8 @@ func (ds *DurableStore) GetCurrentSwapByChannelId(id types.Destination) (channel
 				return true // objective not found, continue looking
 			}
 
-			if obj.C.Id == id && obj.Status == protocols.Approved {
-				currentSwap = obj.Swap
+			if obj.C.Id == id && obj.SwapStatus == types.PendingConfirmation {
+				pendingSwap = obj.Swap
 				return false // objective found, stop iteration
 			}
 
@@ -884,5 +884,5 @@ func (ds *DurableStore) GetCurrentSwapByChannelId(id types.Destination) (channel
 		return channel.Swap{}, err
 	}
 
-	return currentSwap, nil
+	return pendingSwap, nil
 }

@@ -989,8 +989,11 @@ func (e *Engine) attemptProgress(objective protocols.Objective) (outgoing Engine
 	// Probably should have a better check that only adds it to CompletedObjectives if it was completed in this crank
 	if waitingFor == "WaitingForNothing" {
 		outgoing.CompletedObjectives = append(outgoing.CompletedObjectives, crankedObjective)
-		_, ok := crankedObjective.(*swap.Objective)
-		if !ok {
+
+		// Only release the channel if the objective owns one
+		// Swap objective does not own a channel
+		channel := crankedObjective.OwnsChannel()
+		if !channel.IsZero() {
 			err = e.store.ReleaseChannelFromOwnership(crankedObjective.OwnsChannel())
 			if err != nil {
 				return

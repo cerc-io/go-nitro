@@ -182,9 +182,9 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.NoPayloadRequest) (types.NodeInfo, error) {
 				return nrs.node.GetNodeInfo(), nil
 			})
-		case serde.GetCurrentSwapRequestMethod:
+		case serde.GetPendingSwapRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.GetSwapChannelRequest) (string, error) {
-				swap, err := nrs.node.GetCurrentSwapByChannelId(req.Id)
+				swap, err := nrs.node.GetPendingSwapByChannelId(req.Id)
 				if err != nil {
 					return "", err
 				}

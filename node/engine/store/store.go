@@ -41,7 +41,7 @@ type Store interface {
 	ReleaseChannelFromOwnership(types.Destination) error                         // Release channel from being owned by any objective
 	GetLastBlockNumSeen() (uint64, error)
 	SetLastBlockNumSeen(uint64) error
-	GetCurrentSwapByChannelId(id types.Destination) (channel.Swap, error)
+	GetPendingSwapByChannelId(id types.Destination) (channel.Swap, error)
 	GetSwapById(id types.Destination) (channel.Swap, error)
 
 	ConsensusChannelStore

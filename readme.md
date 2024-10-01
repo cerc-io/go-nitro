@@ -539,10 +539,10 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
   nitro-rpc-client swap $SWAP_CHANNEL_ID  --AssetIn "$ASSET_ADDRESS_1:20" --AssetOut "$ASSET_ADDRESS_2:10" -p 4006
   ```
 
-- Check current swap in process
+- Check pending swap awaiting confirmation for this swap channel
 
   ```bash
-  nitro-rpc-client get-current-swap $SWAP_CHANNEL_ID  -p 4007
+  nitro-rpc-client get-pending-swap $SWAP_CHANNEL_ID  -p 4007
 
   # Get current swap id
   export SWAP_ID=<swap id>

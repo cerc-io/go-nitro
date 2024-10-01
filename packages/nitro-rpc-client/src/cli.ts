@@ -793,8 +793,8 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "get-current-swap <channelId>",
-    "Gets the current processed swap of this swap channel",
+    "get-pending-swap <channelId>",
+    "Gets the pending swap awaiting confirmation for this swap channel",
     (yargsBuilder) => {
       return yargsBuilder.positional("channelId", {
         describe: "The channel ID of the payment channel",
@@ -813,8 +813,8 @@ yargs(hideBin(process.argv))
       );
 
       // TODO: Generate JSON schema for get current swap
-      const currentSwap = await rpcClient.GetCurrentSwap(yargs.channelId);
-      console.log(JSON.parse(currentSwap));
+      const pendingSwap = await rpcClient.GetPendingSwap(yargs.channelId);
+      console.log(JSON.parse(pendingSwap));
       await rpcClient.Close();
       process.exit(0);
     }
@@ -897,6 +897,8 @@ yargs(hideBin(process.argv))
       );
 
       console.log(`Confirming Swap with ${response.Action}`);
+
+      // TODO: Wait for objective to complete
       await rpcClient.Close();
       process.exit(0);
     }

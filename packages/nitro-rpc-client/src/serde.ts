@@ -1,6 +1,7 @@
 import Ajv, { JTDDataType } from "ajv/dist/jtd";
 
 import {
+  Balance,
   ChannelMode,
   ChannelStatus,
   ConfirmSwapAction,
@@ -256,7 +257,7 @@ export function getAndValidateResult<T extends RequestMethod>(
     case "get_signed_state":
     case "close_payment_channel":
     case "close_swap_channel":
-    case "get_current_swap":
+    case "get_pending_swap":
       return validateAndConvertResult(
         stringSchema,
         result,
@@ -266,7 +267,7 @@ export function getAndValidateResult<T extends RequestMethod>(
       return validateAndConvertResult(
         stringSchema,
         result,
-        convertSwapChannelInfoBalances
+        convertToSwapChannelInfoType
       );
     case "get_ledger_channel":
       return validateAndConvertResult(
@@ -434,17 +435,16 @@ function convertToInternalLedgerChannelType(
   };
 }
 
-export const convertSwapChannelInfoBalances = (
+export const convertToSwapChannelInfoType = (
   result: string
 ): SwapChannelInfo => {
-  const swapChannelInfo: SwapChannelInfo = JSON.parse(result);
+  const swapChannelInfo = JSON.parse(result);
   const modifiedSwapChannelInfo: SwapChannelInfo = {
     ...swapChannelInfo,
-    Balances: swapChannelInfo.Balances.map((balance) => ({
+    Balances: swapChannelInfo.Balances.map((balance: Balance) => ({
       ...balance,
-      // TODO: Use big int instead of parse int
-      MyBalance: parseInt(balance.MyBalance, 16).toString(),
-      TheirBalance: parseInt(balance.TheirBalance, 16).toString(),
+      MyBalance: BigInt(balance.MyBalance),
+      TheirBalance: BigInt(balance.TheirBalance),
     })),
   };
   return modifiedSwapChannelInfo;

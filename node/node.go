@@ -242,12 +242,12 @@ func (n *Node) SwapAssets(channelId types.Destination, tokenIn common.Address, t
 		return swap.ObjectiveResponse{}, fmt.Errorf("no swap channel found for channel ID %v", channelId)
 	}
 
-	s, err := n.store.GetCurrentSwapByChannelId(channelId)
+	s, err := n.store.GetPendingSwapByChannelId(channelId)
 	if err != nil {
 		return swap.ObjectiveResponse{}, err
 	}
 
-	if !s.ChannelId.IsZero() {
+	if !s.Id.IsZero() {
 		return swap.ObjectiveResponse{}, fmt.Errorf("swap objective exists for the given channel %+v", channelId)
 	}
 
@@ -398,8 +398,8 @@ func (n *Node) GetPaymentChannelsByLedger(ledgerId types.Destination) ([]query.P
 	return query.GetPaymentChannelsByLedger(ledgerId, n.store, n.vm)
 }
 
-func (n *Node) GetCurrentSwapByChannelId(swapChannelId types.Destination) (channel.Swap, error) {
-	return n.store.GetCurrentSwapByChannelId(swapChannelId)
+func (n *Node) GetPendingSwapByChannelId(swapChannelId types.Destination) (channel.Swap, error) {
+	return n.store.GetPendingSwapByChannelId(swapChannelId)
 }
 
 func (n *Node) GetVoucher(id types.Destination) payments.Voucher {

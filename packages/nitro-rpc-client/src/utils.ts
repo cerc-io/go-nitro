@@ -9,7 +9,6 @@ import {
   RequestMethod,
   RPCRequestAndResponses,
   SwapAssetsData,
-  SwapChannelInfo,
 } from "./types";
 
 export const RPC_PATH = "api/v1";
@@ -166,17 +165,3 @@ export function parseSwapAssetsData(
     AmountOut: Number(amountOut),
   };
 }
-
-export const convertSwapChannelInfoBalances = (
-  transaction: SwapChannelInfo
-): SwapChannelInfo => {
-  const modifiedSwapChannelInfo: SwapChannelInfo = {
-    ...transaction,
-    Balances: transaction.Balances.map((balance) => ({
-      ...balance,
-      MyBalance: parseInt(balance.MyBalance, 16).toString(),
-      TheirBalance: parseInt(balance.TheirBalance, 16).toString(),
-    })),
-  };
-  return modifiedSwapChannelInfo;
-};

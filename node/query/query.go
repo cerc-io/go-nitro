@@ -102,33 +102,37 @@ func getLatestSupportedOrPreFund(ledgerChannel *channel.Channel) (state.State, e
 }
 
 // getLedgerBalanceFromState returns the balance of the ledger channel from the given state
-func getLedgerBalanceFromState(latest state.State, myAddress types.Address) (LedgerChannelBalance, error) {
+func getLedgerBalanceFromState(latest state.State, myAddress types.Address) ([]LedgerChannelBalance, error) {
 	// TODO: We assume single asset outcomes
-	outcome := latest.Outcome[0]
-	asset := outcome.Asset
+	var balances []LedgerChannelBalance
 
-	var them types.Address
-	var myBalance, theirBalance *big.Int
+	for _, outcome := range latest.Outcome {
 
-	if latest.Participants[0] == myAddress {
-		them = latest.Participants[1]
-		theirBalance = outcome.Allocations[1].Amount
-		myBalance = outcome.Allocations[0].Amount
-	} else if latest.Participants[1] == myAddress {
-		them = latest.Participants[0]
-		theirBalance = outcome.Allocations[0].Amount
-		myBalance = outcome.Allocations[1].Amount
-	} else {
-		return LedgerChannelBalance{}, fmt.Errorf("could not find my address %v in participants %v", myAddress, latest.Participants)
+		var them types.Address
+		var myBalance, theirBalance *big.Int
+
+		if latest.Participants[0] == myAddress {
+			them = latest.Participants[1]
+			theirBalance = outcome.Allocations[1].Amount
+			myBalance = outcome.Allocations[0].Amount
+		} else if latest.Participants[1] == myAddress {
+			them = latest.Participants[0]
+			theirBalance = outcome.Allocations[0].Amount
+			myBalance = outcome.Allocations[1].Amount
+		} else {
+			return []LedgerChannelBalance{}, fmt.Errorf("could not find my address %v in participants %v", myAddress, latest.Participants)
+		}
+
+		balances = append(balances, LedgerChannelBalance{
+			AssetAddress: outcome.Asset,
+			Me:           myAddress,
+			Them:         them,
+			MyBalance:    (*hexutil.Big)(myBalance),
+			TheirBalance: (*hexutil.Big)(theirBalance),
+		})
 	}
 
-	return LedgerChannelBalance{
-		AssetAddress: asset,
-		Me:           myAddress,
-		Them:         them,
-		MyBalance:    (*hexutil.Big)(myBalance),
-		TheirBalance: (*hexutil.Big)(theirBalance),
-	}, nil
+	return balances, nil
 }
 
 // GetVirtualFundObjective returns the virtual fund objective for the given channel if it exists.
@@ -302,7 +306,7 @@ func GetLedgerChannelInfo(id types.Destination, store store.Store) (LedgerChanne
 
 func ConstructLedgerInfoFromConsensus(con *consensus_channel.ConsensusChannel, myAddress types.Address) (LedgerChannelInfo, error) {
 	latest := con.ConsensusVars().AsState(con.FixedPart())
-	balance, err := getLedgerBalanceFromState(latest, myAddress)
+	balances, err := getLedgerBalanceFromState(latest, myAddress)
 	if err != nil {
 		return LedgerChannelInfo{}, fmt.Errorf("failed to construct ledger channel info from consensus channel: %w", err)
 	}
@@ -310,7 +314,7 @@ func ConstructLedgerInfoFromConsensus(con *consensus_channel.ConsensusChannel, m
 	return LedgerChannelInfo{
 		ID:          con.Id,
 		Status:      Open,
-		Balance:     balance,
+		Balances:    balances,
 		ChannelMode: channel.Open,
 	}, nil
 }
@@ -320,7 +324,7 @@ func ConstructLedgerInfoFromChannel(c *channel.Channel, myAddress types.Address)
 	if err != nil {
 		return LedgerChannelInfo{}, err
 	}
-	balance, err := getLedgerBalanceFromState(latest, myAddress)
+	balances, err := getLedgerBalanceFromState(latest, myAddress)
 	if err != nil {
 		return LedgerChannelInfo{}, fmt.Errorf("failed to construct ledger channel info from channel: %w", err)
 	}
@@ -328,7 +332,7 @@ func ConstructLedgerInfoFromChannel(c *channel.Channel, myAddress types.Address)
 	return LedgerChannelInfo{
 		ID:          c.Id,
 		Status:      getStatusFromChannel(c),
-		Balance:     balance,
+		Balances:    balances,
 		ChannelMode: c.OnChain.ChannelMode,
 	}, nil
 }

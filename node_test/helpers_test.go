@@ -340,13 +340,13 @@ func createLedgerInfo(id types.Destination, outcome outcome.Exit, status query.C
 	return query.LedgerChannelInfo{
 		ID:     id,
 		Status: status,
-		Balance: query.LedgerChannelBalance{
+		Balances: []query.LedgerChannelBalance{{
 			AssetAddress: outcome[0].Asset,
 			Me:           me,
 			Them:         them,
 			MyBalance:    (*hexutil.Big)(myBalance),
 			TheirBalance: (*hexutil.Big)(theirBalance),
-		},
+		}},
 	}
 }
 

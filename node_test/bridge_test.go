@@ -100,8 +100,8 @@ func TestBridgedFund(t *testing.T) {
 		<-nodeAPrime.ObjectiveCompleteChan(virtualDefundResponse)
 
 		ledgerChannelInfo, _ := nodeAPrime.GetLedgerChannel(l2LedgerChannelId)
-		balanceNodeBPrime := ledgerChannelInfo.Balance.TheirBalance.ToInt()
-		balanceNodeAPrime := ledgerChannelInfo.Balance.MyBalance.ToInt()
+		balanceNodeBPrime := ledgerChannelInfo.Balances[0].TheirBalance.ToInt()
+		balanceNodeAPrime := ledgerChannelInfo.Balances[0].MyBalance.ToInt()
 		t.Log("Balance of node BPrime", balanceNodeBPrime, "\nBalance of node APrime", balanceNodeAPrime)
 
 		// APrime's balance is determined by subtracting amount paid from it's ledger deposit, while BPrime's balance is calculated by adding the amount received

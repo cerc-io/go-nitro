@@ -1,6 +1,7 @@
 package query
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/types"
@@ -50,7 +51,7 @@ type SwapChannelInfo struct {
 type LedgerChannelInfo struct {
 	ID          types.Destination
 	Status      ChannelStatus
-	Balance     LedgerChannelBalance
+	Balances    []LedgerChannelBalance
 	ChannelMode channel.ChannelMode
 }
 
@@ -74,7 +75,31 @@ func (lcb LedgerChannelBalance) Equal(other LedgerChannelBalance) bool {
 
 // Equal returns true if the other LedgerChannelInfo is equal to this one
 func (li LedgerChannelInfo) Equal(other LedgerChannelInfo) bool {
-	return li.ID == other.ID && li.Status == other.Status && li.Balance.Equal(other.Balance) && li.ChannelMode == other.ChannelMode
+	areBalancesEqual := true
+	freqMap := make(map[common.Address]int)
+
+	if len(li.Balances) != len(other.Balances) {
+		areBalancesEqual = false
+	}
+
+	for _, balance := range li.Balances {
+		freqMap[balance.AssetAddress]++
+	}
+
+	for _, balance := range other.Balances {
+		if freqMap[balance.AssetAddress] == 0 {
+			areBalancesEqual = false
+		}
+		freqMap[balance.AssetAddress]--
+	}
+
+	for _, count := range freqMap {
+		if count != 0 {
+			areBalancesEqual = false
+		}
+	}
+
+	return li.ID == other.ID && li.Status == other.Status && areBalancesEqual && li.ChannelMode == other.ChannelMode
 }
 
 // Equal returns true if the other PaymentChannelInfo is equal to this one

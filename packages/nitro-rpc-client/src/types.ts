@@ -415,7 +415,7 @@ export type ObjectiveCompleteNotification = JsonRpcNotification<
 export type LedgerChannelInfo = {
   ID: string;
   Status: ChannelStatus;
-  Balance: LedgerChannelBalance;
+  Balances: LedgerChannelBalance[];
   ChannelMode: keyof typeof ChannelMode;
 };
 

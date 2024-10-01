@@ -72,13 +72,15 @@ const ledgerChannelSchema = {
     ID: { type: "string" },
     Status: { type: "string" },
     ChannelMode: { type: "int32" },
-    Balance: {
-      properties: {
-        AssetAddress: { type: "string" },
-        Them: { type: "string" },
-        Me: { type: "string" },
-        MyBalance: { type: "string" },
-        TheirBalance: { type: "string" },
+    Balances: {
+      elements: {
+        properties: {
+          AssetAddress: { type: "string" },
+          Them: { type: "string" },
+          Me: { type: "string" },
+          MyBalance: { type: "string" },
+          TheirBalance: { type: "string" },
+        },
       },
     },
   },
@@ -365,8 +367,8 @@ export function getAndValidateNotification<T extends RPCNotification["method"]>(
         data as PaymentChannelSchemaType
       );
     case "ledger_channel_updated":
-      return convertToInternalPaymentChannelType(
-        data as PaymentChannelSchemaType
+      return convertToInternalLedgerChannelType(
+        data as LedgerChannelSchemaType
       );
     case "objective_completed":
       return data as string;
@@ -427,11 +429,11 @@ function convertToInternalLedgerChannelType(
     ...result,
     Status: result.Status as ChannelStatus,
     ChannelMode: ChannelMode[result.ChannelMode] as keyof typeof ChannelMode,
-    Balance: {
-      ...result.Balance,
-      TheirBalance: BigInt(result.Balance.TheirBalance),
-      MyBalance: BigInt(result.Balance.MyBalance),
-    },
+    Balances: result.Balances.map((balance) => ({
+      ...balance,
+      MyBalance: BigInt(balance.MyBalance ?? 0),
+      TheirBalance: BigInt(balance.TheirBalance ?? 0),
+    })),
   };
 }
 

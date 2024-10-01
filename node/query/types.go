@@ -1,7 +1,6 @@
 package query
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/types"
@@ -76,25 +75,13 @@ func (lcb LedgerChannelBalance) Equal(other LedgerChannelBalance) bool {
 // Equal returns true if the other LedgerChannelInfo is equal to this one
 func (li LedgerChannelInfo) Equal(other LedgerChannelInfo) bool {
 	areBalancesEqual := true
-	freqMap := make(map[common.Address]int)
 
 	if len(li.Balances) != len(other.Balances) {
 		areBalancesEqual = false
 	}
 
-	for _, balance := range li.Balances {
-		freqMap[balance.AssetAddress]++
-	}
-
-	for _, balance := range other.Balances {
-		if freqMap[balance.AssetAddress] == 0 {
-			areBalancesEqual = false
-		}
-		freqMap[balance.AssetAddress]--
-	}
-
-	for _, count := range freqMap {
-		if count != 0 {
+	for i, balance := range li.Balances {
+		if !balance.Equal(other.Balances[i]) {
 			areBalancesEqual = false
 		}
 	}

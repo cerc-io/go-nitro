@@ -107,7 +107,6 @@ func getLedgerBalanceFromState(latest state.State, myAddress types.Address) ([]L
 	var balances []LedgerChannelBalance
 
 	for _, outcome := range latest.Outcome {
-
 		var them types.Address
 		var myBalance, theirBalance *big.Int
 

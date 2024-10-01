@@ -21,7 +21,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     ? hre.ethers.utils.parseUnits(process.env.INITIAL_TOKEN_SUPPLY, 18)
     : DEFAULT_INITIAL_TOKEN_SUPPLY;
 
-  await deploy('Token', {
+  await deploy(name, {
+    contract: "Token",
     from: deployer,
     log: true,
     args: [name, symbol, deployer, initialSupply],

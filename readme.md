@@ -89,7 +89,7 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     export DISABLE_DETERMINISTIC_DEPLOYMENT=true
 
     # variables for token name, token symbol and initial supply
-    export TOKEN_NAME="TestToken"
+    export TOKEN_NAME="TestToken1"
     export TOKEN_SYMBOL="TT"
 
     # Note: Token supply denotes actual number of tokens and not the supply in Wei
@@ -102,9 +102,9 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     # Note the address of custom token
     yarn contracts:deploy-token-geth
 
-    <!-- TODO: Figure out how to deploy multiple token -->
     # Deploy custom token 2
     # Note the address of custom token
+    export TOKEN_NAME="TestToken2"
     yarn contracts:deploy-token-geth
     ```
 
@@ -174,7 +174,7 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     EOF
     ```
 
-  - Start Alice node
+  - Start node for Alice
 
     ```
     source ./packages/nitro-protocol/hardhat-deployments/geth/.contracts.env
@@ -198,7 +198,7 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
     EOF
     ```
 
-  - Start Bob node
+  - Start node for Bob
 
     ```
     source ./packages/nitro-protocol/hardhat-deployments/geth/.contracts.env

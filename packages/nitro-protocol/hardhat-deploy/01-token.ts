@@ -22,7 +22,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     : DEFAULT_INITIAL_TOKEN_SUPPLY;
 
   await deploy(name, {
-    contract: "Token",
+    contract: 'Token',
     from: deployer,
     log: true,
     args: [name, symbol, deployer, initialSupply],

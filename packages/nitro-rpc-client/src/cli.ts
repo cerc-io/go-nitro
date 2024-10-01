@@ -874,12 +874,11 @@ yargs(hideBin(process.argv))
     "swap-accept <SwapId>",
     "Accept the received swap",
     (yargsBuilder) => {
-      return yargsBuilder
-        .positional("SwapId", {
-          describe: "The Id of swap",
-          type: "string",
-          demandOption: true,
-        })
+      return yargsBuilder.positional("SwapId", {
+        describe: "The Id of swap",
+        type: "string",
+        demandOption: true,
+      });
     },
     async (yargs) => {
       const rpcPort = yargs.p;
@@ -909,12 +908,11 @@ yargs(hideBin(process.argv))
     "swap-reject <SwapId>",
     "Reject the received swap",
     (yargsBuilder) => {
-      return yargsBuilder
-        .positional("SwapId", {
-          describe: "The Id of swap",
-          type: "string",
-          demandOption: true,
-        })
+      return yargsBuilder.positional("SwapId", {
+        describe: "The Id of swap",
+        type: "string",
+        demandOption: true,
+      });
     },
     async (yargs) => {
       const rpcPort = yargs.p;

@@ -195,7 +195,11 @@ export class NitroRpcClient implements RpcClientApi {
       SwapAssetsData: swapAssetsData,
       Channel: channelId,
     };
-    const request = generateRequest("swap_initiate", payload, this.authToken || "");
+    const request = generateRequest(
+      "swap_initiate",
+      payload,
+      this.authToken || ""
+    );
     const res = await this.transport.sendRequest<"swap_initiate">(request);
     return getAndValidateResult(res, "swap_initiate");
   }

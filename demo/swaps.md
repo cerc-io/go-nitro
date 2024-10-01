@@ -32,6 +32,14 @@
   nitro-rpc-client --version
   ```
 
+- Follow this [doc](https://book.getfoundry.sh/getting-started/installation) to set up foundry to run anvil chain
+
+  - Use an older foundry version to work with go-nitro
+
+    ```bash
+    foundryup --version nightly-cafc2606a2187a42b236df4aa65f4e8cdfcea970
+    ```
+
 ## Demo
 
 - Start anvil chain
@@ -247,7 +255,7 @@
 - Conduct swap through swap channel
 
   ```bash
-  nitro-rpc-client swap $SWAP_CHANNEL_ID  --AssetIn "$ASSET_ADDRESS_1:20" --AssetOut "$ASSET_ADDRESS_2:10" -p 4006
+  nitro-rpc-client swap-initiate $SWAP_CHANNEL_ID  --AssetIn "$ASSET_ADDRESS_1:20" --AssetOut "$ASSET_ADDRESS_2:10" -p 4006
 
   # Example ouput
   # {
@@ -293,13 +301,13 @@
 
   ```bash
   # To accept incoming swap
-  nitro-rpc-client confirm-swap $SWAP_ID accepted -p 4007
+  nitro-rpc-client swap-accept $SWAP_ID -p 4007
 
   # Example output
   # Confirming Swap with accepted
 
   # To reject incoming swap
-  nitro-rpc-client confirm-swap $SWAP_ID rejected -p 4007
+  nitro-rpc-client swap-reject $SWAP_ID -p 4007
 
   # Example output
   # Confirming Swap with rejected

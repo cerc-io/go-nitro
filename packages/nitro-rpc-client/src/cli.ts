@@ -561,7 +561,10 @@ yargs(hideBin(process.argv))
 
       const { Id } = sfObjective;
       console.log(`Objective started ${Id}`);
-      // TODO: Wait for swapfund to complete
+
+      await rpcClient.WaitForObjectiveToComplete(Id)
+      console.log(`Objective complete ${Id}`)
+
       await rpcClient.Close();
       process.exit(0);
     }
@@ -591,7 +594,10 @@ yargs(hideBin(process.argv))
       const id = await rpcClient.CloseSwapChannel(yargs.channelId);
 
       console.log(`Objective started ${id}`);
-      // TODO: Wait for swap-defund to complete
+
+      await rpcClient.WaitForObjectiveToComplete(id)
+      console.log(`Objective complete ${id}`)
+
       await rpcClient.Close();
       process.exit(0);
     }

@@ -239,7 +239,7 @@ func (e *Engine) run(ctx context.Context) {
 		case retryObjectiveTxReq := <-e.RetryObjectiveTxRequestFromAPI:
 			err = e.handleRetryObjectiveTxRequest(retryObjectiveTxReq)
 		case confirmSwapReq := <-e.ConfirmSwapRequestFromAPI:
-			err = e.handleConfirmSwapRequest(confirmSwapReq)
+			res, err = e.handleConfirmSwapRequest(confirmSwapReq)
 		case <-blockTicker:
 			blockNum := e.chain.GetLastConfirmedBlockNum()
 			err = e.store.SetLastBlockNumSeen(blockNum)
@@ -862,24 +862,19 @@ func (e *Engine) handleCounterChallengeRequest(request CounterChallengeRequest) 
 	return nil
 }
 
-func (e *Engine) handleConfirmSwapRequest(request types.ConfirmSwapRequest) error {
+func (e *Engine) handleConfirmSwapRequest(request types.ConfirmSwapRequest) (EngineEvent, error) {
 	objective, err := e.store.GetObjectiveById(protocols.ObjectiveId(swap.ObjectivePrefix + request.SwapId.String()))
 	if err != nil {
-		return err
+		return EngineEvent{}, err
 	}
 	o, ok := objective.(*swap.Objective)
 	if !ok {
-		return fmt.Errorf("not a swap objective")
+		return EngineEvent{}, fmt.Errorf("not a swap objective")
 	}
 
 	o.SwapStatus = request.Action
 
-	_, err = e.attemptProgress(o)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return e.attemptProgress(o)
 }
 
 func (e *Engine) handleRetryObjectiveTxRequest(request types.RetryObjectiveTxRequest) error {

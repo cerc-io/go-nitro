@@ -903,8 +903,9 @@ yargs(hideBin(process.argv))
       );
 
       console.log(`Confirming Swap with ${response.Action}`);
+      await rpcClient.WaitForObjectiveToComplete(`Swap-${yargs.SwapId}`);
+      console.log(`Objective complete Swap-${yargs.SwapId}`);
 
-      // TODO: Wait for objective to complete
       await rpcClient.Close();
       process.exit(0);
     }

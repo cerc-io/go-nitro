@@ -564,7 +564,7 @@ The on-chain component of Nitro (i.e. the solidity contracts) are housed in the 
 
   ```bash
   Objective started SwapFund-0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1
-  Objective complete SwapFund-0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1
+  Channel open 0x9e1950864b8c704411a6dd790008302c3d5a875a544235cc5f423682d012adc1
   ```
 
 - Check swap channel info

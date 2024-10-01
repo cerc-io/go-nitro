@@ -559,11 +559,11 @@ yargs(hideBin(process.argv))
         assetsData
       );
 
-      const { Id } = sfObjective;
+      const { Id, ChannelId } = sfObjective;
       console.log(`Objective started ${Id}`);
 
-      await rpcClient.WaitForObjectiveToComplete(Id)
-      console.log(`Objective complete ${Id}`)
+      await rpcClient.WaitForObjectiveToComplete(Id);
+      console.log(`Channel open ${ChannelId}`);
 
       await rpcClient.Close();
       process.exit(0);
@@ -595,8 +595,8 @@ yargs(hideBin(process.argv))
 
       console.log(`Objective started ${id}`);
 
-      await rpcClient.WaitForObjectiveToComplete(id)
-      console.log(`Objective complete ${id}`)
+      await rpcClient.WaitForObjectiveToComplete(id);
+      console.log(`Objective complete ${id}`);
 
       await rpcClient.Close();
       process.exit(0);

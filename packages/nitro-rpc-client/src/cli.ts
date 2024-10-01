@@ -826,7 +826,7 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "swap <channelId>",
+    "swap-initiate <channelId>",
     "Swaps assets on a given swap channel",
     (yargsBuilder) => {
       return yargsBuilder
@@ -869,9 +869,10 @@ yargs(hideBin(process.argv))
       process.exit(0);
     }
   )
+  // TODO: Separate out methods to accept and reject swaps
   .command(
-    "confirm-swap <SwapId> <action>",
-    "Confirm the received swap",
+    "swap-accept <SwapId>",
+    "Accept the received swap",
     (yargsBuilder) => {
       return yargsBuilder
         .positional("SwapId", {
@@ -879,12 +880,6 @@ yargs(hideBin(process.argv))
           type: "string",
           demandOption: true,
         })
-        .positional("action", {
-          describe: "The action to confirm the swap with",
-          type: "string",
-          choices: ["accepted", "rejected"],
-          demandOption: true,
-        });
     },
     async (yargs) => {
       const rpcPort = yargs.p;
@@ -899,7 +894,42 @@ yargs(hideBin(process.argv))
 
       const response = await rpcClient.ConfirmSwap(
         yargs.SwapId,
-        ConfirmSwapAction[yargs.action as keyof typeof ConfirmSwapAction]
+        ConfirmSwapAction.accepted
+      );
+
+      console.log(`Confirming Swap with ${response.Action}`);
+      await rpcClient.WaitForObjectiveToComplete(`Swap-${yargs.SwapId}`);
+      console.log(`Objective complete Swap-${yargs.SwapId}`);
+
+      await rpcClient.Close();
+      process.exit(0);
+    }
+  )
+  .command(
+    "swap-reject <SwapId>",
+    "Reject the received swap",
+    (yargsBuilder) => {
+      return yargsBuilder
+        .positional("SwapId", {
+          describe: "The Id of swap",
+          type: "string",
+          demandOption: true,
+        })
+    },
+    async (yargs) => {
+      const rpcPort = yargs.p;
+      const rpcHost = yargs.h;
+      const isSecure = yargs.s;
+
+      const rpcClient = await NitroRpcClient.CreateHttpNitroClient(
+        getRPCUrl(rpcHost, rpcPort),
+        isSecure
+      );
+      if (yargs.n) logOutChannelUpdates(rpcClient);
+
+      const response = await rpcClient.ConfirmSwap(
+        yargs.SwapId,
+        ConfirmSwapAction.rejected
       );
 
       console.log(`Confirming Swap with ${response.Action}`);

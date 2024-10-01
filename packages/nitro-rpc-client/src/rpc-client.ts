@@ -22,7 +22,7 @@ import {
   AssetData,
   SwapFundPayload,
   SwapAssetsData,
-  SwapPayload,
+  SwapInitiatePayload,
   GetPendingSwap,
   ConfirmSwapAction,
   ConfirmSwapResult,
@@ -190,14 +190,14 @@ export class NitroRpcClient implements RpcClientApi {
   public async SwapAssets(
     channelId: string,
     swapAssetsData: SwapAssetsData
-  ): Promise<SwapPayload> {
+  ): Promise<SwapInitiatePayload> {
     const payload = {
       SwapAssetsData: swapAssetsData,
       Channel: channelId,
     };
-    const request = generateRequest("swap", payload, this.authToken || "");
-    const res = await this.transport.sendRequest<"swap">(request);
-    return getAndValidateResult(res, "swap");
+    const request = generateRequest("swap_initiate", payload, this.authToken || "");
+    const res = await this.transport.sendRequest<"swap_initiate">(request);
+    return getAndValidateResult(res, "swap_initiate");
   }
 
   public async GetPendingSwap(channelId: string): Promise<string> {

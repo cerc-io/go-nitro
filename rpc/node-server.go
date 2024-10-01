@@ -205,10 +205,10 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 				err := nrs.node.Pay(req.Channel, big.NewInt(int64(req.Amount)))
 				return req, err
 			})
-		case serde.SwapRequestMethod:
-			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.SwapRequest) (serde.SwapRequest, error) {
-				if err := serde.ValidateSwapRequest(req); err != nil {
-					return serde.SwapRequest{}, err
+		case serde.SwapInitiateRequestMethod:
+			return processRequest(nrs.BaseRpcServer, permSign, requestData, func(req serde.SwapInitiateRequest) (serde.SwapInitiateRequest, error) {
+				if err := serde.ValidateSwapInitiateRequest(req); err != nil {
+					return serde.SwapInitiateRequest{}, err
 				}
 
 				_, err := nrs.node.SwapAssets(req.Channel, req.SwapAssetsData.TokenIn, req.SwapAssetsData.TokenOut, big.NewInt(int64(req.SwapAssetsData.AmountIn)), big.NewInt(int64(req.SwapAssetsData.AmountOut)))

@@ -484,9 +484,17 @@ func (n *Node) ConfirmSwap(swapId types.Destination, action types.SwapStatus) er
 		return err
 	}
 
-	_, ok := obj.(*swap.Objective)
+	o, ok := obj.(*swap.Objective)
 	if !ok {
 		return fmt.Errorf("not a swap objective")
+	}
+
+	if o.Status != protocols.Approved {
+		return fmt.Errorf("swap with ID %s is not approved", swapId.String())
+	}
+
+	if o.C.MyIndex == o.SwapperIndex {
+		return fmt.Errorf("swap cannot be confirmed by swapper")
 	}
 
 	n.engine.ConfirmSwapRequestFromAPI <- types.ConfirmSwapRequest{SwapId: swapId, Action: action}

@@ -10,7 +10,7 @@ import {
   ReceiveVoucherResult,
   SwapAssetsData,
   SwapChannelInfo,
-  SwapPayload,
+  SwapInitiatePayload,
   Voucher,
 } from "./types";
 
@@ -185,7 +185,7 @@ interface swapAPI {
   SwapAssets(
     channelId: string,
     swapAssetsData: SwapAssetsData
-  ): Promise<SwapPayload>;
+  ): Promise<SwapInitiatePayload>;
 }
 
 interface syncAPI {

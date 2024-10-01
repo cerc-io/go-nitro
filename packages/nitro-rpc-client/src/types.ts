@@ -60,7 +60,7 @@ export type PaymentPayload = {
   Channel: string;
 };
 
-export type SwapPayload = {
+export type SwapInitiatePayload = {
   SwapAssetsData: SwapAssetsData;
   Channel: string;
 };
@@ -175,7 +175,7 @@ export type RetryTxRequest = JsonRpcRequest<
 >;
 export type PaymentRequest = JsonRpcRequest<"pay", PaymentPayload>;
 
-export type SwapRequest = JsonRpcRequest<"swap", SwapPayload>;
+export type SwapRequest = JsonRpcRequest<"swap_initiate", SwapInitiatePayload>;
 
 export type ConfirmSwapRequest = JsonRpcRequest<
   "confirm_swap",
@@ -294,7 +294,7 @@ export type GetSwapChannelResponse = JsonRpcResponse<SwapChannelInfo>;
 export type GetVoucherResponse = JsonRpcResponse<Voucher>;
 export type GetPendingSwapResponse = JsonRpcResponse<string>;
 export type PaymentResponse = JsonRpcResponse<PaymentPayload>;
-export type SwapResponse = JsonRpcResponse<SwapPayload>;
+export type SwapResponse = JsonRpcResponse<SwapInitiatePayload>;
 export type CounterChallengeResponse = JsonRpcResponse<CounterChallengeResult>;
 export type ConfirmSwapResponse = JsonRpcResponse<ConfirmSwapResult>;
 export type GetLedgerChannelResponse = JsonRpcResponse<LedgerChannelInfo>;
@@ -347,7 +347,7 @@ export type RPCRequestAndResponses = {
   get_voucher: [GetVoucherRequest, GetVoucherResponse];
   get_pending_swap: [GetPendingSwapRequest, GetPendingSwapResponse];
   pay: [PaymentRequest, PaymentResponse];
-  swap: [SwapRequest, SwapResponse];
+  swap_initiate: [SwapRequest, SwapResponse];
   confirm_swap: [ConfirmSwapRequest, ConfirmSwapResponse];
   counter_challenge: [CounterChallengeRequest, CounterChallengeResponse];
   close_payment_channel: [VirtualDefundRequest, VirtualDefundResponse];

@@ -319,7 +319,7 @@ export function getAndValidateResult<T extends RequestMethod>(
         result,
         (result: PaymentSchemaType) => result
       );
-    case "swap":
+    case "swap_initiate":
       return validateAndConvertResult(
         swapSchema,
         result,

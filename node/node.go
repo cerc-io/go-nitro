@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/safesync"
@@ -398,7 +397,7 @@ func (n *Node) GetPaymentChannelsByLedger(ledgerId types.Destination) ([]query.P
 	return query.GetPaymentChannelsByLedger(ledgerId, n.store, n.vm)
 }
 
-func (n *Node) GetPendingSwapByChannelId(swapChannelId types.Destination) (*channel.Swap, error) {
+func (n *Node) GetPendingSwapByChannelId(swapChannelId types.Destination) (*payments.Swap, error) {
 	return n.store.GetPendingSwapByChannelId(swapChannelId)
 }
 

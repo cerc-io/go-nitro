@@ -41,10 +41,10 @@ type Store interface {
 	ReleaseChannelFromOwnership(types.Destination) error                         // Release channel from being owned by any objective
 	GetLastBlockNumSeen() (uint64, error)
 	SetLastBlockNumSeen(uint64) error
-	GetPendingSwapByChannelId(id types.Destination) (*channel.Swap, error)
-	GetSwapById(id types.Destination) (channel.Swap, error)
-	GetSwapsByChannelId(id types.Destination) ([]channel.Swap, error)
-	SetChannelToSwaps(swap channel.Swap) (channel.Swap, error)
+	GetPendingSwapByChannelId(id types.Destination) (*payments.Swap, error)
+	GetSwapById(id types.Destination) (payments.Swap, error)
+	GetSwapsByChannelId(id types.Destination) ([]payments.Swap, error)
+	SetChannelToSwaps(swap payments.Swap) (payments.Swap, error)
 	ConsensusChannelStore
 	payments.VoucherStore
 	io.Closer

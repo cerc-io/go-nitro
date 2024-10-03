@@ -1061,7 +1061,7 @@ func (e *Engine) generateNotifications(o protocols.Objective) (EngineEvent, erro
 			outgoing.LedgerChannelUpdates = append(outgoing.LedgerChannelUpdates, l)
 		case *channel.SwapChannel:
 			// TODO: Add notification for swap channel
-		case *channel.Swap:
+		case *payments.Swap:
 			// Do nothing
 		default:
 			return outgoing, fmt.Errorf("handleNotifications: Unknown related type %T", c)

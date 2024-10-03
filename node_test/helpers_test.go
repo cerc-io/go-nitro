@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/google/go-cmp/cmp"
-	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/crypto"
 	"github.com/statechannels/go-nitro/internal/logging"
@@ -26,6 +25,7 @@ import (
 	p2pms "github.com/statechannels/go-nitro/node/engine/messageservice/p2p-message-service"
 	"github.com/statechannels/go-nitro/node/engine/store"
 	"github.com/statechannels/go-nitro/node/query"
+	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
 	"github.com/statechannels/go-nitro/types"
 	"github.com/tidwall/buntdb"
@@ -526,7 +526,7 @@ func waitForEvent(t *testing.T, eventChannel <-chan chainservice.Event, eventTyp
 	return nil
 }
 
-func modifyOutcomeWithSwap(initialOutcome outcome.Exit, acceptedSwap *channel.Swap, swapSenderIndex int) outcome.Exit {
+func modifyOutcomeWithSwap(initialOutcome outcome.Exit, acceptedSwap *payments.Swap, swapSenderIndex int) outcome.Exit {
 	modifiedOutcome := initialOutcome.Clone()
 	for _, assetOutcome := range modifiedOutcome {
 		swapSenderAllocation := assetOutcome.Allocations[swapSenderIndex]

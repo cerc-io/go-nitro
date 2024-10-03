@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state"
+	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/protocols"
 	"github.com/statechannels/go-nitro/types"
 )
@@ -31,7 +32,7 @@ const ObjectivePrefix = "Swap-"
 var ErrInvalidSwap error = errors.New("invalid swap")
 
 type SwapPayload struct {
-	Swap       channel.Swap
+	Swap       payments.Swap
 	StateSigs  map[uint]state.Signature
 	SwapStatus types.SwapStatus
 }
@@ -40,7 +41,7 @@ type SwapPayload struct {
 type Objective struct {
 	Status     protocols.ObjectiveStatus
 	C          *channel.SwapChannel
-	Swap       channel.Swap
+	Swap       payments.Swap
 	StateSigs  map[uint]state.Signature
 	SwapStatus types.SwapStatus
 	// Index of participant who initiated the swap in participants array
@@ -87,7 +88,7 @@ func NewObjective(request ObjectiveRequest, preApprove bool, isSwapSender bool, 
 	return obj, nil
 }
 
-func (o *Objective) isValidSwap(swap channel.Swap) bool {
+func (o *Objective) isValidSwap(swap payments.Swap) bool {
 	tokenIn := swap.Exchange.TokenIn
 	tokenOut := swap.Exchange.TokenOut
 
@@ -441,7 +442,7 @@ func (o *Objective) UnmarshalJSON(data []byte) error {
 	o.Status = jsonSo.Status
 	o.SwapSenderIndex = jsonSo.SwapSenderIndex
 	o.SwapStatus = jsonSo.SwapStatus
-	o.Swap = channel.Swap{}
+	o.Swap = payments.Swap{}
 	o.Swap.Id = jsonSo.Swap
 	o.StateSigs = jsonSo.StateSigs
 
@@ -492,13 +493,13 @@ func IsSwapObjective(id protocols.ObjectiveId) bool {
 
 // ObjectiveRequest represents a request to create a new swap objective.
 type ObjectiveRequest struct {
-	swap             channel.Swap
+	swap             payments.Swap
 	objectiveStarted chan struct{}
 }
 
 // NewObjectiveRequest creates a new ObjectiveRequest.
 func NewObjectiveRequest(channelId types.Destination, tokenIn common.Address, tokenOut common.Address, amountIn *big.Int, amountOut *big.Int, fixedPart state.FixedPart, nonce uint64) ObjectiveRequest {
-	swap := channel.NewSwap(channelId, tokenIn, tokenOut, amountIn, amountOut, nonce)
+	swap := payments.NewSwap(channelId, tokenIn, tokenOut, amountIn, amountOut, nonce)
 	return ObjectiveRequest{
 		swap:             swap,
 		objectiveStarted: make(chan struct{}),

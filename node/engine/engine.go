@@ -68,6 +68,7 @@ var nonFatalErrors = []error{
 	directfund.ErrLedgerChannelExists,
 	virtualfund.ErrUpdatingLedgerFunding,
 	swapfund.ErrUpdatingLedgerFunding,
+	swapfund.ErrZeroFunds,
 	errEmptyDroppedEvent,
 	swap.ErrInvalidSwap,
 }

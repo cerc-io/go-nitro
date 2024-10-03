@@ -28,7 +28,10 @@ const (
 	SignedStatePayload protocols.PayloadType = "SignedStatePayload"
 )
 
-var ErrUpdatingLedgerFunding = errors.New("error updating ledger funding")
+var (
+	ErrUpdatingLedgerFunding = errors.New("error updating ledger funding")
+	ErrZeroFunds             = errors.New("Swap channel cannot be created without any funds")
+)
 
 const ObjectivePrefix = "SwapFund-"
 
@@ -415,6 +418,10 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	// Input validation
 	if updated.Status != protocols.Approved {
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
+	}
+
+	if !updated.a0.IsNonZero() && !updated.b0.IsNonZero() {
+		return &updated, sideEffects, WaitingForNothing, ErrZeroFunds
 	}
 
 	// Prefunding

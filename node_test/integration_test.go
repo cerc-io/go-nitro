@@ -61,6 +61,7 @@ func TestComplexIntegrationScenario(t *testing.T) {
 	RunIntegrationTestCase(complexCase, t)
 }
 
+// TODO: Move swap integration test to swap test
 func TestSwapFund(t *testing.T) {
 	testCase := TestCase{
 		Description:       "Direct defund with Challenge",

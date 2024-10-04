@@ -1,6 +1,7 @@
 package node_test
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 	"time"
@@ -14,11 +15,10 @@ import (
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
 	"github.com/statechannels/go-nitro/node/engine/store"
 	"github.com/statechannels/go-nitro/protocols/directfund"
+	"github.com/statechannels/go-nitro/protocols/swap"
 	"github.com/statechannels/go-nitro/protocols/swapfund"
 	"github.com/statechannels/go-nitro/types"
 )
-
-const SWAP_ITERATION = 7
 
 type TestUtils struct {
 	tc                           TestCase
@@ -205,8 +205,10 @@ func TestStorageOfLastNSwap(t *testing.T) {
 	defer closeSwapChannel(t, utils, swapChannelResponse.ChannelId)
 
 	t.Run("Ensure that only the most recent n swaps are being stored ", func(t *testing.T) {
+		swapIterations := 7
+
 		var swapsIds []types.Destination
-		for i := 1; i <= SWAP_ITERATION; i++ {
+		for i := 1; i <= swapIterations; i++ {
 
 			// Initiate swap from Bob
 			swapAssetResponse, err := utils.nodeB.SwapAssets(swapChannelResponse.ChannelId, common.Address{}, utils.infra.anvilChain.ContractAddresses.TokenAddresses[0], big.NewInt(10), big.NewInt(20))
@@ -241,7 +243,7 @@ func TestStorageOfLastNSwap(t *testing.T) {
 
 			testhelpers.Assert(t, len(lastNSwaps) == channel.MAX_SWAP_STORAGE_LIMIT, "error in storing last n swap: mismatch in length of channel to swaps map")
 
-			firstSwapIndex := SWAP_ITERATION - channel.MAX_SWAP_STORAGE_LIMIT
+			firstSwapIndex := swapIterations - channel.MAX_SWAP_STORAGE_LIMIT
 			expectedRemovedSwaps := swapsIds[:firstSwapIndex]
 			for _, swap := range lastNSwaps {
 				for _, expectedRemovedSwapId := range expectedRemovedSwaps {
@@ -253,6 +255,31 @@ func TestStorageOfLastNSwap(t *testing.T) {
 				_, err := nodeStore.GetSwapById(expectedRemovedSwapId)
 				testhelpers.Assert(t, err == store.ErrNoSuchSwap, "expected swap to be removed from store")
 			}
+		}
+	})
+}
+
+func TestParallelSwapCreation(t *testing.T) {
+	// Currently parallel swap creations are allowed
+	t.Skip()
+	utils, cleanup := initializeNodesAndInfra(t)
+	defer cleanup()
+
+	ledgerChannelResponse := createMultiAssetLedgerChannel(t, utils)
+	defer closeMultiAssetLedgerChannel(t, utils, ledgerChannelResponse.ChannelId)
+
+	swapChannelResponse := createSwapChannel(t, utils)
+	defer closeSwapChannel(t, utils, swapChannelResponse.ChannelId)
+
+	t.Run("Ensure parallel swaps are not allowed ", func(t *testing.T) {
+		nodes := []node.Node{utils.nodeA, utils.nodeB}
+
+		for i, node := range nodes {
+			_, err := node.SwapAssets(swapChannelResponse.ChannelId, common.Address{}, utils.infra.anvilChain.ContractAddresses.TokenAddresses[0], big.NewInt(10), big.NewInt(20))
+			if i == 0 {
+				continue
+			}
+			testhelpers.Assert(t, errors.Is(err, swap.ErrSwapExists), "expected error: %v", swap.ErrSwapExists)
 		}
 	})
 }

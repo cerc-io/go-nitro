@@ -247,7 +247,7 @@ func (n *Node) SwapAssets(channelId types.Destination, tokenIn common.Address, t
 	}
 
 	if s != nil && !s.Id.IsZero() {
-		return swap.ObjectiveResponse{}, fmt.Errorf("swap objective exists for the given channel %+v", channelId)
+		return swap.ObjectiveResponse{}, fmt.Errorf("%w: channel Id %+v", swap.ErrSwapExists, channelId)
 	}
 
 	objectiveRequest := swap.NewObjectiveRequest(channelId, tokenIn, tokenOut, amountIn, amountOut, swapChannel.FixedPart, rand.Uint64())

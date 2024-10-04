@@ -98,6 +98,40 @@ func createMultiAssetLedgerChannel(t *testing.T, utils TestUtils) directfund.Obj
 	return ledgerResponse
 }
 
+func closeSwapChannel(t *testing.T, utils TestUtils, swapChannelId types.Destination) {
+	res, err := utils.nodeA.CloseSwapChannel(swapChannelId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("Started swap-defund objective", "objectiveId", res)
+
+	// Wait for swap-defund objectives to complete
+	chA := utils.nodeA.ObjectiveCompleteChan(res)
+	chB := utils.nodeB.ObjectiveCompleteChan(res)
+	<-chA
+	<-chB
+
+	t.Log("Completed swap-defund objective")
+}
+
+func closeMultiAssetLedgerChannel(t *testing.T, utils TestUtils, ledgerChannelId types.Destination) {
+	res, err := utils.nodeA.CloseLedgerChannel(ledgerChannelId, false)
+	if err != nil {
+		t.Log(err)
+	}
+
+	t.Log("Started direct-defund objective", "objectiveId", res)
+
+	// Wait for direct defund objectives to complete
+	chA := utils.nodeA.ObjectiveCompleteChan(res)
+	chB := utils.nodeA.ObjectiveCompleteChan(res)
+	<-chA
+	<-chB
+
+	t.Log("Completed direct-defund objective")
+}
+
 func createSwapChannel(t *testing.T, utils TestUtils) swapfund.ObjectiveResponse {
 	// TODO: Refactor create swap channel outcome method
 	multiassetSwapChannelOutcome := outcome.Exit{
@@ -163,8 +197,12 @@ func createSwapChannel(t *testing.T, utils TestUtils) swapfund.ObjectiveResponse
 func TestStorageOfLastNSwap(t *testing.T) {
 	utils, cleanup := initializeNodesAndInfra(t)
 	defer cleanup()
-	createMultiAssetLedgerChannel(t, utils)
+
+	ledgerChannelResponse := createMultiAssetLedgerChannel(t, utils)
+	defer closeMultiAssetLedgerChannel(t, utils, ledgerChannelResponse.ChannelId)
+
 	swapChannelResponse := createSwapChannel(t, utils)
+	defer closeSwapChannel(t, utils, swapChannelResponse.ChannelId)
 
 	t.Run("Ensure that only the most recent n swaps are being stored ", func(t *testing.T) {
 		var swapsIds []types.Destination
@@ -201,7 +239,7 @@ func TestStorageOfLastNSwap(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			testhelpers.Assert(t, len(lastNSwaps) == channel.MAX_SWAP_STORAGE_LIMIT, "mismatch is length of last N swaps map")
+			testhelpers.Assert(t, len(lastNSwaps) == channel.MAX_SWAP_STORAGE_LIMIT, "error in storing last n swap: mismatch in length of channel to swaps map")
 
 			firstSwapIndex := SWAP_ITERATION - channel.MAX_SWAP_STORAGE_LIMIT
 			expectedRemovedSwaps := swapsIds[:firstSwapIndex]
@@ -213,7 +251,7 @@ func TestStorageOfLastNSwap(t *testing.T) {
 
 			for _, expectedRemovedSwapId := range expectedRemovedSwaps {
 				_, err := nodeStore.GetSwapById(expectedRemovedSwapId)
-				testhelpers.Assert(t, err == store.ErrNoSuchSwap, "expects swap to be removed")
+				testhelpers.Assert(t, err == store.ErrNoSuchSwap, "expected swap to be removed from store")
 			}
 		}
 	})

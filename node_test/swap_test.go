@@ -3,16 +3,22 @@ package node_test
 import (
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/testactors"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
 	"github.com/statechannels/go-nitro/node"
 	"github.com/statechannels/go-nitro/node/engine/chainservice"
 	"github.com/statechannels/go-nitro/node/engine/store"
+	"github.com/statechannels/go-nitro/protocols/directfund"
+	"github.com/statechannels/go-nitro/protocols/swapfund"
 	"github.com/statechannels/go-nitro/types"
 )
+
+const SWAP_ITERATION = 7
 
 type TestUtils struct {
 	tc                           TestCase
@@ -57,16 +63,16 @@ func initializeNodesAndInfra(t *testing.T) (TestUtils, func()) {
 	}
 
 	cleanup := func() {
-		removeTempFolder()
-		infra.Close(t)
 		nodeA.Close()
 		nodeB.Close()
+		removeTempFolder()
+		infra.Close(t)
 	}
 
 	return utils, cleanup
 }
 
-func createMultiAssetLedgerChannel(t *testing.T, utils TestUtils) {
+func createMultiAssetLedgerChannel(t *testing.T, utils TestUtils) directfund.ObjectiveResponse {
 	outcomeEth := CreateLedgerOutcome(*utils.nodeA.Address, *utils.nodeB.Address, ledgerChannelDeposit, ledgerChannelDeposit+10, common.Address{})
 
 	outcomeCustomToken := CreateLedgerOutcome(*utils.nodeA.Address, *utils.nodeB.Address, ledgerChannelDeposit+20, ledgerChannelDeposit+30, utils.infra.anvilChain.ContractAddresses.TokenAddresses[0])
@@ -89,9 +95,10 @@ func createMultiAssetLedgerChannel(t *testing.T, utils TestUtils) {
 	<-chA
 	<-chB
 	t.Logf("Ledger channel %v created", ledgerResponse.ChannelId)
+	return ledgerResponse
 }
 
-func createSwapChannel(t *testing.T, utils TestUtils) {
+func createSwapChannel(t *testing.T, utils TestUtils) swapfund.ObjectiveResponse {
 	// TODO: Refactor create swap channel outcome method
 	multiassetSwapChannelOutcome := outcome.Exit{
 		outcome.SingleAssetExit{
@@ -150,11 +157,64 @@ func createSwapChannel(t *testing.T, utils TestUtils) {
 	<-chB
 
 	t.Log("Completed swap-fund objective")
+	return swapChannelresponse
 }
 
 func TestStorageOfLastNSwap(t *testing.T) {
 	utils, cleanup := initializeNodesAndInfra(t)
 	defer cleanup()
 	createMultiAssetLedgerChannel(t, utils)
-	createSwapChannel(t, utils)
+	swapChannelResponse := createSwapChannel(t, utils)
+
+	t.Run("Ensure that only the most recent n swaps are being stored ", func(t *testing.T) {
+		var swapsIds []types.Destination
+		for i := 1; i <= SWAP_ITERATION; i++ {
+
+			// Initiate swap from Bob
+			swapAssetResponse, err := utils.nodeB.SwapAssets(swapChannelResponse.ChannelId, common.Address{}, utils.infra.anvilChain.ContractAddresses.TokenAddresses[0], big.NewInt(10), big.NewInt(20))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Wait for objective to wait for confirmation
+			time.Sleep(3 * time.Second)
+
+			pendingSwap, err := utils.nodeA.GetPendingSwapByChannelId(swapAssetResponse.ChannelId)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Accept the swap
+			err = utils.nodeA.ConfirmSwap(pendingSwap.Id, types.Accepted)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			<-utils.nodeB.ObjectiveCompleteChan(swapAssetResponse.Id)
+			swapsIds = append(swapsIds, pendingSwap.Id)
+		}
+
+		storesToTest := []store.Store{utils.storeA, utils.storeB}
+		for _, nodeStore := range storesToTest {
+			lastNSwaps, err := nodeStore.GetSwapsByChannelId(swapChannelResponse.ChannelId)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			testhelpers.Assert(t, len(lastNSwaps) == channel.MAX_SWAP_STORAGE_LIMIT, "mismatch is length of last N swaps map")
+
+			firstSwapIndex := SWAP_ITERATION - channel.MAX_SWAP_STORAGE_LIMIT
+			expectedRemovedSwaps := swapsIds[:firstSwapIndex]
+			for _, swap := range lastNSwaps {
+				for _, expectedRemovedSwapId := range expectedRemovedSwaps {
+					testhelpers.Assert(t, swap.Id != expectedRemovedSwapId, "error in storing last n swap")
+				}
+			}
+
+			for _, expectedRemovedSwapId := range expectedRemovedSwaps {
+				_, err := nodeStore.GetSwapById(expectedRemovedSwapId)
+				testhelpers.Assert(t, err == store.ErrNoSuchSwap, "expects swap to be removed")
+			}
+		}
+	})
 }

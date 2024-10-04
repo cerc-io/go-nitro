@@ -370,7 +370,8 @@ func (c *Channel) UpdateWithChainEvent(event chainservice.Event) (*Channel, erro
 	case chainservice.DepositedEvent:
 		c.OnChain.Holdings[e.Asset] = e.NowHeld
 	case chainservice.ConcludedEvent:
-		break // TODO: update OnChain.StateHash and OnChain.Outcome
+		// TODO: update OnChain.StateHash and OnChain.Outcome
+		c.OnChain.FinalizesAt = new(big.Int).SetUint64(e.Block().Timestamp)
 	case chainservice.ChallengeRegisteredEvent:
 		h, err := e.StateHash(c.FixedPart)
 		if err != nil {

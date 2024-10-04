@@ -103,10 +103,9 @@ func ChannelsExistWithCounterparty(counterparty types.Address, getChannels GetCh
 		// We only want to find directly funded channels that would have two participants
 		if len(c.Participants) == 2 {
 			// We only want to find directly funded channels that are not finalized
-			if c.OnChain.ChannelMode == channel.Finalized {
-				return false, nil
+			if c.OnChain.ChannelMode != channel.Finalized {
+				return true, nil
 			}
-			return true, nil
 		}
 	}
 

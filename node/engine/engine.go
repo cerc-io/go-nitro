@@ -747,7 +747,13 @@ func (e *Engine) handleObjectiveRequest(or protocols.ObjectiveRequest) (EngineEv
 			return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not create directdefund objective for %+v: %w", request, err)
 		}
 
-		// Retaining the consensus channel since it's needed to process a challenge-registered event for a virtual channel and obtain the ledger channel ID.
+		// Retaining the consensus channel only if ddfo is with challenge since it's needed to process a challenge-registered event for a virtual channel and obtain the ledger channel ID.
+		if !ddfo.IsChallenge {
+			err = e.store.DestroyConsensusChannel(request.ChannelId)
+			if err != nil {
+				return failedEngineEvent, fmt.Errorf("handleAPIEvent: Could not destroy consensus channel for %+v: %w", request, err)
+			}
+		}
 
 		return e.attemptProgress(&ddfo)
 	case bridgedfund.ObjectiveRequest:

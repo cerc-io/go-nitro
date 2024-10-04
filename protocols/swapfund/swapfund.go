@@ -30,7 +30,7 @@ const (
 
 var (
 	ErrUpdatingLedgerFunding = errors.New("error updating ledger funding")
-	ErrZeroFunds             = errors.New("Swap channel cannot be created without any funds")
+	ErrZeroFunds             = errors.New("swap channel cannot be created without any funds")
 )
 
 const ObjectivePrefix = "SwapFund-"

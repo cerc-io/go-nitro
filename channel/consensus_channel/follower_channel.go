@@ -1,6 +1,7 @@
 package consensus_channel
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/statechannels/go-nitro/channel/state"
@@ -38,6 +39,13 @@ func (c *ConsensusChannel) SignNextProposal(expectedProposal Proposal, sk []byte
 		return SignedProposal{}, ErrNoProposals
 	}
 
+	marshalQ, _ := json.Marshal(c.proposalQueue[0])
+
+	fmt.Println("FIRST PROP", string(marshalQ))
+
+	marshalE, _ := expectedProposal.MarshalJSON()
+
+	fmt.Println("EXPECTED PROP", string(marshalE))
 	p := c.proposalQueue[0].Proposal
 
 	if !p.Equal(&expectedProposal) {

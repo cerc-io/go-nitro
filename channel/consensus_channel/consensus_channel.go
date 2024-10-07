@@ -134,6 +134,7 @@ func (c *ConsensusChannel) IsProposedNext(g Guarantee) (bool, error) {
 	vars := Vars{TurnNum: c.current.TurnNum, Outcome: c.current.Outcome.clone()}
 
 	if len(c.proposalQueue) == 0 {
+		fmt.Println("PROP QUEUE NIL")
 		return false, nil
 	}
 
@@ -146,6 +147,8 @@ func (c *ConsensusChannel) IsProposedNext(g Guarantee) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	fmt.Println("IS PROPOSED NEXT", vars.Outcome.includes(g), c.Includes(g))
 
 	return vars.Outcome.includes(g) && !c.Includes(g), nil
 }

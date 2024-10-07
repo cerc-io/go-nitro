@@ -655,9 +655,15 @@ func (c *Connection) expectedProposal() map[common.Address]consensus_channel.Pro
 	proposals := make(map[common.Address]consensus_channel.Proposal)
 	g := c.getExpectedGuarantee()
 
+	for a := range g {
+		fmt.Println("Asset in expectedG", a)
+	}
+
 	for asset, amount := range c.GuaranteeInfo.LeftAmount {
+		fmt.Println("Asset in ginfo.leftamount", asset)
 		guarantee := g[asset]
 		if c.Channel.Includes(guarantee) {
+			fmt.Println("CONTINUING AS INCLUDED", asset)
 			continue
 		}
 		proposal := consensus_channel.NewAddProposal(c.Channel.Id, guarantee, amount, asset)
@@ -678,6 +684,7 @@ func (o *Objective) proposeLedgerUpdate(connection Connection, sk *[]byte) (prot
 	sideEffects := protocols.SideEffects{}
 
 	// TODO: expectedProposal return multiple proposals, loop through it and call propose on each proposal
+	fmt.Println("PROPOSE")
 	proposals := connection.expectedProposal()
 
 	for _, p := range proposals {
@@ -702,7 +709,13 @@ func (o *Objective) proposeLedgerUpdate(connection Connection, sk *[]byte) (prot
 func (o *Objective) acceptLedgerUpdate(c Connection, sk *[]byte, a common.Address) (protocols.SideEffects, error) {
 	ledger := c.Channel
 	sideEffects := protocols.SideEffects{}
+	fmt.Println("ACCEPT /////////////////////////////////////////////////////")
 	expectedProposals := c.expectedProposal()
+
+	marshalledProps, _ := json.Marshal(expectedProposals)
+
+	fmt.Println("EXPECTED ASSET", a)
+	fmt.Println("EXPECTED PROPOSALS", string(marshalledProps))
 
 	p := expectedProposals[a]
 	sp, err := ledger.SignNextProposal(p, *sk)
@@ -732,15 +745,12 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 	// TODO: Fix error, changed method to send guarantee map
 	guarantee := ledgerConnection.getExpectedGuarantee()
 	proposed := false
-	for _, g := range guarantee {
-		if ledgerConnection.Channel.Includes(g) {
-			continue
-		}
-
+	for a, g := range guarantee {
 		p, err := ledger.IsProposed(g)
 		if err != nil {
 			return protocols.SideEffects{}, err
 		}
+		fmt.Println("IS PROPOSED", a, p)
 
 		if p {
 			proposed = true
@@ -760,6 +770,7 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 	} else {
 		// If the proposal is next in the queue we accept it
 		for a, g := range guarantee {
+			fmt.Println("assets in outsideexpectedG", a)
 			proposedNext, err := ledger.IsProposedNext(g)
 			if err != nil {
 				return protocols.SideEffects{}, err

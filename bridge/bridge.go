@@ -211,19 +211,22 @@ func (b *Bridge) processCompletedObjectivesFromL1(objId protocols.ObjectiveId) e
 
 	l1ledgerChannelState := l1LedgerChannel.SupportedSignedState()
 	l1ledgerChannelStateClone := l1ledgerChannelState.Clone()
-
 	// Put NodeBPrime's allocation at index 0 as it creates mirrored ledger channel
 	// Swap the allocations to be set in mirrored ledger channel
-	tempAllocation := l1ledgerChannelStateClone.State().Outcome[0].Allocations[0]
-	l1ledgerChannelStateClone.State().Outcome[0].Allocations[0] = l1ledgerChannelStateClone.State().Outcome[0].Allocations[1]
-	l1ledgerChannelStateClone.State().Outcome[0].Allocations[1] = tempAllocation
+	for _, outcome := range l1ledgerChannelStateClone.State().Outcome {
+		// Swap the allocations in place
+		// Allocations have at least two elements before performing the swap
+		if len(outcome.Allocations) >= 2 {
+			outcome.Allocations[0], outcome.Allocations[1] = outcome.Allocations[1], outcome.Allocations[0]
+		}
+	}
 
 	// Create extended state outcome based on l1ChannelState
 	l1ChannelCloneOutcome := l1ledgerChannelStateClone.State().Outcome
 
 	// Create mirrored ledger channel between node BPrime and APrime
 	// TODO: Support mirrored ledger channel creation with multiple assets
-	l2LedgerChannelResponse, err := b.nodeL2.CreateBridgeChannel(l1ledgerChannelStateClone.State().Participants[0], l1ledgerChannelStateClone.State().ChallengeDuration, l1ChannelCloneOutcome[:1])
+	l2LedgerChannelResponse, err := b.nodeL2.CreateBridgeChannel(l1ledgerChannelStateClone.State().Participants[0], l1ledgerChannelStateClone.State().ChallengeDuration, l1ChannelCloneOutcome)
 	if err != nil {
 		return err
 	}

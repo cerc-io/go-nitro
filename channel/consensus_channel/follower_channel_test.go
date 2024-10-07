@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/channel/state"
 	"github.com/statechannels/go-nitro/types"
 )
@@ -130,7 +131,7 @@ func TestFollowerChannel(t *testing.T) {
 	if channel.ConsensusTurnNum() != 1 {
 		t.Fatalf("incorrect turn number: expected 1, got %d", channel.ConsensusTurnNum())
 	}
-	if !channel.Includes(proposal.ToAdd.Guarantee) {
+	if !channel.Includes(proposal.ToAdd.Guarantee, common.Address{}) {
 		t.Fatal("expected the channel to not include the guarantee")
 	}
 	if len(channel.proposalQueue) != 0 {

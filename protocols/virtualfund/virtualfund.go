@@ -96,19 +96,19 @@ func (c *Connection) handleProposal(sp consensus_channel.SignedProposal) error {
 
 // IsFundingTheTarget computes whether the ledger channel on the receiver funds the guarantee expected by this connection
 func (c *Connection) IsFundingTheTarget() bool {
-	g := c.getExpectedGuarantee()
+	g, a := c.getExpectedGuarantee()
 	marshalledGuarantee, err := g.MarshalJSON()
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		slog.Debug("DEBUG: Expected guarantee", "guarantee", string(marshalledGuarantee), "isIncluded", c.Channel.Includes(g), "myIndex", c.Channel.MyIndex)
+		slog.Debug("DEBUG: Expected guarantee", "guarantee", string(marshalledGuarantee), "isIncluded", c.Channel.Includes(g, a), "myIndex", c.Channel.MyIndex)
 	}
 
-	return c.Channel.Includes(g)
+	return c.Channel.Includes(g, a)
 }
 
 // getExpectedGuarantee returns a map of asset addresses to guarantees for a Connection.
-func (c *Connection) getExpectedGuarantee() consensus_channel.Guarantee {
+func (c *Connection) getExpectedGuarantee() (consensus_channel.Guarantee, common.Address) {
 	amountFunds := c.GuaranteeInfo.LeftAmount.Add(c.GuaranteeInfo.RightAmount)
 
 	// HACK: GuaranteeInfo stores amounts as types.Funds.
@@ -116,8 +116,10 @@ func (c *Connection) getExpectedGuarantee() consensus_channel.Guarantee {
 	// diverted for that asset type.
 	// So, we loop through amountFunds and break after the first asset type ...
 	var amount *big.Int
-	for _, val := range amountFunds {
+	var assetAddress common.Address
+	for a, val := range amountFunds {
 		amount = val
+		assetAddress = a
 		break
 	}
 
@@ -125,7 +127,7 @@ func (c *Connection) getExpectedGuarantee() consensus_channel.Guarantee {
 	left := c.GuaranteeInfo.Left
 	right := c.GuaranteeInfo.Right
 
-	return consensus_channel.NewGuarantee(amount, target, left, right)
+	return consensus_channel.NewGuarantee(amount, target, left, right), assetAddress
 }
 
 // Objective is a cache of data computed by reading from the store. It stores (potentially) infinite data.
@@ -643,7 +645,7 @@ func IsVirtualFundObjective(id protocols.ObjectiveId) bool {
 }
 
 func (c *Connection) expectedProposal() consensus_channel.Proposal {
-	g := c.getExpectedGuarantee()
+	g, _ := c.getExpectedGuarantee()
 
 	var leftAmount *big.Int
 
@@ -715,8 +717,8 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 	ledger := ledgerConnection.Channel
 
 	var sideEffects protocols.SideEffects
-	g := ledgerConnection.getExpectedGuarantee()
-	proposed, err := ledger.IsProposed(g)
+	g, a := ledgerConnection.getExpectedGuarantee()
+	proposed, err := ledger.IsProposed(g, a)
 	if err != nil {
 		return protocols.SideEffects{}, err
 	}
@@ -737,7 +739,7 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 			return protocols.SideEffects{}, err
 		}
 		// If the proposal is next in the queue we accept it
-		proposedNext, _ := ledger.IsProposedNext(g)
+		proposedNext, _ := ledger.IsProposedNext(g, a)
 		if proposedNext {
 
 			se, err := o.acceptLedgerUpdate(ledgerConnection, sk)

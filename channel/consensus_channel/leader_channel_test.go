@@ -143,7 +143,7 @@ func TestLeaderChannel(t *testing.T) {
 			case AddProposal:
 				{
 					add := proposal.ToAdd
-					proposed, _ := channel.IsProposed(add.Guarantee)
+					proposed, _ := channel.IsProposed(add.Guarantee, common.Address{})
 
 					if expectedErr == nil && !proposed {
 						t.Fatalf("failed to propose guarantee in happy case")
@@ -352,11 +352,11 @@ func TestLeaderChannel(t *testing.T) {
 			case AddProposal:
 				{
 					g := counterProposal.Proposal.ToAdd.Guarantee
-					if !channel.Includes(g) {
+					if !channel.Includes(g, common.Address{}) {
 						t.Fatalf("failed to fund guarantee given successful counterproposal")
 					}
 
-					if proposed, _ := channel.IsProposed(g); proposed {
+					if proposed, _ := channel.IsProposed(g, common.Address{}); proposed {
 						t.Fatalf("guarantee still proposed given successful counterproposal")
 					}
 				}

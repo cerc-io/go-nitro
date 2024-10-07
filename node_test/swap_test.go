@@ -350,11 +350,11 @@ func TestSwapFund(t *testing.T) {
 			Allocations: outcome.Allocations{
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*nodeA.Address),
-					Amount:      big.NewInt(int64(100)),
+					Amount:      big.NewInt(int64(0)),
 				},
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*nodeB.Address),
-					Amount:      big.NewInt(int64(100)),
+					Amount:      big.NewInt(int64(0)),
 				},
 			},
 		},
@@ -368,6 +368,19 @@ func TestSwapFund(t *testing.T) {
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*nodeB.Address),
 					Amount:      big.NewInt(int64(100)),
+				},
+			},
+		},
+		outcome.SingleAssetExit{
+			Asset: infra.anvilChain.ContractAddresses.TokenAddresses[1],
+			Allocations: outcome.Allocations{
+				outcome.Allocation{
+					Destination: types.AddressToDestination(*nodeA.Address),
+					Amount:      big.NewInt(int64(0)),
+				},
+				outcome.Allocation{
+					Destination: types.AddressToDestination(*nodeB.Address),
+					Amount:      big.NewInt(int64(0)),
 				},
 			},
 		},
@@ -398,7 +411,7 @@ func TestSwapFund(t *testing.T) {
 	fmt.Println("Ledger state after swapfund", string(marshalledState))
 
 	// Initiate swap from Bob
-	response1, err := nodeB.SwapAssets(swapChannelresponse.ChannelId, common.Address{}, infra.anvilChain.ContractAddresses.TokenAddresses[0], big.NewInt(0), big.NewInt(50))
+	response1, err := nodeB.SwapAssets(swapChannelresponse.ChannelId, infra.anvilChain.ContractAddresses.TokenAddresses[0], infra.anvilChain.ContractAddresses.TokenAddresses[1], big.NewInt(0), big.NewInt(0))
 	if err != nil {
 		t.Fatal(err)
 	}

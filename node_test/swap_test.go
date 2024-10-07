@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/testactors"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
@@ -526,5 +527,5 @@ func TestSwapFund(t *testing.T) {
 	t.Log("Completed swap-defund objective")
 
 	expectedLedgerOutcome := createExpectedLedgerOutcome(ledgerStateBeforeSdf.State().Outcome, modifiedOutcome4)
-	checkLedgerChannel(t, ledgerResponse.ChannelId, expectedLedgerOutcome, query.Open, nodeA, nodeB)
+	checkLedgerChannel(t, ledgerResponse.ChannelId, expectedLedgerOutcome, query.Open, channel.Open, nodeA, nodeB)
 }

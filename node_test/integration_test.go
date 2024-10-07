@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/internal/testactors"
 	td "github.com/statechannels/go-nitro/internal/testdata"
 	"github.com/statechannels/go-nitro/internal/testhelpers"
@@ -120,10 +121,10 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 			t.Log("DEBUG: Setting up ledger channel between Alice/Bob and intermediaries, intermediary number", i)
 			// Setup and check the ledger channel between Alice and the intermediary
 			aliceLedgers[i] = openLedgerChannel(t, clientA, clientI, asset, 0)
-			checkLedgerChannel(t, aliceLedgers[i], CreateLedgerOutcome(*clientA.Address, *clientI.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset), query.Open, clientA)
+			checkLedgerChannel(t, aliceLedgers[i], CreateLedgerOutcome(*clientA.Address, *clientI.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset), query.Open, channel.Open, clientA)
 			// Setup and check the ledger channel between Bob and the intermediary
 			bobLedgers[i] = openLedgerChannel(t, clientI, clientB, asset, 0)
-			checkLedgerChannel(t, bobLedgers[i], CreateLedgerOutcome(*clientI.Address, *clientB.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset), query.Open, clientB)
+			checkLedgerChannel(t, bobLedgers[i], CreateLedgerOutcome(*clientI.Address, *clientB.Address, ledgerChannelDeposit, ledgerChannelDeposit, asset), query.Open, channel.Open, clientB)
 
 		}
 
@@ -221,19 +222,28 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 
 		// Close all the ledger channels we opened
 
+		var channelMode channel.ChannelMode
+
+		// Since block time stamp of mock chain is 0 and channel mode is decided using block time stamp
+		if tc.Chain == MockChain {
+			channelMode = channel.Open
+		} else {
+			channelMode = channel.Finalized
+		}
+
 		closeLedgerChannel(t, clientA, intermediaries[0], aliceLedgers[0])
-		checkLedgerChannel(t, aliceLedgers[0], finalAliceLedger(*intermediaries[0].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, clientA)
+		checkLedgerChannel(t, aliceLedgers[0], finalAliceLedger(*intermediaries[0].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, channelMode, clientA)
 		t.Log("DEBUG: After closing first alice ledger Channel")
 
 		// TODO: This is brittle, we should generalize this to n number of intermediaries
 		if tc.NumOfHops == 1 {
 			closeLedgerChannel(t, intermediaries[0], clientB, bobLedgers[0])
-			checkLedgerChannel(t, bobLedgers[0], finalBobLedger(*intermediaries[0].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, clientB)
+			checkLedgerChannel(t, bobLedgers[0], finalBobLedger(*intermediaries[0].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, channelMode, clientB)
 			t.Log("DEBUG: After closing ledger channel when NumOfHops is 1")
 		}
 		if tc.NumOfHops == 2 {
 			closeLedgerChannel(t, intermediaries[1], clientB, bobLedgers[1])
-			checkLedgerChannel(t, bobLedgers[1], finalBobLedger(*intermediaries[1].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, clientB)
+			checkLedgerChannel(t, bobLedgers[1], finalBobLedger(*intermediaries[1].Address, asset, tc.NumOfPayments, 1, tc.NumOfChannels), query.Complete, channelMode, clientB)
 			t.Log("DEBUG: After closing ledger channel when NumOfHops is 2")
 		}
 

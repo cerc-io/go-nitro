@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/go-cmp/cmp"
 
+	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/logging"
 	interRpc "github.com/statechannels/go-nitro/internal/rpc"
@@ -189,14 +190,14 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 	for i, client := range clients {
 		if i != 0 {
 			leftLC := ledgerChannels[i-1]
-			expectedLeftLC := createLedgerInfo(leftLC.ChannelId, simpleOutcome(actors[i-1].Address(), actors[i].Address(), 100, 100), query.Open, actors[i].Address())
+			expectedLeftLC := createLedgerInfo(leftLC.ChannelId, simpleOutcome(actors[i-1].Address(), actors[i].Address(), 100, 100), query.Open, channel.Open, actors[i].Address())
 			actualLeftLC, err := client.GetLedgerChannel(leftLC.ChannelId)
 			checkError(t, err, "client.GetLedgerChannel")
 			checkQueryInfo(t, expectedLeftLC, actualLeftLC)
 		}
 		if i != n-1 {
 			rightLC := ledgerChannels[i]
-			expectedRightLC := createLedgerInfo(rightLC.ChannelId, simpleOutcome(actors[i].Address(), actors[i+1].Address(), 100, 100), query.Open, actors[i].Address())
+			expectedRightLC := createLedgerInfo(rightLC.ChannelId, simpleOutcome(actors[i].Address(), actors[i+1].Address(), 100, 100), query.Open, channel.Open, actors[i].Address())
 			actualRightLC, err := client.GetLedgerChannel(rightLC.ChannelId)
 			checkError(t, err, "client.GetLedgerChannel")
 			checkQueryInfo(t, expectedRightLC, actualRightLC)
@@ -335,12 +336,12 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 	expectedAliceLedgerNotifs := createLedgerStory(
 		aliceLedger.ChannelId, alice.Address(), actors[1].Address(), // actor[1] is the first intermediary - can be Bob if n=2 (0-hop)
 		[]channelStatusShorthand{
-			{100, 100, query.Proposed},
-			{100, 100, query.Open},
-			{0, 100, query.Open},  // alice's balance forwarded to the guarantee for the virtual channel
-			{99, 101, query.Open}, // returns to alice & actors[1] after closure
-			{99, 101, query.Closing},
-			{99, 101, query.Complete},
+			{100, 100, query.Proposed, channel.Open},
+			{100, 100, query.Open, channel.Open},
+			{0, 100, query.Open, channel.Open},  // alice's balance forwarded to the guarantee for the virtual channel
+			{99, 101, query.Open, channel.Open}, // returns to alice & actors[1] after closure
+			{99, 101, query.Closing, channel.Open},
+			{99, 101, query.Complete, channel.Open},
 		},
 	)[alice.Address()]
 	checkNotifications(t, "aliceLedger", expectedAliceLedgerNotifs, []query.LedgerChannelInfo{}, aliceLedgerNotifs, defaultTimeout)
@@ -349,16 +350,16 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 	expectedBobLedgerNotifs := createLedgerStory(
 		bobLedger.ChannelId, actors[n-2].Address(), bob.Address(),
 		[]channelStatusShorthand{
-			{100, 100, query.Proposed},
-			{100, 100, query.Open},
-			{0, 100, query.Open},
-			{99, 101, query.Open},
-			{99, 101, query.Complete},
+			{100, 100, query.Proposed, channel.Open},
+			{100, 100, query.Open, channel.Open},
+			{0, 100, query.Open, channel.Open},
+			{99, 101, query.Open, channel.Open},
+			{99, 101, query.Complete, channel.Open},
 		},
 	)[bob.Address()]
 	if n != 2 { // bob does not trigger a ledger-channel close if n=2 - alice does
 		expectedBobLedgerNotifs = append(expectedBobLedgerNotifs,
-			createLedgerInfo(bobLedger.ChannelId, simpleOutcome(actors[n-2].Address(), bob.Address(), 99, 101), query.Closing, bob.Address()),
+			createLedgerInfo(bobLedger.ChannelId, simpleOutcome(actors[n-2].Address(), bob.Address(), 99, 101), query.Closing, channel.Open, bob.Address()),
 		)
 	}
 	checkNotifications(t, "bobLedger", expectedBobLedgerNotifs, []query.LedgerChannelInfo{}, bobLedgerNotifs, defaultTimeout)
@@ -366,19 +367,19 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 	requiredVCNotifs := createPaychStory(
 		vabCreateResponse.ChannelId, alice.Address(), bob.Address(),
 		[]channelStatusShorthand{
-			{100, 0, query.Proposed},
-			{100, 0, query.Open},
-			{99, 1, query.Complete},
+			{100, 0, query.Proposed, channel.Open},
+			{100, 0, query.Open, channel.Open},
+			{99, 1, query.Complete, channel.Open},
 		},
 	)
 	optionalVCNotifs := createPaychStory(
 		vabCreateResponse.ChannelId, alice.Address(), bob.Address(),
 		[]channelStatusShorthand{
-			{99, 1, query.Closing},
+			{99, 1, query.Closing, channel.Open},
 			// TODO: Sometimes we see a closing notification with the original balance.
 			// See https://github.com/statechannels/go-nitro/issues/1306
-			{99, 1, query.Open},
-			{100, 0, query.Closing},
+			{99, 1, query.Open, channel.Open},
+			{100, 0, query.Closing, channel.Open},
 		},
 	)
 

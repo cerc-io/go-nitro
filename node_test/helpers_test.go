@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/google/go-cmp/cmp"
+	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/crypto"
 	"github.com/statechannels/go-nitro/internal/logging"
@@ -311,7 +312,7 @@ func checkPaymentChannel(t *testing.T, id types.Destination, o outcome.Exit, sta
 }
 
 // createLedgerInfo constructs a LedgerChannelInfo so we can easily compare it to the result of GetLedgerChannel
-func createLedgerInfo(id types.Destination, outcome outcome.Exit, status query.ChannelStatus, user types.Address) query.LedgerChannelInfo {
+func createLedgerInfo(id types.Destination, outcome outcome.Exit, status query.ChannelStatus, channelMode channel.ChannelMode, user types.Address) query.LedgerChannelInfo {
 	var balances []query.LedgerChannelBalance
 
 	for _, o := range outcome {
@@ -352,16 +353,18 @@ func createLedgerInfo(id types.Destination, outcome outcome.Exit, status query.C
 	}
 
 	return query.LedgerChannelInfo{
-		ID:       id,
-		Status:   status,
-		Balances: balances,
+		ID:          id,
+		Status:      status,
+		Balances:    balances,
+		ChannelMode: channelMode,
 	}
 }
 
 type channelStatusShorthand struct {
-	clientA uint
-	clientB uint
-	status  query.ChannelStatus
+	clientA     uint
+	clientB     uint
+	status      query.ChannelStatus
+	channelMode channel.ChannelMode
 }
 
 // createLedgerStory returns a sequence of LedgerChannelInfo structs for each
@@ -381,12 +384,14 @@ func createLedgerStory(
 			id,
 			simpleOutcome(firstParticipant, secondParticipant, state.clientA, state.clientB),
 			state.status,
+			state.channelMode,
 			firstParticipant,
 		)
 		stories[secondParticipant][i] = createLedgerInfo(
 			id,
 			simpleOutcome(firstParticipant, secondParticipant, state.clientA, state.clientB),
 			state.status,
+			state.channelMode,
 			secondParticipant,
 		)
 	}
@@ -396,9 +401,9 @@ func createLedgerStory(
 
 // checkLedgerChannel checks that the ledger channel has the expected outcome and status
 // It will fail if the channel does not exist
-func checkLedgerChannel(t *testing.T, ledgerId types.Destination, o outcome.Exit, status query.ChannelStatus, clients ...node.Node) {
+func checkLedgerChannel(t *testing.T, ledgerId types.Destination, o outcome.Exit, status query.ChannelStatus, channelMode channel.ChannelMode, clients ...node.Node) {
 	for _, c := range clients {
-		expected := createLedgerInfo(ledgerId, o, status, *c.Address)
+		expected := createLedgerInfo(ledgerId, o, status, channelMode, *c.Address)
 		ledger, err := c.GetLedgerChannel(ledgerId)
 		if err != nil {
 			t.Fatal(err)

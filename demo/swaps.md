@@ -415,12 +415,17 @@
 - Check on-chain balances of Alice and Bob after closing ledger channel
 
   ```bash
-    # Make sure you are in the root of the go-nitro repo
-    source ./packages/nitro-protocol/hardhat-deployments/geth/.contracts.env
+    # Go to nitro-protocol package
+    cd packages/nitro-protocol
+
+    source ./hardhat-deployments/geth/.contracts.env
     export ASSET_ADDRESS_1=$TestToken1
     export ASSET_ADDRESS_2=$TestToken2
     export A_CHAIN_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
     export B_CHAIN_ADDRESS="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+    export GETH_URL="http://127.0.0.1:8545"
+    export GETH_CHAIN_ID=1337
+    export GETH_DEPLOYER_PK=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
     # Check on chain balances for both Alice and bob
     # Alice

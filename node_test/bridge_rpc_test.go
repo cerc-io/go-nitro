@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/statechannels/go-nitro/bridge"
+	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/internal/logging"
 	internalRpc "github.com/statechannels/go-nitro/internal/rpc"
 	"github.com/statechannels/go-nitro/internal/testactors"
@@ -160,7 +161,7 @@ func TestBridgeFlow(t *testing.T) {
 		// Wait for mirror channel creation
 		l2LedgerChannelId = <-bridgeClient.CreatedMirrorChannel()
 
-		expectedMirrorChannel := createLedgerInfo(l2LedgerChannelId, simpleOutcome(bridgeAddress, nodeAAddress, 100, 100), query.Open, nodeAAddress)
+		expectedMirrorChannel := createLedgerInfo(l2LedgerChannelId, simpleOutcome(bridgeAddress, nodeAAddress, 100, 100), query.Open, channel.Open, nodeAAddress)
 		actualMirrorChannel, err := nodeAPrimeRpcClient.GetLedgerChannel(l2LedgerChannelId)
 		checkError(t, err, "client.GetLedgerChannel")
 		checkQueryInfo(t, expectedMirrorChannel, actualMirrorChannel)
@@ -202,7 +203,7 @@ func TestBridgeFlow(t *testing.T) {
 
 		<-nodeARpcClient.ObjectiveCompleteChan(protocols.ObjectiveId(mirrorbridgeddefund.ObjectivePrefix + l1LedgerChannelId.String()))
 
-		expectedMirrorChannel := createLedgerInfo(l1LedgerChannelId, simpleOutcome(nodeAAddress, bridgeAddress, 99, 101), query.Complete, nodeAAddress)
+		expectedMirrorChannel := createLedgerInfo(l1LedgerChannelId, simpleOutcome(nodeAAddress, bridgeAddress, 99, 101), query.Complete, channel.Finalized, nodeAAddress)
 		actualMirrorChannel, err := nodeARpcClient.GetLedgerChannel(l1LedgerChannelId)
 		checkError(t, err, "client.GetLedgerChannel")
 		checkQueryInfo(t, expectedMirrorChannel, actualMirrorChannel)

@@ -209,6 +209,18 @@ func (n *Node) CreateSwapChannel(Intermediaries []types.Address, CounterParty ty
 		n.engine.GetConsensusAppAddress(),
 	)
 
+	isAmountNonZero := false
+	for _, o := range objectiveRequest.Outcome {
+		if o.Allocations.Total().Cmp(common.Big0) == 1 {
+			isAmountNonZero = true
+			break
+		}
+	}
+
+	if !isAmountNonZero {
+		return swapfund.ObjectiveResponse{}, swapfund.ErrZeroFunds
+	}
+
 	// Send the event to the engine
 	n.engine.ObjectiveRequestsFromAPI <- objectiveRequest
 
@@ -291,7 +303,7 @@ func (n *Node) CreateLedgerChannel(Counterparty types.Address, ChallengeDuration
 	)
 
 	// Check store to see if there is an existing channel with this counterparty
-	channelExists, err := directfund.ChannelsExistWithCounterparty(Counterparty, n.store.GetChannelsByParticipant, n.store.GetConsensusChannel)
+	channelExists, err := directfund.OpenLedgerChannelsExistWithCounterparty(Counterparty, n.store.GetChannelsByParticipant, n.store.GetConsensusChannel)
 	if err != nil {
 		slog.Error("direct fund error", "error", err)
 		return directfund.ObjectiveResponse{}, fmt.Errorf("counterparty check failed: %w", err)

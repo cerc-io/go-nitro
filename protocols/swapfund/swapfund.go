@@ -178,6 +178,11 @@ func NewObjective(request ObjectiveRequest, preApprove bool, myAddress types.Add
 	if err != nil {
 		return Objective{}, fmt.Errorf("error creating objective: %w", err)
 	}
+
+	if !objective.a0.IsNonZero() && !objective.b0.IsNonZero() {
+		return Objective{}, ErrZeroFunds
+	}
+
 	return objective, nil
 }
 
@@ -418,10 +423,6 @@ func (o *Objective) Crank(secretKey *[]byte) (protocols.Objective, protocols.Sid
 	// Input validation
 	if updated.Status != protocols.Approved {
 		return &updated, sideEffects, WaitingForNothing, protocols.ErrNotApproved
-	}
-
-	if !updated.a0.IsNonZero() && !updated.b0.IsNonZero() {
-		return &updated, sideEffects, WaitingForNothing, ErrZeroFunds
 	}
 
 	// Prefunding

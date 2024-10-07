@@ -341,7 +341,7 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 			{0, 100, query.Open, channel.Open},  // alice's balance forwarded to the guarantee for the virtual channel
 			{99, 101, query.Open, channel.Open}, // returns to alice & actors[1] after closure
 			{99, 101, query.Closing, channel.Open},
-			{99, 101, query.Complete, channel.Open},
+			{99, 101, query.Complete, channel.Open}, // Since mockChain's block time stamp is always 0, the channel mode always remains open
 		},
 	)[alice.Address()]
 	checkNotifications(t, "aliceLedger", expectedAliceLedgerNotifs, []query.LedgerChannelInfo{}, aliceLedgerNotifs, defaultTimeout)
@@ -354,7 +354,7 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 			{100, 100, query.Open, channel.Open},
 			{0, 100, query.Open, channel.Open},
 			{99, 101, query.Open, channel.Open},
-			{99, 101, query.Complete, channel.Open},
+			{99, 101, query.Complete, channel.Open}, // Since mockChain's block time stamp is always 0, the channel mode always remains open
 		},
 	)[bob.Address()]
 	if n != 2 { // bob does not trigger a ledger-channel close if n=2 - alice does
@@ -369,7 +369,7 @@ func executeNRpcTest(t *testing.T, connectionType transport.TransportType, n int
 		[]channelStatusShorthand{
 			{100, 0, query.Proposed, channel.Open},
 			{100, 0, query.Open, channel.Open},
-			{99, 1, query.Complete, channel.Open},
+			{99, 1, query.Complete, channel.Open}, // Since mockChain's block time stamp is always 0, the channel mode always remains open
 		},
 	)
 	optionalVCNotifs := createPaychStory(

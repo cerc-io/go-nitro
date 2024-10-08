@@ -84,7 +84,7 @@ func TestBridgedFund(t *testing.T) {
 
 	t.Run("Create virtual channel on mirrored ledger channel and make payments", func(t *testing.T) {
 		// Create virtual channel on mirrored ledger channel on L2
-		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, types.Address{})
+		virtualOutcome := initialPaymentOutcome(*nodeAPrime.Address, bridgeAddress, infraL1.anvilChain.ContractAddresses.TokenAddresses[0])
 		virtualResponse, _ := nodeAPrime.CreatePaymentChannel([]types.Address{}, bridgeAddress, uint32(tcL2.ChallengeDuration), virtualOutcome)
 		<-nodeAPrime.ObjectiveCompleteChan(virtualResponse.Id)
 		checkPaymentChannel(t, virtualResponse.ChannelId, virtualOutcome, query.Open, nodeAPrime)
@@ -485,11 +485,18 @@ func TestExitL2WithVirtualChannelStateUnilaterally(t *testing.T) {
 
 	l1ChannelId, mirroredLedgerChannelId := createL1L2Channels(t, nodeA, nodeB, nodeAPrime, nodeBPrime, storeA, tcL1, tcL2, chainServiceB)
 
+	l2ChannelState, err := nodeAPrime.GetSignedState(mirroredLedgerChannelId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	o := l2ChannelState.State().Outcome
+
 	// Create virtual channel on mirrored ledger channel on L2 and make payments
-	virtualChannel := createL2VirtualChannel(t, nodeAPrime, nodeBPrime, storeBPrime, tcL2)
+	virtualChannel := createL2VirtualChannel(t, nodeAPrime, nodeBPrime, storeBPrime, tcL2, o[0].Asset)
 
 	// Bridge pays APrime
-	err := nodeBPrime.Pay(virtualChannel.Id, big.NewInt(payAmount))
+	err = nodeBPrime.Pay(virtualChannel.Id, big.NewInt(payAmount))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -724,9 +731,9 @@ func createL1L2Channels(t *testing.T, nodeA node.Node, nodeB node.Node, nodeAPri
 	return l1LedgerChannelId, response.ChannelId
 }
 
-func createL2VirtualChannel(t *testing.T, nodeAPrime node.Node, nodeBPrime node.Node, L2bridgeStore store.Store, tcL2 TestCase) *channel.Channel {
+func createL2VirtualChannel(t *testing.T, nodeAPrime node.Node, nodeBPrime node.Node, L2bridgeStore store.Store, tcL2 TestCase, firstLedgerAsset common.Address) *channel.Channel {
 	// Create virtual channel on mirrored ledger channel on L2
-	virtualOutcome := initialPaymentOutcome(*nodeBPrime.Address, *nodeAPrime.Address, types.Address{})
+	virtualOutcome := initialPaymentOutcome(*nodeBPrime.Address, *nodeAPrime.Address, firstLedgerAsset)
 
 	virtualResponse, _ := nodeBPrime.CreatePaymentChannel([]types.Address{}, *nodeAPrime.Address, uint32(tcL2.ChallengeDuration), virtualOutcome)
 	waitForObjectives(t, nodeBPrime, nodeAPrime, []node.Node{}, []protocols.ObjectiveId{virtualResponse.Id})

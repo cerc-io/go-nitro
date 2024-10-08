@@ -423,7 +423,7 @@ func createPaychInfo(id types.Destination, outcome outcome.Exit, status query.Ch
 		ID:     id,
 		Status: status,
 		Balance: query.PaymentChannelBalance{
-			AssetAddress:   types.Address{},
+			AssetAddress:   outcome[0].Asset,
 			Payee:          payee,
 			Payer:          payer,
 			RemainingFunds: (*hexutil.Big)(outcome[0].Allocations[0].Amount),

@@ -96,7 +96,7 @@ func (c *Connection) handleProposal(sp consensus_channel.SignedProposal) error {
 
 // IsFundingTheTarget computes whether the ledger channel on the receiver funds the guarantee expected by this connection
 func (c *Connection) IsFundingTheTarget() bool {
-	g, a := c.getExpectedGuarantee()
+	g, a := c.getExpectedGuaranteeAndAsset()
 	marshalledGuarantee, err := g.MarshalJSON()
 	if err != nil {
 		fmt.Println(err)
@@ -108,26 +108,37 @@ func (c *Connection) IsFundingTheTarget() bool {
 }
 
 // getExpectedGuarantee returns a map of asset addresses to guarantees for a Connection.
-func (c *Connection) getExpectedGuarantee() (consensus_channel.Guarantee, common.Address) {
+func (c *Connection) getExpectedGuarantee() map[common.Address]consensus_channel.Guarantee {
 	amountFunds := c.GuaranteeInfo.LeftAmount.Add(c.GuaranteeInfo.RightAmount)
+	assetGuaranteeMap := make(map[common.Address]consensus_channel.Guarantee, 0)
+
+	for a, val := range amountFunds {
+		target := c.GuaranteeInfo.GuaranteeDestination
+		left := c.GuaranteeInfo.Left
+		right := c.GuaranteeInfo.Right
+		guarantee := consensus_channel.NewGuarantee(val, target, left, right)
+		assetGuaranteeMap[a] = guarantee
+	}
+
+	return assetGuaranteeMap
+}
+
+// getExpectedGuaranteeAndAsset returns asset address and guarantee for a Connection.
+func (c *Connection) getExpectedGuaranteeAndAsset() (consensus_channel.Guarantee, common.Address) {
+	var asset common.Address
+	var guarantee consensus_channel.Guarantee
 
 	// HACK: GuaranteeInfo stores amounts as types.Funds.
 	// We only expect a single asset type, and we want to know how much is to be
 	// diverted for that asset type.
-	// So, we loop through amountFunds and break after the first asset type ...
-	var amount *big.Int
-	var assetAddress common.Address
-	for a, val := range amountFunds {
-		amount = val
-		assetAddress = a
+	// So, we loop through assetGuaranteeMap and break after the first iteration ...
+	for a, g := range c.getExpectedGuarantee() {
+		asset = a
+		guarantee = g
 		break
 	}
 
-	target := c.GuaranteeInfo.GuaranteeDestination
-	left := c.GuaranteeInfo.Left
-	right := c.GuaranteeInfo.Right
-
-	return consensus_channel.NewGuarantee(amount, target, left, right), assetAddress
+	return guarantee, asset
 }
 
 // Objective is a cache of data computed by reading from the store. It stores (potentially) infinite data.
@@ -645,7 +656,7 @@ func IsVirtualFundObjective(id protocols.ObjectiveId) bool {
 }
 
 func (c *Connection) expectedProposal() consensus_channel.Proposal {
-	g, _ := c.getExpectedGuarantee()
+	g, _ := c.getExpectedGuaranteeAndAsset()
 
 	var leftAmount *big.Int
 
@@ -717,7 +728,7 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 	ledger := ledgerConnection.Channel
 
 	var sideEffects protocols.SideEffects
-	g, a := ledgerConnection.getExpectedGuarantee()
+	g, a := ledgerConnection.getExpectedGuaranteeAndAsset()
 	proposed, err := ledger.IsProposed(g, a)
 	if err != nil {
 		return protocols.SideEffects{}, err

@@ -140,7 +140,7 @@ func diffFromCorrectConnection(c *Connection, left, right ta.Actor) string {
 
 	expectedAmount := big.NewInt(0).Set(vPreFund.VariablePart().Outcome[0].TotalAllocated())
 	want := consensus_channel.NewGuarantee(expectedAmount, Id, left.Destination(), right.Destination())
-	got, _ := c.getExpectedGuarantee()
+	got, _ := c.getExpectedGuaranteeAndAsset()
 
 	return compareGuarantees(want, got)
 }
@@ -265,7 +265,7 @@ func TestCrankAsAlice(t *testing.T) {
 	oObj, effects, waitingFor, err = o.Crank(&my.PrivateKey)
 	o = oObj.(*Objective)
 
-	oGuarantee, _ := o.ToMyRight.getExpectedGuarantee()
+	oGuarantee, _ := o.ToMyRight.getExpectedGuaranteeAndAsset()
 
 	p := consensus_channel.NewAddProposal(o.ToMyRight.Channel.Id, oGuarantee, big.NewInt(6), common.Address{})
 	sp := consensus_channel.SignedProposal{Proposal: p, Signature: consensusStateSignatures(alice, p1, oGuarantee)[0], TurnNum: 2}
@@ -282,7 +282,7 @@ func TestCrankAsAlice(t *testing.T) {
 	Equals(t, waitingFor, WaitingForCompleteFunding)
 
 	// If Alice had received a signed counterproposal, she should proceed to postFundSetup
-	oGuarantee, _ = o.ToMyRight.getExpectedGuarantee()
+	oGuarantee, _ = o.ToMyRight.getExpectedGuaranteeAndAsset()
 	sp = consensus_channel.SignedProposal{Proposal: p, Signature: consensusStateSignatures(alice, p1, oGuarantee)[1], TurnNum: 2}
 
 	oObj, err = o.ReceiveProposal(sp)
@@ -364,7 +364,7 @@ func TestCrankAsBob(t *testing.T) {
 	Equals(t, effects, emptySideEffects)
 	Equals(t, waitingFor, WaitingForCompleteFunding)
 
-	oGuarantee, _ := o.ToMyLeft.getExpectedGuarantee()
+	oGuarantee, _ := o.ToMyLeft.getExpectedGuaranteeAndAsset()
 
 	// If Bob had received a signed counterproposal, he should proceed to postFundSetup
 	p := consensus_channel.NewAddProposal(o.ToMyLeft.Channel.Id, oGuarantee, big.NewInt(6), common.Address{})
@@ -384,7 +384,7 @@ func TestCrankAsBob(t *testing.T) {
 	Ok(t, err)
 	Equals(t, waitingFor, WaitingForCompletePostFund)
 	assertStateSentTo(t, effects, postFS, p1)
-	oGuarantee, _ = o.ToMyLeft.getExpectedGuarantee()
+	oGuarantee, _ = o.ToMyLeft.getExpectedGuaranteeAndAsset()
 	sp.Signature = consensusStateSignatures(p1, bob, oGuarantee)[1]
 	assertOneProposalSent(t, effects, sp, p1)
 }
@@ -438,7 +438,7 @@ func TestCrankAsP1(t *testing.T) {
 	oObj, effects, waitingFor, err = o.Crank(&my.PrivateKey)
 	o = oObj.(*Objective)
 
-	oGuarantee, _ := o.ToMyLeft.getExpectedGuarantee()
+	oGuarantee, _ := o.ToMyLeft.getExpectedGuaranteeAndAsset()
 	p := consensus_channel.NewAddProposal(o.ToMyLeft.Channel.Id, oGuarantee, big.NewInt(6), common.Address{})
 	sp := consensus_channel.SignedProposal{Proposal: p, Signature: consensusStateSignatures(p1, alice, oGuarantee)[0], TurnNum: 2}
 	Ok(t, err)
@@ -453,7 +453,7 @@ func TestCrankAsP1(t *testing.T) {
 	Equals(t, effects, emptySideEffects)
 	Equals(t, waitingFor, WaitingForCompleteFunding)
 
-	oGuarantee, _ = o.ToMyLeft.getExpectedGuarantee()
+	oGuarantee, _ = o.ToMyLeft.getExpectedGuaranteeAndAsset()
 	// If P1 had received a signed counterproposal, she should proceed to postFundSetup
 	p = consensus_channel.NewAddProposal(o.ToMyLeft.Channel.Id, oGuarantee, big.NewInt(6), common.Address{})
 	sp = consensus_channel.SignedProposal{Proposal: p, Signature: consensusStateSignatures(p1, alice, oGuarantee)[1], TurnNum: 2}

@@ -15,9 +15,6 @@ func ValidatePaymentRequest(req PaymentRequest) error {
 }
 
 func ValidateSwapInitiateRequest(req SwapInitiateRequest) error {
-	if req.SwapAssetsData.AmountIn == 0 || req.SwapAssetsData.AmountOut == 0 {
-		return InvalidParamsError
-	}
 	if (req.Channel == types.Destination{}) {
 		return InvalidParamsError
 	}

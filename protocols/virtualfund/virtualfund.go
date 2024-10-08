@@ -110,7 +110,7 @@ func (c *Connection) IsFundingTheTarget() bool {
 // getExpectedGuarantee returns a map of asset addresses to guarantees for a Connection.
 func (c *Connection) getExpectedGuarantee() map[common.Address]consensus_channel.Guarantee {
 	amountFunds := c.GuaranteeInfo.LeftAmount.Add(c.GuaranteeInfo.RightAmount)
-	assetGuaranteeMap := make(map[common.Address]consensus_channel.Guarantee, 0)
+	assetGuaranteeMap := make(map[common.Address]consensus_channel.Guarantee)
 
 	for a, val := range amountFunds {
 		target := c.GuaranteeInfo.GuaranteeDestination
@@ -172,6 +172,12 @@ func NewObjective(request ObjectiveRequest, preApprove bool, myAddress types.Add
 	if !ok {
 		return Objective{}, fmt.Errorf("could not find ledger for %s and %s", myAddress, counterParty)
 	}
+
+	// TODO: Take asset from user to create virtual channel
+	consensusOut := rightCC.ConsensusVars().Outcome
+	firstLedgerAsset := consensusOut[0].AsOutcome()[0].Asset
+
+	request.Outcome[0].Asset = firstLedgerAsset
 
 	var leftCC *consensus_channel.ConsensusChannel
 

@@ -311,10 +311,12 @@ func (o *Objective) CreateL1StateBasedOnL2() (state.State, error) {
 
 	// Swap the L2 outcome: since Alice creates a ledger channel in L1, the 0th position in L1's state allocations corresponds to Alice. Similarly, since Bridge Prime creates a ledger channel in L2, the 0th position in L2's state allocations corresponds to Bridge Prime.
 	l1OutcomeBasedOnL2 := l1VariablePartBasedOnL2.Outcome.Clone()
-	tempAllocation := l1OutcomeBasedOnL2[0].Allocations[0]
-	l1OutcomeBasedOnL2[0].Allocations[0] = l1OutcomeBasedOnL2[0].Allocations[1]
-	l1OutcomeBasedOnL2[0].Allocations[1] = tempAllocation
-	l1OutcomeBasedOnL2[0].Asset = l1State.VariablePart().Outcome[0].Asset
+
+	for _, outcome := range l1OutcomeBasedOnL2 {
+		if len(outcome.Allocations) >= 2 {
+			outcome.Allocations[0], outcome.Allocations[1] = outcome.Allocations[1], outcome.Allocations[0]
+		}
+	}
 	l1VariablePartBasedOnL2.Outcome = l1OutcomeBasedOnL2
 
 	l1VariablePartBasedOnL2.TurnNum++

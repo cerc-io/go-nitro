@@ -702,13 +702,7 @@ func (o *Objective) proposeLedgerUpdate(connection Connection, sk *[]byte) (prot
 func (o *Objective) acceptLedgerUpdate(c Connection, sk *[]byte, a common.Address) (protocols.SideEffects, error) {
 	ledger := c.Channel
 	sideEffects := protocols.SideEffects{}
-	fmt.Println("ACCEPT /////////////////////////////////////////////////////")
 	expectedProposals := c.expectedProposal()
-
-	marshalledProps, _ := json.Marshal(expectedProposals)
-
-	fmt.Println("EXPECTED ASSET", a)
-	fmt.Println("EXPECTED PROPOSALS", string(marshalledProps))
 
 	p := expectedProposals[a]
 	sp, err := ledger.SignNextProposal(p, *sk)
@@ -743,7 +737,6 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 		if err != nil {
 			return protocols.SideEffects{}, err
 		}
-		fmt.Println("IS PROPOSED", a, p)
 
 		if p {
 			proposed = true
@@ -763,7 +756,6 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 	} else {
 		// If the proposal is next in the queue we accept it
 		for a, g := range guarantee {
-			fmt.Println("assets in outsideexpectedG", a)
 			proposedNext, err := ledger.IsProposedNext(g, a)
 			if err != nil {
 				return protocols.SideEffects{}, err

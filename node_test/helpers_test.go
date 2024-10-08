@@ -3,6 +3,7 @@ package node_test
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"reflect"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/crypto"
+	"github.com/statechannels/go-nitro/internal/logging"
 	"github.com/statechannels/go-nitro/internal/testactors"
 	"github.com/statechannels/go-nitro/internal/testdata"
 	"github.com/statechannels/go-nitro/node"
@@ -143,7 +145,7 @@ func setupStore(tc TestCase, tp TestParticipant, si sharedTestInfrastructure, da
 }
 
 func setupIntegrationNode(tc TestCase, tp TestParticipant, si sharedTestInfrastructure, bootPeers []string, dataFolder string) (node.Node, messageservice.MessageService, string, store.Store, chainservice.ChainService) {
-	// logging.SetupDefaultFileLogger(tc.LogName+"_"+string(tp.Name)+".log", slog.LevelDebug)
+	logging.SetupDefaultFileLogger(tc.LogName+"_"+string(tp.Name)+".log", slog.LevelDebug)
 	messageService, multiAddr := setupMessageService(tc, tp, si, bootPeers)
 	cs := setupChainService(tc, tp, si)
 	store := setupStore(tc, tp, si, dataFolder)

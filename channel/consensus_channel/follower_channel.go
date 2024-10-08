@@ -38,9 +38,6 @@ func (c *ConsensusChannel) SignNextProposal(expectedProposal Proposal, sk []byte
 		return SignedProposal{}, ErrNoProposals
 	}
 
-	marshalE, _ := expectedProposal.MarshalJSON()
-
-	fmt.Println("EXPECTED PROP", string(marshalE))
 	p := c.proposalQueue[0].Proposal
 
 	if !p.Equal(&expectedProposal) {

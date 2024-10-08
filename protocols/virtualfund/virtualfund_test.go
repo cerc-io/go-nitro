@@ -80,9 +80,9 @@ func TestMarshalJSON(t *testing.T) {
 	}
 
 	if vfo.ToMyLeft != nil {
-
 		vfoGuarantee, _ := vfo.ToMyLeft.getExpectedGuarantee()
 		gotGuarantee, _ := got.ToMyLeft.getExpectedGuarantee()
+
 		if !reflect.DeepEqual(vfoGuarantee, gotGuarantee) {
 			t.Fatalf("expected left-channel guarantees %v, but found %v", vfo.ToMyLeft, got.ToMyLeft)
 		}
@@ -96,6 +96,7 @@ func TestMarshalJSON(t *testing.T) {
 	if vfo.ToMyRight != nil {
 		vfoGuarantee, _ := vfo.ToMyRight.getExpectedGuarantee()
 		gotGuarantee, _ := got.ToMyRight.getExpectedGuarantee()
+
 		if !reflect.DeepEqual(vfoGuarantee, gotGuarantee) {
 			t.Fatalf("expected right-channel %v, but found %v", vfo.ToMyRight, got.ToMyRight)
 		}

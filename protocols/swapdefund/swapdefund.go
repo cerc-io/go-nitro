@@ -425,7 +425,16 @@ func (o *Objective) updateLedgerToRemoveGuarantee(ledger *consensus_channel.Cons
 	var sideEffects protocols.SideEffects
 
 	proposals := o.ledgerProposal(ledger)
-	proposed := ledger.HasRemovalBeenProposed(o.VId())
+	proposed := false
+
+	for _, p := range proposals {
+		isProposed := ledger.HasRemovalBeenProposed(o.VId(), p.ToRemove.AssetAddress)
+
+		if isProposed {
+			proposed = true
+			break
+		}
+	}
 
 	if ledger.IsLeader() {
 		if proposed { // If we've already proposed a remove proposal we can return
@@ -450,7 +459,7 @@ func (o *Objective) updateLedgerToRemoveGuarantee(ledger *consensus_channel.Cons
 	} else {
 		// If the proposal is next in the queue we accept it
 		for _, p := range proposals {
-			proposedNext := ledger.HasRemovalBeenProposedNext(o.VId())
+			proposedNext := ledger.HasRemovalBeenProposedNext(o.VId(), p.ToRemove.AssetAddress)
 
 			if proposedNext {
 				sp, err := ledger.SignNextProposal(p, *sk)

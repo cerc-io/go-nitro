@@ -30,5 +30,7 @@ export default task('check-token-balance', 'Prints the token balance of a given 
     const formattedBalance = ethers.utils.formatUnits(balance, decimals);
 
     // Print the token balance
-    console.log(`Balance of ${accountAddress}: ${formattedBalance} tokens`);
+    console.log(
+      `Balance of ${accountAddress}: ${formattedBalance} tokens with token address ${tokenAddress}`
+    );
   });

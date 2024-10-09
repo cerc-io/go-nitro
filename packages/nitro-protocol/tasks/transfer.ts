@@ -22,5 +22,7 @@ export default task('transfer', 'Transfers ERC20 tokens')
     const tx = await token.transfer(recipient, parsedAmount);
     await tx.wait();
 
-    console.log(`Transferred ${amount} tokens to ${recipient} from ${sender.address}`);
+    console.log(
+      `Transferred ${amount} tokens with address ${contractAddress} to ${recipient} from ${sender.address}`
+    );
   });

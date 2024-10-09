@@ -1061,7 +1061,7 @@ func (e *Engine) generateNotifications(o protocols.Objective) (EngineEvent, erro
 				return outgoing, err
 			}
 
-			slog.Debug("DEBUG: engine-generateNotifications generating notification for payment_channel_updated")
+			slog.Debug("DEBUG: engine.go-generateNotifications generating notification for payment_channel_updated")
 			outgoing.PaymentChannelUpdates = append(outgoing.PaymentChannelUpdates, info)
 		case *channel.Channel:
 			l, err := query.ConstructLedgerInfoFromChannel(c, *e.store.GetAddress())

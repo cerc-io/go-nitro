@@ -1,6 +1,8 @@
 package notifier
 
 import (
+	"encoding/json"
+	"log/slog"
 	"sync"
 
 	"github.com/statechannels/go-nitro/node/query"
@@ -30,8 +32,16 @@ func (li *paymentChannelListeners) Notify(info query.PaymentChannelInfo) {
 	if li.prev.Equal(info) {
 		return
 	}
-	for _, list := range li.listeners {
+	for i, list := range li.listeners {
 		list <- info
+		marshalledInfo, err := json.Marshal(info)
+
+		if err != nil {
+			slog.Debug("DEBUG: listeners.go-Notify for paymentChannelListeners error marshalling paymentChannelInfo", "listenerNum", i, "error", err)
+		} else {
+			slog.Debug("DEBUG: listeners.go-Notify for paymentChannelListeners", "listenerNum", i, "paymentChannelInfo", string(marshalledInfo))
+		}
+
 	}
 	li.prev = info
 }

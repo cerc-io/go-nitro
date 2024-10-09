@@ -2,6 +2,7 @@
 package node // import "github.com/statechannels/go-nitro/node"
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -100,6 +101,12 @@ func (n *Node) handleEngineEvent(update engine.EngineEvent) {
 		n.handleError(err)
 	}
 	for _, updated := range update.PaymentChannelUpdates {
+		marshalledInfo, er := json.Marshal(updated)
+		if er != nil {
+			slog.Debug("DEBUG node.go-handleEngineEvent error marshalling paymentChannelInfo", "error", er)
+		} else {
+			slog.Debug("DEBUG node.go-handleEngineEvent", "paymentChannelInfo", string(marshalledInfo))
+		}
 
 		err := n.channelNotifier.NotifyPaymentUpdated(updated)
 		n.handleError(err)

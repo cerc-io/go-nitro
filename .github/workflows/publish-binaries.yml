@@ -25,6 +25,21 @@ jobs:
         go build -v -o nitro .
         go build -v -o nitro-bridge cmd/start-bridge/main.go
 
+    - name: Run yarn build
+      run: yarn && yarn build
+
+    - name: Configure gitea npm registry
+      run: |
+        npm config set registry https://9c89-14-140-185-65.ngrok-free.app/api/packages/cerc-io/npm/
+
+    - name: Authenticate to gitea registry
+      run: |
+        npm config set -- '//9c89-14-140-185-65.ngrok-free.app/api/packages/cerc-io/npm/:_authToken' "${{ secrets.GITEA_CICD_PUBLISH_TOKEN }}"
+    - name: npm publish
+      run: |
+        cd packages/nitro-rpc-client
+        npm publish
+
     - name: Create Release on Gitea
       id: create_release
       run: |
@@ -32,7 +47,7 @@ jobs:
         TAG_NAME=$(echo '${{ toJson(github.event.release) }}' | jq -r '.tag_name')
 
         RELEASE_RESPONSE=$(curl -s -X POST "https://9c89-14-140-185-65.ngrok-free.app/api/v1/repos/cerc-io/nitro-stack-test/releases" \
-          -H "Authorization: token ${{ secrets.GITEA_SECRET_TOKEN }}" \
+          -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
           -H "Content-Type: application/json" \
           -d '{
             "tag_name": "'"$TAG_NAME"'",
@@ -47,13 +62,13 @@ jobs:
     - name: Upload nitro binary to Gitea Release
       run: |
         curl -X POST "https://9c89-14-140-185-65.ngrok-free.app/api/v1/repos/cerc-io/nitro-stack-test/releases/${{ steps.create_release.outputs.release_id }}/assets?name=nitro" \
-        -H "Authorization: token ${{ secrets.GITEA_SECRET_TOKEN }}" \
+        -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
         -H "Content-Type: multipart/form-data" \
         --form "attachment=@nitro"
 
     - name: Upload nitro-bridge binary to Gitea Release
       run: |
         curl -X POST "https://9c89-14-140-185-65.ngrok-free.app/api/v1/repos/cerc-io/nitro-stack-test/releases/${{ steps.create_release.outputs.release_id }}/assets?name=nitro-bridge" \
-        -H "Authorization: token ${{ secrets.GITEA_SECRET_TOKEN }}" \
+        -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
         -H "Content-Type: multipart/form-data" \
         --form "attachment=@nitro-bridge"

@@ -101,7 +101,7 @@ func (c *Connection) IsFundingTheTarget() bool {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		slog.Debug("DEBUG: Expected guarantee", "guarantee", string(marshalledGuarantee), "isIncluded", c.Channel.Includes(g, a), "myIndex", c.Channel.MyIndex)
+		slog.Debug("DEBUG: Expected guarantee", "guarantee", string(marshalledGuarantee), "isIncluded", c.Channel.Includes(g, a), "myIndex", c.Channel.MyIndex, "address", a)
 	}
 
 	return c.Channel.Includes(g, a)

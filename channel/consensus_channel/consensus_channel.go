@@ -3,7 +3,9 @@ package consensus_channel
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"sort"
 
@@ -133,6 +135,13 @@ func (c *ConsensusChannel) IsProposed(g Guarantee, a common.Address) (bool, erro
 func (c *ConsensusChannel) IsProposedNext(g Guarantee, a common.Address) (bool, error) {
 	vars := Vars{TurnNum: c.current.TurnNum, Outcome: c.current.Outcome.clone()}
 
+	marshalledProposalQueue, er := json.Marshal(c.proposalQueue)
+	if er != nil {
+		slog.Debug("DEBUG: Error marshalling proposal queue inside IsProposedNext", "error", er)
+	} else {
+		slog.Debug("DEBUG: Inside is proposed next", "ProposalQueue", string(marshalledProposalQueue))
+	}
+
 	if len(c.proposalQueue) == 0 {
 		return false, nil
 	}
@@ -146,6 +155,8 @@ func (c *ConsensusChannel) IsProposedNext(g Guarantee, a common.Address) (bool, 
 	if err != nil {
 		return false, err
 	}
+
+	slog.Debug("DEBUG: Inside is proposed next", "isProposedNext", vars.Outcome.includes(g, a) && !c.Includes(g, a))
 
 	return vars.Outcome.includes(g, a) && !c.Includes(g, a), nil
 }

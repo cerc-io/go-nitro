@@ -392,8 +392,17 @@ func (e *Engine) handleMessage(message protocols.Message) (EngineEvent, error) {
 
 	}
 
+	slog.Debug("DEBUG: LedgerProposals via message", "Ledger proposals length", len(message.LedgerProposals))
+
 	for _, entry := range message.LedgerProposals { // The ledger protocol requires us to process these proposals in turnNum order.
 		// Here we rely on the sender having packed them into the message in that order, and do not apply any checks or sorting of our own.
+		marshalledProposal, er := json.Marshal(entry)
+		if er != nil {
+			slog.Debug("DEBUG: Error marshalling proposal in engine.handleMessage")
+		} else {
+			slog.Debug("DEBUG: Proposal received from message", "proposal", string(marshalledProposal))
+		}
+
 		c, _ := e.store.GetChannelById(entry.Proposal.Target())
 		id := getProposalObjectiveId(entry.Proposal, c.Type)
 

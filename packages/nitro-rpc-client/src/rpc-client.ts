@@ -120,7 +120,7 @@ export class NitroRpcClient implements RpcClientApi {
           if (payload.ID === channelId) {
             this.GetPaymentChannel(channelId).then((l) => {
               console.log(
-                "DEBUG: Payment channel status after payment_channel_updated notification",
+                "DEBUG: rpc-client.ts-WaitForPaymentChannelStatus payment channel status after payment_channel_updated notification",
                 l.Status
               );
               if (l.Status == status) resolve();

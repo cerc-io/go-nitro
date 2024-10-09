@@ -101,7 +101,7 @@ func (c *Connection) IsFundingTheTarget() bool {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		slog.Debug("DEBUG: Expected guarantee", "guarantee", string(marshalledGuarantee), "isIncluded", c.Channel.Includes(g, a), "myIndex", c.Channel.MyIndex, "address", a)
+		slog.Debug("DEBUG: virtualfund.go-IsFundingTheTarget expected guarantee", "guarantee", string(marshalledGuarantee), "isIncluded", c.Channel.Includes(g, a), "myIndex", c.Channel.MyIndex, "address", a)
 	}
 
 	return c.Channel.Includes(g, a)
@@ -713,7 +713,7 @@ func (o *Objective) acceptLedgerUpdate(c Connection, sk *[]byte) (protocols.Side
 	}
 	sideEffects := protocols.SideEffects{}
 
-	slog.Debug("DEBUG: Proposal Queue length", "len", len(ledger.ProposalQueue()))
+	slog.Debug("DEBUG: virtualfund.go-acceptLedgerUpdate proposal queue length", "length", len(ledger.ProposalQueue()))
 
 	// ledger sideEffect
 	if proposals := ledger.ProposalQueue(); len(proposals) != 0 {
@@ -740,7 +740,7 @@ func (o *Objective) updateLedgerWithGuarantee(ledgerConnection Connection, sk *[
 		return protocols.SideEffects{}, err
 	}
 
-	slog.Debug("DEBUG: Is guarantee proposed", "isProposed", proposed)
+	slog.Debug("DEBUG: virtualfund.go-updateLedgerWithGuarantee is guarantee proposed", "isProposed", proposed)
 
 	if ledger.IsLeader() { // If the user is the proposer craft a new proposal
 		if proposed {

@@ -392,15 +392,15 @@ func (e *Engine) handleMessage(message protocols.Message) (EngineEvent, error) {
 
 	}
 
-	slog.Debug("DEBUG: LedgerProposals via message", "Ledger proposals length", len(message.LedgerProposals))
+	slog.Debug("DEBUG: engine.go-handleMessage length of ledger proposals via message", "length", len(message.LedgerProposals))
 
 	for _, entry := range message.LedgerProposals { // The ledger protocol requires us to process these proposals in turnNum order.
 		// Here we rely on the sender having packed them into the message in that order, and do not apply any checks or sorting of our own.
 		marshalledProposal, er := json.Marshal(entry)
 		if er != nil {
-			slog.Debug("DEBUG: Error marshalling proposal in engine.handleMessage")
+			slog.Debug("DEBUG: engine.go-handleMessage error marshalling proposal")
 		} else {
-			slog.Debug("DEBUG: Proposal received from message", "proposal", string(marshalledProposal))
+			slog.Debug("DEBUG: engine.go-handleMessage proposal received from message", "proposal", string(marshalledProposal))
 		}
 
 		c, _ := e.store.GetChannelById(entry.Proposal.Target())
@@ -1061,7 +1061,7 @@ func (e *Engine) generateNotifications(o protocols.Objective) (EngineEvent, erro
 				return outgoing, err
 			}
 
-			slog.Debug("DEBUG: Generating notification for payment_channel_updated")
+			slog.Debug("DEBUG: engine-generateNotifications generating notification for payment_channel_updated")
 			outgoing.PaymentChannelUpdates = append(outgoing.PaymentChannelUpdates, info)
 		case *channel.Channel:
 			l, err := query.ConstructLedgerInfoFromChannel(c, *e.store.GetAddress())

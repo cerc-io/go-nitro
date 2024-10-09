@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -105,11 +106,16 @@ func (t *serverHttpTransport) RegisterRequestHandler(apiVersion string, handler 
 }
 
 func (t *serverHttpTransport) Notify(data []byte) error {
-	slog.Debug("DEBUG: In http server Notify method")
+	slog.Debug("DEBUG: server.go-Notify")
 	t.notificationListeners.Range(func(key string, value chan []byte) bool {
 		value <- data
 
-		slog.Debug("DEBUG: Sent data to notification listeners", "key", key, "data", string(data))
+		marshalledData, err := json.Marshal(data)
+		if err != nil {
+			slog.Debug("DEBUG: server.go-Notify error marshalling data")
+		} else {
+			slog.Debug("DEBUG: server.go-Notify sent data to notification listeners", "key", key, "data", string(marshalledData))
+		}
 
 		return true
 	})

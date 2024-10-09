@@ -353,7 +353,7 @@ func (rs *NodeRpcServer) sendNotifications(ctx context.Context,
 				return
 			}
 
-			slog.Debug("DEBUG: Sending payment_channel_updated notification")
+			slog.Debug("DEBUG: node_server.go-sendNotifications sending payment_channel_updated notification")
 			err := sendNotification(rs.BaseRpcServer, serde.PaymentChannelUpdated, paymentInfo)
 			if err != nil {
 				panic(err)

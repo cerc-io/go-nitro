@@ -137,9 +137,9 @@ func (c *ConsensusChannel) IsProposedNext(g Guarantee, a common.Address) (bool, 
 
 	marshalledProposalQueue, er := json.Marshal(c.proposalQueue)
 	if er != nil {
-		slog.Debug("DEBUG: Error marshalling proposal queue inside IsProposedNext", "error", er)
+		slog.Debug("DEBUG: consensus_channel.go-IsProposedNext error marshalling proposal queue", "error", er)
 	} else {
-		slog.Debug("DEBUG: Inside is proposed next", "ProposalQueue", string(marshalledProposalQueue))
+		slog.Debug("DEBUG: consensus_channel.go-IsProposedNext", "proposalQueue", string(marshalledProposalQueue))
 	}
 
 	if len(c.proposalQueue) == 0 {
@@ -156,7 +156,8 @@ func (c *ConsensusChannel) IsProposedNext(g Guarantee, a common.Address) (bool, 
 		return false, err
 	}
 
-	slog.Debug("DEBUG: Inside is proposed next", "isProposedNext", vars.Outcome.includes(g, a) && !c.Includes(g, a))
+	slog.Debug("DEBUG: consensus_channel.go-IsProposedNext is guarantee going to be included", "isGuranteeIncluded", vars.Outcome.includes(g, a))
+	slog.Debug("DEBUG: consensus_channel.go-IsProposedNext is guarantee already included", "isGuranteeIncluded", c.Includes(g, a))
 
 	return vars.Outcome.includes(g, a) && !c.Includes(g, a), nil
 }

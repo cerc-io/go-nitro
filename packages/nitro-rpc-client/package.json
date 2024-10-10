@@ -1,5 +1,5 @@
 {
-  "name": "@statechannels/nitro-rpc-client",
+  "name": "@cerc-io/nitro-rpc-client",
   "version": "0.0.9",
   "description": "Typescript RPC client for go-nitro",
   "repository": "https://github.com/statechannels/nitro-rpc-client.git",

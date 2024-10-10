@@ -13,17 +13,19 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "18.15.0"
-      - name: "Install dependencies and build packages"
-        run: |
-          cd ./packages/nitro-protocol
-          npm ci --legacy-peer-deps
+      - name: Run yarn build
+        run: yarn && yarn build
       - name: Configure git.vdb.to npm registry
         run: |
           npm config set registry https://git.vdb.to/api/packages/cerc-io/npm/
       - name: Authenticate to git.vdb.to registry
         run: |
           npm config set -- '//git.vdb.to/api/packages/cerc-io/npm/:_authToken' "${{ secrets.GITEA_PUBLISH_TOKEN }}"
-      - name: npm publish
+      - name: Publish nitro-protocol package
         run: |
-          cd ./nitro-protocol
+          cd ./packages/nitro-protocol
+          npm publish
+      - name: Publish nitro-rpc-client package
+        run: |
+          cd ./packages/nitro-rpc-client
           npm publish

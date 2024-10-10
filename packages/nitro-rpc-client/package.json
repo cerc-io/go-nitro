@@ -6,7 +6,9 @@
   "license": "MIT",
   "author": "Alex Gap",
   "main": "dist/src/index.js",
-  "bin": "./bin/nitro-rpc-client",
+  "bin": {
+    "nitro-cli": "./bin/nitro-cli"
+  },
   "scripts": {
     "build": "tsc -b .",
     "lint": "yarn lint:eslint && yarn lint:misc --check",

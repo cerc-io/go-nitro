@@ -4602,7 +4602,7 @@ __metadata:
     websocket: ^1.0.34
     yargs: ^17.7.1
   bin:
-    nitro-rpc-client: ./bin/nitro-rpc-client
+    nitro-cli: ./bin/nitro-cli
   languageName: unknown
   linkType: soft
 

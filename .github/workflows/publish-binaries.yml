@@ -12,7 +12,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up Go
+    - name: Set up go
       uses: actions/setup-go@v2
       with:
         go-version: 1.22
@@ -20,27 +20,12 @@ jobs:
     - name: Install dependencies
       run: go mod tidy
 
-    - name: Build binaries
+    - name: Build binaries for nitro and bridge
       run: |
         go build -v -o nitro .
         go build -v -o nitro-bridge cmd/start-bridge/main.go
 
-    - name: Run yarn build
-      run: yarn && yarn build
-
-    - name: Configure gitea npm registry
-      run: |
-        npm config set registry https://git.vdb.to/api/packages/cerc-io/npm/
-
-    - name: Authenticate to gitea registry
-      run: |
-        npm config set -- '//git.vdb.to/api/packages/cerc-io/npm/:_authToken' "${{ secrets.GITEA_CICD_PUBLISH_TOKEN }}"
-    - name: npm publish
-      run: |
-        cd packages/nitro-rpc-client
-        npm publish
-
-    - name: Create Release on Gitea
+    - name: Create release in git.vdb.to/cerc-io/nitro
       id: create_release
       run: |
         NAME=$(echo '${{ toJson(github.event.release) }}' | jq -r '.name')
@@ -53,22 +38,22 @@ jobs:
             "tag_name": "'"$TAG_NAME"'",
             "target_commitish": "main",
             "name": "'"$NAME"'",
-            "body": "Automatically generated release from GitHub CI",
+            "body": "Created by GitHub CI",
             "draft": false,
             "prerelease": false
           }')
         echo "::set-output name=release_id::$(echo $RELEASE_RESPONSE | jq -r '.id')"
 
-    - name: Upload nitro binary to Gitea Release
+    - name: Upload nitro binary to git.vdb release
       run: |
         curl -X POST "https://git.vdb.to/api/v1/repos/cerc-io/nitro/releases/${{ steps.create_release.outputs.release_id }}/assets?name=nitro" \
         -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
         -H "Content-Type: multipart/form-data" \
         --form "attachment=@nitro"
 
-    - name: Upload nitro-bridge binary to Gitea Release
+    - name: Upload bridge binary to git.vdb release
       run: |
-        curl -X POST "https://git.vdb.to/api/v1/repos/cerc-io/nitro/releases/${{ steps.create_release.outputs.release_id }}/assets?name=nitro-bridge" \
+        curl -X POST "https://git.vdb.to/api/v1/repos/cerc-io/nitro/releases/${{ steps.create_release.outputs.release_id }}/assets?name=bridge" \
         -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
         -H "Content-Type: multipart/form-data" \
         --form "attachment=@nitro-bridge"

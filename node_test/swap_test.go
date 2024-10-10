@@ -128,14 +128,14 @@ func closeMultiAssetLedgerChannel(t *testing.T, utils TestUtils, ledgerChannelId
 
 	// Wait for direct defund objectives to complete
 	chA := utils.nodeA.ObjectiveCompleteChan(res)
-	chB := utils.nodeA.ObjectiveCompleteChan(res)
+	chB := utils.nodeB.ObjectiveCompleteChan(res)
 	<-chA
 	<-chB
 
 	t.Log("Completed direct-defund objective")
 }
 
-func createSwapChannel(t *testing.T, utils TestUtils) swapfund.ObjectiveResponse {
+func createSwapChannel(t *testing.T, utils TestUtils) (swapfund.ObjectiveResponse, outcome.Exit) {
 	// TODO: Refactor create swap channel outcome method
 	multiassetSwapChannelOutcome := outcome.Exit{
 		outcome.SingleAssetExit{
@@ -194,7 +194,7 @@ func createSwapChannel(t *testing.T, utils TestUtils) swapfund.ObjectiveResponse
 	<-chB
 
 	t.Log("Completed swap-fund objective")
-	return swapChannelresponse
+	return swapChannelresponse, multiassetSwapChannelOutcome
 }
 
 func TestStorageOfLastNSwap(t *testing.T) {
@@ -204,7 +204,7 @@ func TestStorageOfLastNSwap(t *testing.T) {
 	ledgerChannelResponse := createMultiAssetLedgerChannel(t, utils)
 	defer closeMultiAssetLedgerChannel(t, utils, ledgerChannelResponse.ChannelId)
 
-	swapChannelResponse := createSwapChannel(t, utils)
+	swapChannelResponse, _ := createSwapChannel(t, utils)
 	defer closeSwapChannel(t, utils, swapChannelResponse.ChannelId)
 
 	t.Run("Ensure that only the most recent n swaps are being stored ", func(t *testing.T) {
@@ -271,7 +271,7 @@ func TestParallelSwapCreation(t *testing.T) {
 	ledgerChannelResponse := createMultiAssetLedgerChannel(t, utils)
 	defer closeMultiAssetLedgerChannel(t, utils, ledgerChannelResponse.ChannelId)
 
-	swapChannelResponse := createSwapChannel(t, utils)
+	swapChannelResponse, _ := createSwapChannel(t, utils)
 	defer closeSwapChannel(t, utils, swapChannelResponse.ChannelId)
 
 	t.Run("Ensure parallel swaps are not allowed ", func(t *testing.T) {
@@ -528,4 +528,70 @@ func TestSwapFund(t *testing.T) {
 
 	expectedLedgerOutcome := createExpectedLedgerOutcome(ledgerStateBeforeSdf.State().Outcome, modifiedOutcome4)
 	checkLedgerChannel(t, ledgerResponse.ChannelId, expectedLedgerOutcome, query.Open, channel.Open, nodeA, nodeB)
+}
+
+func TestSwapTillEmptyBalance(t *testing.T) {
+	utils, cleanup := initializeNodesAndInfra(t)
+	defer cleanup()
+
+	ledgerChannelResponse := createMultiAssetLedgerChannel(t, utils)
+	defer closeMultiAssetLedgerChannel(t, utils, ledgerChannelResponse.ChannelId)
+
+	swapChannelResponse, initialOutcome := createSwapChannel(t, utils)
+	defer closeSwapChannel(t, utils, swapChannelResponse.ChannelId)
+
+	for i := 0; i < 3; i++ {
+		// Initiate swap from Bob
+		swapAssetResponse, err := utils.nodeB.SwapAssets(swapChannelResponse.ChannelId, common.Address{}, utils.infra.anvilChain.ContractAddresses.TokenAddresses[0], big.NewInt(100), big.NewInt(200))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Wait for objective to wait for confirmation
+		time.Sleep(3 * time.Second)
+
+		pendingSwap, err := utils.nodeA.GetPendingSwapByChannelId(swapAssetResponse.ChannelId)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if pendingSwap != nil {
+			// Accept the swap
+			err = utils.nodeA.ConfirmSwap(pendingSwap.Id, types.Accepted)
+			if err != nil {
+				t.Fatal(err)
+			}
+			<-utils.nodeB.ObjectiveCompleteChan(swapAssetResponse.Id)
+			initialOutcome = modifyOutcomeWithSwap(initialOutcome, pendingSwap, 1)
+		}
+		checkSwapChannel(t, swapChannelResponse.ChannelId, initialOutcome, query.Open, utils.nodeA, utils.nodeB)
+	}
+
+	for i := 0; i < 3; i++ {
+		// Initiate swap from Bob
+		swapAssetResponse, err := utils.nodeA.SwapAssets(swapChannelResponse.ChannelId, common.Address{}, utils.infra.anvilChain.ContractAddresses.TokenAddresses[0], big.NewInt(100), big.NewInt(200))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Wait for objective to wait for confirmation
+		time.Sleep(3 * time.Second)
+
+		pendingSwap, err := utils.nodeB.GetPendingSwapByChannelId(swapAssetResponse.ChannelId)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if pendingSwap != nil {
+			// Accept the swap
+			err = utils.nodeB.ConfirmSwap(pendingSwap.Id, types.Accepted)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			<-utils.nodeA.ObjectiveCompleteChan(swapAssetResponse.Id)
+			initialOutcome = modifyOutcomeWithSwap(initialOutcome, pendingSwap, 0)
+		}
+		checkSwapChannel(t, swapChannelResponse.ChannelId, initialOutcome, query.Open, utils.nodeA, utils.nodeB)
+	}
 }

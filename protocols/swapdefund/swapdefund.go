@@ -80,14 +80,12 @@ func NewObjective(request ObjectiveRequest,
 		return Objective{}, fmt.Errorf("could not find channel %s", request.ChannelId)
 	}
 
-	if FinalTurnNum == 0 {
-		latestSupportedSignedState, err := c.LatestSupportedSignedState()
-		if err != nil {
-			return Objective{}, err
-		}
-
-		FinalTurnNum = int(latestSupportedSignedState.State().TurnNum) + 1
+	latestSupportedSignedState, err := c.LatestSupportedSignedState()
+	if err != nil {
+		return Objective{}, err
 	}
+
+	FinalTurnNum = int(latestSupportedSignedState.State().TurnNum) + 1
 
 	S := &channel.SwapChannel{Channel: *c}
 

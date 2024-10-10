@@ -143,11 +143,11 @@ func createSwapChannel(t *testing.T, utils TestUtils) (swapfund.ObjectiveRespons
 			Allocations: outcome.Allocations{
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*utils.nodeA.Address),
-					Amount:      big.NewInt(int64(1001)),
+					Amount:      big.NewInt(int64(1000)),
 				},
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*utils.nodeB.Address),
-					Amount:      big.NewInt(int64(1002)),
+					Amount:      big.NewInt(int64(1000)),
 				},
 			},
 		},
@@ -156,11 +156,11 @@ func createSwapChannel(t *testing.T, utils TestUtils) (swapfund.ObjectiveRespons
 			Allocations: outcome.Allocations{
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*utils.nodeA.Address),
-					Amount:      big.NewInt(int64(501)),
+					Amount:      big.NewInt(int64(500)),
 				},
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*utils.nodeB.Address),
-					Amount:      big.NewInt(int64(502)),
+					Amount:      big.NewInt(int64(500)),
 				},
 			},
 		},
@@ -169,11 +169,11 @@ func createSwapChannel(t *testing.T, utils TestUtils) (swapfund.ObjectiveRespons
 			Allocations: outcome.Allocations{
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*utils.nodeA.Address),
-					Amount:      big.NewInt(int64(601)),
+					Amount:      big.NewInt(int64(600)),
 				},
 				outcome.Allocation{
 					Destination: types.AddressToDestination(*utils.nodeB.Address),
-					Amount:      big.NewInt(int64(602)),
+					Amount:      big.NewInt(int64(600)),
 				},
 			},
 		},
@@ -540,11 +540,13 @@ func TestSwapTillEmptyBalance(t *testing.T) {
 	swapChannelResponse, initialOutcome := createSwapChannel(t, utils)
 	defer closeSwapChannel(t, utils, swapChannelResponse.ChannelId)
 
-	for i := 0; i < 3; i++ {
+bobSwapLoop:
+	for {
 		// Initiate swap from Bob
-		swapAssetResponse, err := utils.nodeB.SwapAssets(swapChannelResponse.ChannelId, common.Address{}, utils.infra.anvilChain.ContractAddresses.TokenAddresses[0], big.NewInt(100), big.NewInt(200))
+		swapAssetResponse, err := utils.nodeB.SwapAssets(swapChannelResponse.ChannelId, common.Address{}, utils.infra.anvilChain.ContractAddresses.TokenAddresses[0], big.NewInt(100), big.NewInt(100))
 		if err != nil {
-			t.Fatal(err)
+			testhelpers.Assert(t, err == swap.ErrInvalidSwap, "Incorrect error")
+			break bobSwapLoop
 		}
 
 		// Wait for objective to wait for confirmation
@@ -567,11 +569,13 @@ func TestSwapTillEmptyBalance(t *testing.T) {
 		checkSwapChannel(t, swapChannelResponse.ChannelId, initialOutcome, query.Open, utils.nodeA, utils.nodeB)
 	}
 
-	for i := 0; i < 3; i++ {
+aliceSwapLoop:
+	for {
 		// Initiate swap from Bob
 		swapAssetResponse, err := utils.nodeA.SwapAssets(swapChannelResponse.ChannelId, common.Address{}, utils.infra.anvilChain.ContractAddresses.TokenAddresses[0], big.NewInt(100), big.NewInt(200))
 		if err != nil {
-			t.Fatal(err)
+			testhelpers.Assert(t, err == swap.ErrInvalidSwap, "Incorrect error")
+			break aliceSwapLoop
 		}
 
 		// Wait for objective to wait for confirmation

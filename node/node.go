@@ -269,7 +269,20 @@ func (n *Node) SwapAssets(channelId types.Destination, tokenIn common.Address, t
 		return swap.ObjectiveResponse{}, fmt.Errorf("%w: channel Id %+v", swap.ErrSwapExists, channelId)
 	}
 
-	objectiveRequest := swap.NewObjectiveRequest(channelId, tokenIn, tokenOut, amountIn, amountOut, swapChannel.FixedPart, rand.Uint64())
+	swapState, err := swapChannel.LatestSupportedState()
+	if err != nil {
+		return swap.ObjectiveResponse{}, err
+	}
+
+	nonce := rand.Uint64()
+	newSwap := payments.NewSwap(channelId, tokenIn, tokenOut, amountIn, amountOut, nonce)
+
+	isSwapValid := swap.IsValidSwap(swapState, newSwap, swapChannel.MyIndex)
+	if !isSwapValid {
+		return swap.ObjectiveResponse{}, swap.ErrInvalidSwap
+	}
+
+	objectiveRequest := swap.NewObjectiveRequest(channelId, tokenIn, tokenOut, amountIn, amountOut, swapChannel.FixedPart, nonce)
 
 	// Send the event to the engine
 	n.engine.ObjectiveRequestsFromAPI <- objectiveRequest

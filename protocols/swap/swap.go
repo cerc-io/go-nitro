@@ -81,7 +81,12 @@ func NewObjective(request ObjectiveRequest, preApprove bool, isSwapSender bool, 
 		obj.SwapSenderIndex = 1 - uint(myIndex)
 	}
 
-	isValid := obj.isValidSwap(request.swap)
+	s, err := obj.C.LatestSupportedState()
+	if err != nil {
+		return Objective{}, err
+	}
+
+	isValid := IsValidSwap(s, request.swap, obj.SwapSenderIndex)
 	if !isValid {
 		return obj, fmt.Errorf("swap objective creation failed: %w", ErrInvalidSwap)
 	}
@@ -91,7 +96,7 @@ func NewObjective(request ObjectiveRequest, preApprove bool, isSwapSender bool, 
 	return obj, nil
 }
 
-func (o *Objective) isValidSwap(swap payments.Swap) bool {
+func IsValidSwap(s state.State, swap payments.Swap, swapSenderIndex uint) bool {
 	tokenIn := swap.Exchange.TokenIn
 	tokenOut := swap.Exchange.TokenOut
 
@@ -103,16 +108,12 @@ func (o *Objective) isValidSwap(swap payments.Swap) bool {
 		return false
 	}
 
-	s, err := o.C.LatestSupportedState()
-	if err != nil {
-		return false
-	}
 	updateSupportedState := s.Clone()
 	updateOutcome := updateSupportedState.Outcome.Clone()
 
 	for _, assetOutcome := range updateOutcome {
-		swapSenderAllocation := assetOutcome.Allocations[o.SwapSenderIndex]
-		swapReceiverAllocation := assetOutcome.Allocations[1-o.SwapSenderIndex]
+		swapSenderAllocation := assetOutcome.Allocations[swapSenderIndex]
+		swapReceiverAllocation := assetOutcome.Allocations[1-swapSenderIndex]
 
 		if assetOutcome.Asset == tokenIn {
 			res := swapSenderAllocation.Amount.Sub(swapSenderAllocation.Amount, swap.Exchange.AmountIn)

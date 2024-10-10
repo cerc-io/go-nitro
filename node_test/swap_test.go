@@ -1,12 +1,14 @@
 package node_test
 
 import (
+	"encoding/json"
 	"errors"
 	"math/big"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/statechannels/go-nitro/channel"
 	"github.com/statechannels/go-nitro/channel/state/outcome"
 	"github.com/statechannels/go-nitro/internal/testactors"
@@ -196,7 +198,7 @@ func createSwapChannel(t *testing.T, utils TestUtils) (swapfund.ObjectiveRespons
 	return swapChannelresponse, multiassetSwapChannelOutcome
 }
 
-func performSwaps(t *testing.T, sender *node.Node, receiver *node.Node, swapSenderIndex int, swapExchange payments.Exchange, swapChannelId types.Destination, initialOutcome outcome.Exit, action types.SwapStatus) (outcome.Exit, types.Destination, error) {
+func performSwap(t *testing.T, sender *node.Node, receiver *node.Node, swapSenderIndex int, swapExchange payments.Exchange, swapChannelId types.Destination, expectedInitialOutcome outcome.Exit, action types.SwapStatus) (outcome.Exit, types.Destination, error) {
 	swapAssetResponse, err := sender.SwapAssets(swapChannelId, swapExchange.TokenIn, swapExchange.TokenOut, swapExchange.AmountIn, swapExchange.AmountOut)
 	if err != nil {
 		return outcome.Exit{}, types.Destination{}, err
@@ -210,7 +212,7 @@ func performSwaps(t *testing.T, sender *node.Node, receiver *node.Node, swapSend
 		return outcome.Exit{}, types.Destination{}, err
 	}
 
-	// Accept the swap
+	// Accept / reject the swap
 	err = receiver.ConfirmSwap(pendingSwap.Id, action)
 	if err != nil {
 		return outcome.Exit{}, types.Destination{}, err
@@ -219,12 +221,12 @@ func performSwaps(t *testing.T, sender *node.Node, receiver *node.Node, swapSend
 	<-sender.ObjectiveCompleteChan(swapAssetResponse.Id)
 
 	if action == types.Accepted {
-		initialOutcome = modifyOutcomeWithSwap(initialOutcome, pendingSwap, swapSenderIndex)
+		expectedInitialOutcome = modifyOutcomeWithSwap(expectedInitialOutcome, pendingSwap, swapSenderIndex)
 	}
 
-	checkSwapChannel(t, swapChannelId, initialOutcome, query.Open, *sender, *receiver)
+	checkSwapChannel(t, swapChannelId, expectedInitialOutcome, query.Open, *sender, *receiver)
 
-	return initialOutcome, pendingSwap.Id, nil
+	return expectedInitialOutcome, pendingSwap.Id, nil
 }
 
 func TestStorageOfLastNSwap(t *testing.T) {
@@ -234,8 +236,8 @@ func TestStorageOfLastNSwap(t *testing.T) {
 	ledgerChannelResponse := createMultiAssetLedgerChannel(t, utils)
 	defer closeMultiAssetLedgerChannel(t, utils, ledgerChannelResponse.ChannelId)
 
-	swapChannelResponse, initialOutcome := createSwapChannel(t, utils)
-	checkSwapChannel(t, swapChannelResponse.ChannelId, initialOutcome, query.Open, utils.nodeA, utils.nodeB)
+	swapChannelResponse, expectedInitialOutcome := createSwapChannel(t, utils)
+	checkSwapChannel(t, swapChannelResponse.ChannelId, expectedInitialOutcome, query.Open, utils.nodeA, utils.nodeB)
 
 	t.Run("Ensure that only the most recent n swaps are being stored ", func(t *testing.T) {
 		swapIterations := 7
@@ -250,12 +252,12 @@ func TestStorageOfLastNSwap(t *testing.T) {
 				AmountOut: big.NewInt(20),
 			}
 
-			out, swapId, err := performSwaps(t, &utils.nodeB, &utils.nodeA, 1, exchange, swapChannelResponse.ChannelId, initialOutcome, types.Accepted)
+			out, swapId, err := performSwap(t, &utils.nodeB, &utils.nodeA, 1, exchange, swapChannelResponse.ChannelId, expectedInitialOutcome, types.Accepted)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			initialOutcome = out
+			expectedInitialOutcome = out
 			swapsIds = append(swapsIds, swapId)
 		}
 
@@ -291,7 +293,7 @@ func TestStorageOfLastNSwap(t *testing.T) {
 
 		closeSwapChannel(t, utils, swapChannelResponse.ChannelId)
 
-		expectedLedgerOutcome := createExpectedLedgerOutcome(ledgerStateBeforeSdf.State().Outcome, initialOutcome)
+		expectedLedgerOutcome := createExpectedLedgerOutcome(ledgerStateBeforeSdf.State().Outcome, expectedInitialOutcome)
 		checkLedgerChannel(t, ledgerChannelResponse.ChannelId, expectedLedgerOutcome, query.Open, channel.Open, utils.nodeA, utils.nodeB)
 	})
 }
@@ -328,46 +330,50 @@ func TestSwapFund(t *testing.T) {
 	ledgerChannelResponse := createMultiAssetLedgerChannel(t, utils)
 	defer closeMultiAssetLedgerChannel(t, utils, ledgerChannelResponse.ChannelId)
 
-	swapChannelResponse, initialOutcome := createSwapChannel(t, utils)
-	checkSwapChannel(t, swapChannelResponse.ChannelId, initialOutcome, query.Open, utils.nodeA, utils.nodeB)
+	swapChannelResponse, expectedInitialOutcome := createSwapChannel(t, utils)
+	checkSwapChannel(t, swapChannelResponse.ChannelId, expectedInitialOutcome, query.Open, utils.nodeA, utils.nodeB)
 
 	t.Run("Test multiple swaps from both nodes", func(t *testing.T) {
-		for i := 0; i < 4; i++ {
-			exchange := payments.Exchange{
-				TokenIn:   common.Address{},
-				TokenOut:  utils.infra.anvilChain.ContractAddresses.TokenAddresses[0],
-				AmountIn:  big.NewInt(100),
-				AmountOut: big.NewInt(200),
-			}
-
-			// Alice initiates swap
-			sender := &utils.nodeA
-			receiver := &utils.nodeB
-			senderIndex := 0
-
-			// Bob accepts swap
-			action := types.Accepted
-
-			if i == 1 {
-				// Bob initiates swap
-				sender = &utils.nodeB
-				receiver = &utils.nodeA
-				senderIndex = 1
-			}
-
-			if i == 2 {
-				// Bob rejects swap
-				action = types.Rejected
-			}
-
-			out, _, err := performSwaps(t, sender, receiver, senderIndex, exchange, swapChannelResponse.ChannelId, initialOutcome, action)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			initialOutcome = out
+		exchange := payments.Exchange{
+			TokenIn:   common.Address{},
+			TokenOut:  utils.infra.anvilChain.ContractAddresses.TokenAddresses[0],
+			AmountIn:  big.NewInt(20),
+			AmountOut: big.NewInt(10),
 		}
+
+		// Alice initiates swap and Bob accepts
+		out, _, err := performSwap(t, &utils.nodeA, &utils.nodeB, 0, exchange, swapChannelResponse.ChannelId, expectedInitialOutcome, types.Accepted)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectedInitialOutcome = out
+
+		// Bob initiates swap and Alice accepts
+		out, _, err = performSwap(t, &utils.nodeB, &utils.nodeA, 1, exchange, swapChannelResponse.ChannelId, expectedInitialOutcome, types.Accepted)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectedInitialOutcome = out
+
+		// Alice initiates swap and Bob rejects
+		out, _, err = performSwap(t, &utils.nodeA, &utils.nodeB, 0, exchange, swapChannelResponse.ChannelId, expectedInitialOutcome, types.Rejected)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectedInitialOutcome = out
+
+		// Alice initiates swap and Bob accepts
+		out, _, err = performSwap(t, &utils.nodeA, &utils.nodeB, 0, exchange, swapChannelResponse.ChannelId, expectedInitialOutcome, types.Accepted)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectedInitialOutcome = out
 	})
+
 	t.Run("Check ledger channel after swapdefund", func(t *testing.T) {
 		ledgerStateBeforeSdf, err := utils.nodeA.GetSignedState(ledgerChannelResponse.ChannelId)
 		if err != nil {
@@ -376,7 +382,7 @@ func TestSwapFund(t *testing.T) {
 
 		closeSwapChannel(t, utils, swapChannelResponse.ChannelId)
 
-		expectedLedgerOutcome := createExpectedLedgerOutcome(ledgerStateBeforeSdf.State().Outcome, initialOutcome)
+		expectedLedgerOutcome := createExpectedLedgerOutcome(ledgerStateBeforeSdf.State().Outcome, expectedInitialOutcome)
 		checkLedgerChannel(t, ledgerChannelResponse.ChannelId, expectedLedgerOutcome, query.Open, channel.Open, utils.nodeA, utils.nodeB)
 	})
 }
@@ -388,8 +394,8 @@ func TestSwapTillEmptyBalance(t *testing.T) {
 	ledgerChannelResponse := createMultiAssetLedgerChannel(t, utils)
 	defer closeMultiAssetLedgerChannel(t, utils, ledgerChannelResponse.ChannelId)
 
-	swapChannelResponse, initialOutcome := createSwapChannel(t, utils)
-	checkSwapChannel(t, swapChannelResponse.ChannelId, initialOutcome, query.Open, utils.nodeA, utils.nodeB)
+	swapChannelResponse, expectedInitialOutcome := createSwapChannel(t, utils)
+	checkSwapChannel(t, swapChannelResponse.ChannelId, expectedInitialOutcome, query.Open, utils.nodeA, utils.nodeB)
 
 	t.Run("Test performing swaps until balance becomes zero", func(t *testing.T) {
 	bobSwapLoop:
@@ -401,13 +407,35 @@ func TestSwapTillEmptyBalance(t *testing.T) {
 				AmountOut: big.NewInt(100),
 			}
 
-			out, _, err := performSwaps(t, &utils.nodeB, &utils.nodeA, 1, exchange, swapChannelResponse.ChannelId, initialOutcome, types.Accepted)
+			out, _, err := performSwap(t, &utils.nodeB, &utils.nodeA, 1, exchange, swapChannelResponse.ChannelId, expectedInitialOutcome, types.Accepted)
 			if err != nil {
+				// Check that balance of node A is zero now that swap has failed
+				var swapInfo query.SwapChannelInfo
+				marshalledSwapInfo, er := utils.nodeA.GetSwapChannel(swapChannelResponse.ChannelId)
+				if er != nil {
+					t.Fatal(err)
+				}
+
+				er = json.Unmarshal([]byte(marshalledSwapInfo), &swapInfo)
+				if er != nil {
+					t.Fatal(er)
+				}
+
+				var balanceNodeA *hexutil.Big
+
+				for _, b := range swapInfo.Balances {
+					if b.AssetAddress == utils.infra.anvilChain.ContractAddresses.TokenAddresses[0] {
+						balanceNodeA = b.MyBalance
+					}
+				}
+
 				testhelpers.Assert(t, err == swap.ErrInvalidSwap, "Incorrect error")
+				testhelpers.Assert(t, types.IsZero((*big.Int)(balanceNodeA)), "Balance of node A should be zero")
+
 				break bobSwapLoop
 			}
 
-			initialOutcome = out
+			expectedInitialOutcome = out
 		}
 
 	aliceSwapLoop:
@@ -419,13 +447,35 @@ func TestSwapTillEmptyBalance(t *testing.T) {
 				AmountOut: big.NewInt(100),
 			}
 
-			out, _, err := performSwaps(t, &utils.nodeA, &utils.nodeB, 0, exchange, swapChannelResponse.ChannelId, initialOutcome, types.Accepted)
+			out, _, err := performSwap(t, &utils.nodeA, &utils.nodeB, 0, exchange, swapChannelResponse.ChannelId, expectedInitialOutcome, types.Accepted)
 			if err != nil {
+				// Check that balance of node B is zero now that swap has failed
+				var swapInfo query.SwapChannelInfo
+				marshalledSwapInfo, er := utils.nodeB.GetSwapChannel(swapChannelResponse.ChannelId)
+				if er != nil {
+					t.Fatal(err)
+				}
+
+				er = json.Unmarshal([]byte(marshalledSwapInfo), &swapInfo)
+				if er != nil {
+					t.Fatal(er)
+				}
+
+				var balanceNodeB *hexutil.Big
+
+				for _, b := range swapInfo.Balances {
+					if b.AssetAddress == utils.infra.anvilChain.ContractAddresses.TokenAddresses[0] {
+						balanceNodeB = b.MyBalance
+					}
+				}
+
 				testhelpers.Assert(t, err == swap.ErrInvalidSwap, "Incorrect error")
+				testhelpers.Assert(t, types.IsZero((*big.Int)(balanceNodeB)), "Balance of node B should be zero")
+
 				break aliceSwapLoop
 			}
 
-			initialOutcome = out
+			expectedInitialOutcome = out
 		}
 	})
 
@@ -437,7 +487,7 @@ func TestSwapTillEmptyBalance(t *testing.T) {
 
 		closeSwapChannel(t, utils, swapChannelResponse.ChannelId)
 
-		expectedLedgerOutcome := createExpectedLedgerOutcome(ledgerStateBeforeSdf.State().Outcome, initialOutcome)
+		expectedLedgerOutcome := createExpectedLedgerOutcome(ledgerStateBeforeSdf.State().Outcome, expectedInitialOutcome)
 		checkLedgerChannel(t, ledgerChannelResponse.ChannelId, expectedLedgerOutcome, query.Open, channel.Open, utils.nodeA, utils.nodeB)
 	})
 }

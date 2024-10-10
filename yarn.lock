@@ -1885,6 +1885,56 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@cerc-io/nitro-protocol@workspace:packages/nitro-protocol":
+  version: 0.0.0-use.local
+  resolution: "@cerc-io/nitro-protocol@workspace:packages/nitro-protocol"
+  dependencies:
+    "@nomicfoundation/hardhat-network-helpers": ^1.0.3
+    "@nomiclabs/hardhat-ethers": ^2.1.1
+    "@nomiclabs/hardhat-etherscan": ^3.0.0
+    "@nomiclabs/hardhat-waffle": ^2.0.2
+    "@openzeppelin/contracts": ^4.7.3
+    "@starboardventures/hardhat-verify": ^1.0.1
+    "@statechannels/devtools": ^0.5.7
+    "@statechannels/exit-format": ^0.2.0
+    "@typechain/ethers-v5": ^9.0.0
+    "@typechain/hardhat": ^4.0.0
+    "@types/jest": 29.5.0
+    "@types/lodash.isequal": ^4.5.5
+    "@types/lodash.shuffle": ^4.2.6
+    "@types/mocha": ^9.1.0
+    "@types/node": ^18.11.3
+    "@types/wait-on": ^5.3.1
+    "@typescript-eslint/eslint-plugin": ^5.59.0
+    "@typescript-eslint/parser": ^5.59.0
+    axios: 0.25.0
+    chai: ^4.3.6
+    dotenv: ^14.3.2
+    eslint: 7.17.0
+    eslint-config-prettier: ^8.5.0
+    eslint-plugin-import: ^2.26.0
+    eslint-plugin-prettier: 3.3.1
+    ethereum-waffle: ^3.4.0
+    hardhat: ^2.17.2
+    hardhat-deploy: ^0.10.4
+    hardhat-deploy-ethers: ^0.3.0-beta.13
+    hardhat-gas-reporter: ^1.0.7
+    hardhat-watcher: ^2.3.0
+    jest: 29.5.0
+    lodash.isequal: ^4.5.0
+    lodash.shuffle: ^4.2.0
+    prettier: ^2.6.2
+    prettier-plugin-solidity: ^1.0.0-beta.19
+    solhint: ^3.3.7
+    solidity-coverage: ^0.8.4
+    ts-jest: 29.1.0
+    ts-node: ^10.4.0
+    typechain: ^8.0.0
+    typescript: ^4.6.3
+    wait-on: ^6.0.1
+  languageName: unknown
+  linkType: soft
+
 "@cerc-io/nitro-rpc-client@workspace:*, @cerc-io/nitro-rpc-client@workspace:packages/nitro-rpc-client":
   version: 0.0.0-use.local
   resolution: "@cerc-io/nitro-rpc-client@workspace:packages/nitro-rpc-client"
@@ -4555,56 +4605,6 @@ __metadata:
   checksum: 4342bb6a836b5844c8dcdc8933ed12a8e058e41fddbb2b4a95ab615979dd52a15448bce4640550204c2e103bec3de52ccbc1f3a4a3cb2696906cd3ce50980cb1
   languageName: node
   linkType: hard
-
-"@statechannels/nitro-protocol@workspace:packages/nitro-protocol":
-  version: 0.0.0-use.local
-  resolution: "@statechannels/nitro-protocol@workspace:packages/nitro-protocol"
-  dependencies:
-    "@nomicfoundation/hardhat-network-helpers": ^1.0.3
-    "@nomiclabs/hardhat-ethers": ^2.1.1
-    "@nomiclabs/hardhat-etherscan": ^3.0.0
-    "@nomiclabs/hardhat-waffle": ^2.0.2
-    "@openzeppelin/contracts": ^4.7.3
-    "@starboardventures/hardhat-verify": ^1.0.1
-    "@statechannels/devtools": ^0.5.7
-    "@statechannels/exit-format": ^0.2.0
-    "@typechain/ethers-v5": ^9.0.0
-    "@typechain/hardhat": ^4.0.0
-    "@types/jest": 29.5.0
-    "@types/lodash.isequal": ^4.5.5
-    "@types/lodash.shuffle": ^4.2.6
-    "@types/mocha": ^9.1.0
-    "@types/node": ^18.11.3
-    "@types/wait-on": ^5.3.1
-    "@typescript-eslint/eslint-plugin": ^5.59.0
-    "@typescript-eslint/parser": ^5.59.0
-    axios: 0.25.0
-    chai: ^4.3.6
-    dotenv: ^14.3.2
-    eslint: 7.17.0
-    eslint-config-prettier: ^8.5.0
-    eslint-plugin-import: ^2.26.0
-    eslint-plugin-prettier: 3.3.1
-    ethereum-waffle: ^3.4.0
-    hardhat: ^2.17.2
-    hardhat-deploy: ^0.10.4
-    hardhat-deploy-ethers: ^0.3.0-beta.13
-    hardhat-gas-reporter: ^1.0.7
-    hardhat-watcher: ^2.3.0
-    jest: 29.5.0
-    lodash.isequal: ^4.5.0
-    lodash.shuffle: ^4.2.0
-    prettier: ^2.6.2
-    prettier-plugin-solidity: ^1.0.0-beta.19
-    solhint: ^3.3.7
-    solidity-coverage: ^0.8.4
-    ts-jest: 29.1.0
-    ts-node: ^10.4.0
-    typechain: ^8.0.0
-    typescript: ^4.6.3
-    wait-on: ^6.0.1
-  languageName: unknown
-  linkType: soft
 
 "@storybook/addon-actions@npm:7.0.27":
   version: 7.0.27

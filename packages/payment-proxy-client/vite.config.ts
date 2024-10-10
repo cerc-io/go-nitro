@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   // https://vitejs.dev/guide/dep-pre-bundling.html#monorepos-and-linked-dependencies
   optimizeDeps: {
-    include:  ["@statechannels/nitro-rpc-client"]
+    include:  ["@cerc-io/nitro-rpc-client"]
   },
   build: {
     commonjsOptions: {

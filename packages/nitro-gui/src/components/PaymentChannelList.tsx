@@ -1,6 +1,6 @@
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
-import { PaymentChannelInfo } from "@statechannels/nitro-rpc-client/src/types";
+import { PaymentChannelInfo } from "@cerc-io/nitro-rpc-client/src/types";
 import { FC } from "react";
 import { makeStyles } from "tss-react/mui";
 

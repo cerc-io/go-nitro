@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { NitroRpcClient } from "@statechannels/nitro-rpc-client";
-import { LedgerChannelInfo } from "@statechannels/nitro-rpc-client/src/types";
+import { NitroRpcClient } from "@cerc-io/nitro-rpc-client";
+import { LedgerChannelInfo } from "@cerc-io/nitro-rpc-client/src/types";
 
 import "./App.css";
 import TopBar from "./components/TopBar";

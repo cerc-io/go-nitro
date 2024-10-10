@@ -23,7 +23,7 @@ jobs:
     - name: Build binaries for nitro and bridge
       run: |
         go build -v -o nitro .
-        go build -v -o nitro-bridge cmd/start-bridge/main.go
+        go build -o bridge-binary cmd/start-bridge/main.go
 
     - name: Create release in git.vdb.to/cerc-io/nitro
       id: create_release
@@ -56,4 +56,4 @@ jobs:
         curl -X POST "https://git.vdb.to/api/v1/repos/cerc-io/nitro/releases/${{ steps.create_release.outputs.release_id }}/assets?name=bridge" \
         -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
         -H "Content-Type: multipart/form-data" \
-        --form "attachment=@nitro-bridge"
+        --form "attachment=@bridge-binary"

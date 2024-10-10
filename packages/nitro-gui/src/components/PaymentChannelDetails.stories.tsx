@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ChannelStatus } from "@statechannels/nitro-rpc-client/src/types";
+import { ChannelStatus } from "@cerc-io/nitro-rpc-client/src/types";
 import { FC } from "react";
 
 import PaymentChannelDetails from "./PaymentChannelDetails";

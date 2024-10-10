@@ -1,9 +1,9 @@
-import { NitroRpcClient } from "@statechannels/nitro-rpc-client";
+import { NitroRpcClient } from "@cerc-io/nitro-rpc-client";
 import {
   ChannelStatus,
   PaymentChannelBalance,
   PaymentChannelInfo,
-} from "@statechannels/nitro-rpc-client/src/types";
+} from "@cerc-io/nitro-rpc-client/src/types";
 import { useEffect, useState, FC } from "react";
 import { makeStyles } from "tss-react/mui";
 

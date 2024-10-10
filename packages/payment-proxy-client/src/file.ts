@@ -1,5 +1,5 @@
-import { NitroRpcClient } from "@statechannels/nitro-rpc-client";
-import { Voucher } from "@statechannels/nitro-rpc-client/src/types";
+import { NitroRpcClient } from "@cerc-io/nitro-rpc-client";
+import { Voucher } from "@cerc-io/nitro-rpc-client/src/types";
 
 export async function fetchFile(
   url: string,

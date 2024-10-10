@@ -33,8 +33,8 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import PersonIcon from "@mui/icons-material/Person";
 import StorageIcon from "@mui/icons-material/Storage";
-import { NitroRpcClient } from "@statechannels/nitro-rpc-client";
-import { PaymentChannelInfo } from "@statechannels/nitro-rpc-client/src/types";
+import { NitroRpcClient } from "@cerc-io/nitro-rpc-client";
+import { PaymentChannelInfo } from "@cerc-io/nitro-rpc-client/src/types";
 
 import {
   AvailableFile,

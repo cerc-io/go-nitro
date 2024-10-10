@@ -7,7 +7,7 @@ import {
   EyeSlashIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
-import { ChannelStatus } from "@statechannels/nitro-rpc-client/src/types";
+import { ChannelStatus } from "@cerc-io/nitro-rpc-client/src/types";
 
 import { PaymentChannelType } from "./PaymentChannelContainer";
 

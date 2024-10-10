@@ -1,6 +1,6 @@
-import { NitroRpcClient } from "@statechannels/nitro-rpc-client";
+import { NitroRpcClient } from "@cerc-io/nitro-rpc-client";
 import { useEffect, useState } from "react";
-import { LedgerChannelBalance } from "@statechannels/nitro-rpc-client/src/types";
+import { LedgerChannelBalance } from "@cerc-io/nitro-rpc-client/src/types";
 
 import { NetworkBalance, VirtualChannelBalanceProps } from "./NetworkBalance";
 

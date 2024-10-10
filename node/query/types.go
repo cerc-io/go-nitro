@@ -78,11 +78,11 @@ func (li LedgerChannelInfo) Equal(other LedgerChannelInfo) bool {
 
 	if len(li.Balances) != len(other.Balances) {
 		areBalancesEqual = false
-	}
-
-	for i, balance := range li.Balances {
-		if !balance.Equal(other.Balances[i]) {
-			areBalancesEqual = false
+	} else {
+		for i, balance := range li.Balances {
+			if !balance.Equal(other.Balances[i]) {
+				areBalancesEqual = false
+			}
 		}
 	}
 
@@ -101,4 +101,29 @@ func (pcb PaymentChannelBalance) Equal(other PaymentChannelBalance) bool {
 		pcb.Payer == other.Payer &&
 		pcb.PaidSoFar.ToInt().Cmp(other.PaidSoFar.ToInt()) == 0 &&
 		pcb.RemainingFunds.ToInt().Cmp(other.RemainingFunds.ToInt()) == 0
+}
+
+// Equal returns true if the other SwapChannelInfo is equal to this one
+func (sci SwapChannelInfo) Equal(other SwapChannelInfo) bool {
+	areBalancesEqual := true
+	if len(sci.Balances) != len(other.Balances) {
+		areBalancesEqual = false
+	} else {
+		for i, balance := range sci.Balances {
+			if !balance.Equal(other.Balances[i]) {
+				areBalancesEqual = false
+			}
+		}
+	}
+
+	return sci.ID == other.ID && sci.Status == other.Status && areBalancesEqual
+}
+
+// Equal returns true if the other SwapChannelBalance is equal to this one
+func (scb SwapChannelBalance) Equal(other SwapChannelBalance) bool {
+	return scb.AssetAddress == other.AssetAddress &&
+		scb.Them == other.Them &&
+		scb.Me == other.Me &&
+		scb.TheirBalance.ToInt().Cmp(other.TheirBalance.ToInt()) == 0 &&
+		scb.MyBalance.ToInt().Cmp(other.MyBalance.ToInt()) == 0
 }

@@ -14,6 +14,7 @@ const ALL_NOTIFICATIONS = "all"
 type ChannelNotifier struct {
 	ledgerListeners  *safesync.Map[*ledgerChannelListeners]
 	paymentListeners *safesync.Map[*paymentChannelListeners]
+	swapListeners    *safesync.Map[*swapChannelListeners]
 	store            store.Store
 	vm               *payments.VoucherManager
 }
@@ -23,6 +24,7 @@ func NewChannelNotifier(store store.Store, vm *payments.VoucherManager) *Channel
 	return &ChannelNotifier{
 		ledgerListeners:  &safesync.Map[*ledgerChannelListeners]{},
 		paymentListeners: &safesync.Map[*paymentChannelListeners]{},
+		swapListeners:    &safesync.Map[*swapChannelListeners]{},
 		store:            store,
 		vm:               vm,
 	}
@@ -52,6 +54,11 @@ func (cn *ChannelNotifier) RegisterForPaymentChannelUpdates(cId types.Destinatio
 	return li.createNewListener()
 }
 
+func (cn *ChannelNotifier) RegisterForAllSwapChannelUpdates() <-chan query.SwapChannelInfo {
+	li, _ := cn.swapListeners.LoadOrStore(ALL_NOTIFICATIONS, newSwapChannelListeners())
+	return li.getOrCreateListener()
+}
+
 // NotifyLedgerUpdated notifies all listeners of a ledger channel update.
 // It should be called whenever a ledger channel is updated.
 func (cn *ChannelNotifier) NotifyLedgerUpdated(info query.LedgerChannelInfo) error {
@@ -75,6 +82,16 @@ func (cn *ChannelNotifier) NotifyPaymentUpdated(info query.PaymentChannelInfo) e
 	return nil
 }
 
+func (cn *ChannelNotifier) NotifySwapUpdated(info query.SwapChannelInfo) error {
+	li, _ := cn.swapListeners.LoadOrStore(info.ID.String(), newSwapChannelListeners())
+	li.Notify(info)
+
+	allLi, _ := cn.swapListeners.LoadOrStore(ALL_NOTIFICATIONS, newSwapChannelListeners())
+	allLi.Notify(info)
+
+	return nil
+}
+
 // Close closes the notifier and all listeners.
 func (cn *ChannelNotifier) Close() error {
 	var err error
@@ -83,6 +100,10 @@ func (cn *ChannelNotifier) Close() error {
 		return err == nil
 	})
 	cn.paymentListeners.Range(func(k string, v *paymentChannelListeners) bool {
+		err = v.Close()
+		return err == nil
+	})
+	cn.swapListeners.Range(func(k string, v *swapChannelListeners) bool {
 		err = v.Close()
 		return err == nil
 	})

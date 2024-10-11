@@ -12,7 +12,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up go
+    - name: Set up Go
       uses: actions/setup-go@v2
       with:
         go-version: 1.22
@@ -23,7 +23,28 @@ jobs:
     - name: Build binaries for nitro and bridge
       run: |
         go build -v -o nitro .
-        go build -o bridge-binary cmd/start-bridge/main.go
+        go build -o nitro-bridge cmd/start-bridge/main.go
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: nitro-and-bridge-binaries
+        path: |
+          nitro
+          nitro-bridge
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: nitro-and-bridge-binaries
 
     - name: Create release in git.vdb.to/cerc-io/nitro
       id: create_release
@@ -56,4 +77,4 @@ jobs:
         curl -X POST "https://git.vdb.to/api/v1/repos/cerc-io/nitro/releases/${{ steps.create_release.outputs.release_id }}/assets?name=bridge" \
         -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
         -H "Content-Type: multipart/form-data" \
-        --form "attachment=@bridge-binary"
+        --form "attachment=@nitro-bridge"

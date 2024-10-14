@@ -89,12 +89,19 @@ func initializeNodesAndInfra(t *testing.T) (TestUtils, func()) {
 
 	cleanup := func() {
 		removeTempFolder()
+		t.Log("DEBUG: Removed temporary storage folder")
 
 		nodeB.Close()
+		t.Log("DEBUG: Closed node B")
+
 		nodeC.Close()
+		t.Log("DEBUG: Closed node C")
+
 		nodeA.Close()
+		t.Log("DEBUG: Closed node A")
 
 		infra.Close(t)
+		t.Log("DEBUG: Closed infra")
 	}
 
 	return utils, cleanup
@@ -226,7 +233,7 @@ func performSwap(t *testing.T, sender *node.Node, receiver *node.Node, swapSende
 	}
 
 	// Wait for objective to wait for confirmation
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	pendingSwap, err := receiver.GetPendingSwapByChannelId(swapAssetResponse.ChannelId)
 	if err != nil {
@@ -605,7 +612,7 @@ func TestSwapsWithIntermediary(t *testing.T) {
 		}
 
 		// Wait for objective to wait for confirmation
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 
 		pendingSwap, err := utils.nodeC.GetPendingSwapByChannelId(swapAssetResponse.ChannelId)
 		if err != nil {

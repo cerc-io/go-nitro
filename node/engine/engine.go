@@ -459,6 +459,14 @@ func (e *Engine) handleMessage(message protocols.Message) (EngineEvent, error) {
 		}
 
 		allCompleted.CompletedObjectives = append(allCompleted.CompletedObjectives, objective)
+
+		// Generate objective notifications on rejection as attempt progress is not called
+		notif, err := e.generateObjectiveNotifications(objective)
+		if err != nil {
+			return EngineEvent{}, err
+		}
+
+		allCompleted.Merge(notif)
 	}
 
 	for _, voucher := range message.Payments {

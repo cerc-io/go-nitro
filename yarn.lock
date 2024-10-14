@@ -1971,7 +1971,7 @@ __metadata:
     websocket: ^1.0.34
     yargs: ^17.7.1
   bin:
-    nitro-cli: ./bin/nitro-cli
+    nitro-rpc-client: ./bin/nitro-rpc-client
   languageName: unknown
   linkType: soft
 

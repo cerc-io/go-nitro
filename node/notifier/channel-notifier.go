@@ -59,6 +59,12 @@ func (cn *ChannelNotifier) RegisterForAllSwapChannelUpdates() <-chan query.SwapI
 	return li.getOrCreateListener()
 }
 
+// RegisterForLedgerUpdates returns a buffered channel that will receive updates or a specific payment channel.
+func (cn *ChannelNotifier) RegisterForSwapUpdates(cId types.Destination) <-chan query.SwapInfo {
+	li, _ := cn.swapListeners.LoadOrStore(cId.String(), newSwapListeners())
+	return li.createNewListener()
+}
+
 // NotifyLedgerUpdated notifies all listeners of a ledger channel update.
 // It should be called whenever a ledger channel is updated.
 func (cn *ChannelNotifier) NotifyLedgerUpdated(info query.LedgerChannelInfo) error {

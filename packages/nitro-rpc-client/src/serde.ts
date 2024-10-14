@@ -128,6 +128,7 @@ type SwapChannelSchemaType = JTDDataType<typeof swapChannelSchema>;
 const swapInfoSchema = {
   properties: {
     Id: { type: "string" },
+    ChannelId: { type: "string" },
     Status: { type: "int32" },
   },
 } as const;
@@ -468,6 +469,7 @@ export const convertToSwapChannelInfoType = (
 export const convertToSwapInfoType = (result: SwapInfoSchemaType): SwapInfo => {
   return {
     Id: result.Id,
+    ChannelId: result.ChannelId,
     Status: result.Status,
   };
 };

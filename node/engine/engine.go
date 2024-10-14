@@ -1105,8 +1105,9 @@ func (e *Engine) generateObjectiveNotifications(o protocols.Objective) (EngineEv
 		}
 
 		swapInfo := query.SwapInfo{
-			Id:     o.Swap.Id,
-			Status: o.SwapStatus,
+			Id:        o.Swap.Id,
+			ChannelId: o.C.Id,
+			Status:    o.SwapStatus,
 		}
 
 		outgoing.SwapUpdates = append(outgoing.SwapUpdates, swapInfo)

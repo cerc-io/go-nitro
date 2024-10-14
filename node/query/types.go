@@ -55,8 +55,9 @@ type LedgerChannelInfo struct {
 }
 
 type SwapInfo struct {
-	Id     types.Destination
-	Status types.SwapStatus
+	Id        types.Destination
+	ChannelId types.Destination
+	Status    types.SwapStatus
 }
 
 // LedgerChannelBalance contains the balance of a ledger channel

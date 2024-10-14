@@ -487,6 +487,7 @@ export type PaymentChannelInfo = {
 
 export type SwapInfo = {
   Id: string;
+  ChannelId: string;
   Status: SwapStatus;
 };
 

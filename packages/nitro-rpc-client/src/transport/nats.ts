@@ -65,6 +65,9 @@ export class NatsTransport {
         case "payment_channel_updated":
           this.notifications.emit(notif.method, notif);
           break;
+        case "swap_updated":
+          this.notifications.emit(notif.method, notif);
+          break;
       }
     }
   }

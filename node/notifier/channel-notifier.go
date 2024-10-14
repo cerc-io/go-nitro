@@ -83,7 +83,7 @@ func (cn *ChannelNotifier) NotifyPaymentUpdated(info query.PaymentChannelInfo) e
 }
 
 func (cn *ChannelNotifier) NotifySwapUpdated(info query.SwapInfo) error {
-	li, _ := cn.swapListeners.LoadOrStore(info.Swap.Id.String(), newSwapListeners())
+	li, _ := cn.swapListeners.LoadOrStore(info.Id.String(), newSwapListeners())
 	li.Notify(info)
 
 	allLi, _ := cn.swapListeners.LoadOrStore(ALL_NOTIFICATIONS, newSwapListeners())

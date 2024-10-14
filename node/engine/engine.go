@@ -130,6 +130,8 @@ type EngineEvent struct {
 	LedgerChannelUpdates []query.LedgerChannelInfo
 	// PaymentChannelUpdates contains channel info for payment channels that have been updated
 	PaymentChannelUpdates []query.PaymentChannelInfo
+
+	SwapUpdates []query.SwapInfo
 }
 
 // IsEmpty returns true if the EngineEvent contains no changes
@@ -138,7 +140,8 @@ func (ee *EngineEvent) IsEmpty() bool {
 		len(ee.FailedObjectives) == 0 &&
 		len(ee.ReceivedVouchers) == 0 &&
 		len(ee.LedgerChannelUpdates) == 0 &&
-		len(ee.PaymentChannelUpdates) == 0
+		len(ee.PaymentChannelUpdates) == 0 &&
+		len(ee.SwapUpdates) == 0
 }
 
 func (ee *EngineEvent) Merge(other EngineEvent) {
@@ -147,6 +150,7 @@ func (ee *EngineEvent) Merge(other EngineEvent) {
 	ee.ReceivedVouchers = append(ee.ReceivedVouchers, other.ReceivedVouchers...)
 	ee.LedgerChannelUpdates = append(ee.LedgerChannelUpdates, other.LedgerChannelUpdates...)
 	ee.PaymentChannelUpdates = append(ee.PaymentChannelUpdates, other.PaymentChannelUpdates...)
+	ee.SwapUpdates = append(ee.SwapUpdates, other.SwapUpdates...)
 }
 
 type CompletedObjectiveEvent struct {
@@ -998,6 +1002,12 @@ func (e *Engine) attemptProgress(objective protocols.Objective) (outgoing Engine
 	}
 	outgoing.Merge(notifEvents)
 
+	objNotifEvents, err := e.generateObjectiveNotifications(crankedObjective)
+	if err != nil {
+		return EngineEvent{}, err
+	}
+	outgoing.Merge(objNotifEvents)
+
 	e.logger.Info("Objective cranked", logging.WithObjectiveIdAttribute(objective.Id()), "waiting-for", string(waitingFor))
 
 	// If our protocol is waiting for nothing then we know the objective is complete
@@ -1083,6 +1093,25 @@ func (e *Engine) generateNotifications(o protocols.Objective) (EngineEvent, erro
 			return outgoing, fmt.Errorf("handleNotifications: Unknown related type %T", c)
 		}
 	}
+	return outgoing, nil
+}
+
+func (e *Engine) generateObjectiveNotifications(o protocols.Objective) (EngineEvent, error) {
+	outgoing := EngineEvent{}
+	switch o := o.(type) {
+	case *swap.Objective:
+		if o.SwapStatus == types.PendingConfirmation {
+			return outgoing, nil
+		}
+
+		swapInfo := query.SwapInfo{
+			Id:     o.Swap.Id,
+			Status: o.SwapStatus,
+		}
+
+		outgoing.SwapUpdates = append(outgoing.SwapUpdates, swapInfo)
+	}
+
 	return outgoing, nil
 }
 

@@ -112,6 +112,11 @@ func (n *Node) handleEngineEvent(update engine.EngineEvent) {
 		err := n.channelNotifier.NotifyPaymentUpdated(updated)
 		n.handleError(err)
 	}
+
+	for _, updated := range update.SwapUpdates {
+		err := n.channelNotifier.NotifySwapUpdated(updated)
+		n.handleError(err)
+	}
 }
 
 // Begin API
@@ -147,6 +152,10 @@ func (n *Node) LedgerUpdates() <-chan query.LedgerChannelInfo {
 // PaymentUpdates returns a chan that receives payment channel info whenever that payment channel is updated. Not suitable fo multiple subscribers.
 func (n *Node) PaymentUpdates() <-chan query.PaymentChannelInfo {
 	return n.channelNotifier.RegisterForAllPaymentUpdates()
+}
+
+func (n *Node) SwapUpdates() <-chan query.SwapInfo {
+	return n.channelNotifier.RegisterForAllSwapChannelUpdates()
 }
 
 // CompletedObjectives returns a chan that receives a objective ID whenever that objective is completed

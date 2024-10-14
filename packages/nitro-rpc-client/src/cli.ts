@@ -892,6 +892,8 @@ yargs(hideBin(process.argv))
       );
 
       console.log(swapInfo);
+      // TODO: Add channel Id in swapInfo
+      await rpcClient.WaitForSwapStatus();
       await rpcClient.Close();
       process.exit(0);
     }

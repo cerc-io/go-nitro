@@ -75,8 +75,9 @@ func NewNodeRpcServer(nitroNode *nitro.Node, paymentManager paymentsmanager.Paym
 	completedObjChan := nrs.node.CompletedObjectives()
 	ledgerUpdateChan := nrs.node.LedgerUpdates()
 	paymentUpdateChan := nrs.node.PaymentUpdates()
+	swapUpdateChan := nrs.node.SwapUpdates()
 
-	go nrs.sendNotifications(ctx, completedObjChan, ledgerUpdateChan, paymentUpdateChan)
+	go nrs.sendNotifications(ctx, completedObjChan, ledgerUpdateChan, paymentUpdateChan, swapUpdateChan)
 
 	err := nrs.registerHandlers()
 	if err != nil {
@@ -336,6 +337,7 @@ func (rs *NodeRpcServer) sendNotifications(ctx context.Context,
 	completedObjChan <-chan protocols.ObjectiveId,
 	ledgerUpdatesChan <-chan query.LedgerChannelInfo,
 	paymentUpdatesChan <-chan query.PaymentChannelInfo,
+	swapUpdatesChan <-chan query.SwapInfo,
 ) {
 	defer rs.wg.Done()
 	for {
@@ -369,6 +371,16 @@ func (rs *NodeRpcServer) sendNotifications(ctx context.Context,
 
 			slog.Debug("DEBUG: node_server.go-sendNotifications sending payment_channel_updated notification")
 			err := sendNotification(rs.BaseRpcServer, serde.PaymentChannelUpdated, paymentInfo)
+			if err != nil {
+				panic(err)
+			}
+		case swapInfo, ok := <-swapUpdatesChan:
+			if !ok {
+				rs.logger.Warn("SwapUpdates channel closed, exiting sendNotifications")
+				return
+			}
+
+			err := sendNotification(rs.BaseRpcServer, serde.SwapUpdated, swapInfo)
 			if err != nil {
 				panic(err)
 			}

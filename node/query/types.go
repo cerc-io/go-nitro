@@ -3,7 +3,6 @@ package query
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/statechannels/go-nitro/channel"
-	"github.com/statechannels/go-nitro/payments"
 	"github.com/statechannels/go-nitro/types"
 )
 
@@ -56,7 +55,7 @@ type LedgerChannelInfo struct {
 }
 
 type SwapInfo struct {
-	Swap   payments.Swap
+	Id     types.Destination
 	Status types.SwapStatus
 }
 

@@ -29,7 +29,7 @@ func newSwapListeners() *swapListeners {
 func (li *swapListeners) Notify(info query.SwapInfo) {
 	li.listenersLock.Lock()
 	defer li.listenersLock.Unlock()
-	if li.prev.Swap.Equal(info.Swap) && li.prev.Status == info.Status {
+	if li.prev.Id == info.Id && li.prev.Status == info.Status {
 		return
 	}
 

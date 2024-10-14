@@ -9,29 +9,30 @@ import (
 	"github.com/statechannels/go-nitro/protocols"
 )
 
-// swapChannelListeners is a struct that holds a list of listeners for swap channel info.
-type swapChannelListeners struct {
-	// listeners is a list of listeners for swap channel info that we need to notify.
-	listeners []chan query.SwapChannelInfo
+// swapListeners is a struct that holds a list of listeners for swap channel info.
+type swapListeners struct {
+	// listeners is a list of listeners for swap info that we need to notify.
+	listeners []chan query.SwapInfo
 	// prev is the previous swap channel info that was sent to the listeners.
-	prev query.SwapChannelInfo
+	prev query.SwapInfo
 	// listenersLock is used to protect against concurrent access to to sibling struct members.
 	listenersLock *sync.Mutex
 }
 
-// newPaymentChannelListeners constructs a new payment channel listeners struct.
-func newSwapChannelListeners() *swapChannelListeners {
-	return &swapChannelListeners{listeners: []chan query.SwapChannelInfo{}, listenersLock: &sync.Mutex{}}
+// newSwapListeners constructs a new swap listeners struct.
+func newSwapListeners() *swapListeners {
+	return &swapListeners{listeners: []chan query.SwapInfo{}, listenersLock: &sync.Mutex{}}
 }
 
-// Notify notifies all listeners of a swap channel update.
+// Notify notifies all listeners of a swap update.
 // It only notifies listeners if the new info is different from the previous info.
-func (li *swapChannelListeners) Notify(info query.SwapChannelInfo) {
+func (li *swapListeners) Notify(info query.SwapInfo) {
 	li.listenersLock.Lock()
 	defer li.listenersLock.Unlock()
-	if li.prev.Equal(info) {
+	if li.prev.Swap.Equal(info.Swap) && li.prev.Status == info.Status {
 		return
 	}
+
 	for i, list := range li.listeners {
 		list <- info
 		marshalledInfo, err := json.Marshal(info)
@@ -47,17 +48,17 @@ func (li *swapChannelListeners) Notify(info query.SwapChannelInfo) {
 }
 
 // createNewListener creates a new listener and adds it to the list of listeners.
-func (li *swapChannelListeners) createNewListener() <-chan query.SwapChannelInfo {
+func (li *swapListeners) createNewListener() <-chan query.SwapInfo {
 	li.listenersLock.Lock()
 	defer li.listenersLock.Unlock()
 	// Use a buffered channel to avoid blocking the notifier.
-	listener := make(chan query.SwapChannelInfo, 1000)
+	listener := make(chan query.SwapInfo, 1000)
 	li.listeners = append(li.listeners, listener)
 	return listener
 }
 
 // getOrCreateListener returns the first listener, creating one if none exist.
-func (li *swapChannelListeners) getOrCreateListener() <-chan query.SwapChannelInfo {
+func (li *swapListeners) getOrCreateListener() <-chan query.SwapInfo {
 	li.listenersLock.Lock()
 	if len(li.listeners) != 0 {
 		l := li.listeners[0]
@@ -69,7 +70,7 @@ func (li *swapChannelListeners) getOrCreateListener() <-chan query.SwapChannelIn
 }
 
 // Close closes any active listeners.
-func (li *swapChannelListeners) Close() error {
+func (li *swapListeners) Close() error {
 	li.listenersLock.Lock()
 	defer li.listenersLock.Unlock()
 	for _, c := range li.listeners {

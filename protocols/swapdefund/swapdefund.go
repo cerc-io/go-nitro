@@ -536,22 +536,54 @@ func getRequestFinalStatePayload(b []byte) (types.Destination, error) {
 	return cId, nil
 }
 
-// validateFinalSingnedState checks if the signed state in the incoming message is valid
-func validateFinalSingnedState(existingSwapChannelSignedState, incomingSwapChannelState state.SignedState) (bool, error) {
-	if incomingSwapChannelState.ChannelId() != existingSwapChannelSignedState.ChannelId() {
-		return false, fmt.Errorf("channel ID mismatch: expected %s, got %s", existingSwapChannelSignedState.ChannelId(), incomingSwapChannelState.ChannelId())
-	}
+// validateFinalSwapState checks if state in the incoming message is valid
+func (o Objective) validateFinalSwapState(incomingSwapState state.State) bool {
+	if o.S.MyIndex == 0 || o.S.MyIndex == uint(len(o.S.Participants)-1) {
+		// Validate incoming swap channel state for end participants
 
-	existingSwapChannelState := existingSwapChannelSignedState.State().Clone()
-	incomingOutcomes := incomingSwapChannelState.State().Outcome.Clone()
-	for i, exisingOutcome := range existingSwapChannelState.Outcome {
-		incomingOutcome := incomingOutcomes[i]
-		if !validateFinalOutcome(exisingOutcome, incomingOutcome) {
-			return false, fmt.Errorf("invalid outcome in incoming signed state")
+		latestSwapState := o.S.LatestSupportedSwapChannelState()
+		if len(latestSwapState.Outcome) != len(incomingSwapState.Outcome) {
+			return false
+		}
+
+		for i, latestOutcome := range latestSwapState.Outcome {
+			alice, bob := latestSwapState.Participants[0], latestSwapState.Participants[len(latestSwapState.Participants)-1]
+			if incomingSwapState.Outcome[i].Allocations[0].Destination != types.AddressToDestination(alice) {
+				return false
+			}
+
+			if incomingSwapState.Outcome[i].Allocations[1].Destination != types.AddressToDestination(bob) {
+				return false
+			}
+
+			if !latestOutcome.Equal(incomingSwapState.Outcome[i]) {
+				return false
+			}
+		}
+
+	} else {
+		// Validate incoming swap channel state for intermediary
+
+		existingSupportedSwapState, err := o.S.LatestSupportedSignedState()
+		if err != nil {
+			return false
+		}
+
+		if incomingSwapState.ChannelId() != existingSupportedSwapState.ChannelId() {
+			return false
+		}
+
+		existingSwapState := existingSupportedSwapState.State().Clone()
+		incomingOutcomes := incomingSwapState.Outcome.Clone()
+		for i, exisingOutcome := range existingSwapState.Outcome {
+			incomingOutcome := incomingOutcomes[i]
+			if !validateFinalOutcome(exisingOutcome, incomingOutcome) {
+				return false
+			}
 		}
 	}
 
-	return true, nil
+	return true
 }
 
 func validateFinalOutcome(existingOutcome, incomingOutcome outcome.SingleAssetExit) bool {
@@ -586,23 +618,10 @@ func (o *Objective) Update(op protocols.ObjectivePayload) (protocols.Objective, 
 		}
 		updated := o.clone()
 
-		// This condition will be true only for intermediaries since after performing swaps, the turn num for end participants will change
-		if updated.FinalTurnNum == channel.PostFundTurnNum {
-			existingSwapChannelSignedState, err := updated.S.LatestSupportedSignedState()
-			if err != nil {
-				return &Objective{}, err
-			}
-			ok, err := validateFinalSingnedState(existingSwapChannelSignedState, ss)
-			if err != nil {
-				return &Objective{}, fmt.Errorf("failed to validate signed state for intermediary participant: %w", err)
-			}
-
-			if !ok {
-				return &Objective{}, fmt.Errorf("invalid signed state for intermediary participant")
-			}
-
-			updated.FinalTurnNum = ss.State().TurnNum
+		if !updated.validateFinalSwapState(ss.State().Clone()) {
+			return &Objective{}, fmt.Errorf("swap channel state in the incoming message is incorrect")
 		}
+		updated.FinalTurnNum = ss.State().TurnNum
 
 		ok := updated.S.AddSignedState(ss)
 		if !ok {

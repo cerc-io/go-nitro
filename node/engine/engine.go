@@ -1108,10 +1108,6 @@ func (e *Engine) generateObjectiveNotifications(o protocols.Objective) (EngineEv
 	outgoing := EngineEvent{}
 	switch o := o.(type) {
 	case *swap.Objective:
-		if o.SwapStatus == types.PendingConfirmation {
-			return outgoing, nil
-		}
-
 		swapInfo := query.SwapInfo{
 			Id:        o.Swap.Id,
 			ChannelId: o.C.Id,

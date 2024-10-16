@@ -5,7 +5,6 @@ import (
 	"errors"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -20,6 +19,7 @@ import (
 	"github.com/statechannels/go-nitro/node/engine/store"
 	"github.com/statechannels/go-nitro/node/query"
 	"github.com/statechannels/go-nitro/payments"
+	"github.com/statechannels/go-nitro/protocols"
 	"github.com/statechannels/go-nitro/protocols/directfund"
 	"github.com/statechannels/go-nitro/protocols/swap"
 	"github.com/statechannels/go-nitro/protocols/swapfund"
@@ -233,7 +233,12 @@ func performSwap(t *testing.T, sender *node.Node, receiver *node.Node, swapSende
 	}
 
 	// Wait for objective to wait for confirmation
-	time.Sleep(1 * time.Second)
+	for {
+		swapDetails := <-receiver.SwapUpdates()
+		if protocols.ObjectiveId(swap.ObjectivePrefix+swapDetails.Id.String()) == swapAssetResponse.Id {
+			break
+		}
+	}
 
 	pendingSwap, err := receiver.GetPendingSwapByChannelId(swapAssetResponse.ChannelId)
 	if err != nil {
@@ -606,7 +611,12 @@ func TestSwapsWithIntermediary(t *testing.T) {
 		}
 
 		// Wait for objective to wait for confirmation
-		time.Sleep(1 * time.Second)
+		for {
+			swapDetails := <-utils.nodeC.SwapUpdates()
+			if protocols.ObjectiveId(swap.ObjectivePrefix+swapDetails.Id.String()) == swapAssetResponse.Id {
+				break
+			}
+		}
 
 		pendingSwap, err := utils.nodeC.GetPendingSwapByChannelId(swapAssetResponse.ChannelId)
 		if err != nil {

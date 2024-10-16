@@ -459,14 +459,6 @@ func (e *Engine) handleMessage(message protocols.Message) (EngineEvent, error) {
 		}
 
 		allCompleted.CompletedObjectives = append(allCompleted.CompletedObjectives, objective)
-
-		// Generate objective notifications on rejection as attempt progress is not called
-		notif, err := e.generateObjectiveNotifications(objective)
-		if err != nil {
-			return EngineEvent{}, err
-		}
-
-		allCompleted.Merge(notif)
 	}
 
 	for _, voucher := range message.Payments {
@@ -1010,12 +1002,6 @@ func (e *Engine) attemptProgress(objective protocols.Objective) (outgoing Engine
 	}
 	outgoing.Merge(notifEvents)
 
-	objNotifEvents, err := e.generateObjectiveNotifications(crankedObjective)
-	if err != nil {
-		return EngineEvent{}, err
-	}
-	outgoing.Merge(objNotifEvents)
-
 	e.logger.Info("Objective cranked", logging.WithObjectiveIdAttribute(objective.Id()), "waiting-for", string(waitingFor))
 
 	// If our protocol is waiting for nothing then we know the objective is complete
@@ -1093,30 +1079,25 @@ func (e *Engine) generateNotifications(o protocols.Objective) (EngineEvent, erro
 				return outgoing, err
 			}
 			outgoing.LedgerChannelUpdates = append(outgoing.LedgerChannelUpdates, l)
+		case *payments.Swap:
+			swapObjective, ok := o.(*swap.Objective)
+			if !ok {
+				return outgoing, fmt.Errorf("expected swap objective")
+			}
+
+			swapInfo := query.SwapInfo{
+				Id:        c.Id,
+				ChannelId: c.ChannelId,
+				Status:    swapObjective.SwapStatus,
+			}
+
+			outgoing.SwapUpdates = append(outgoing.SwapUpdates, swapInfo)
 		case *channel.SwapChannel:
 			// TODO: Add notification for swap channel
-		case *payments.Swap:
-			// Do nothing
 		default:
 			return outgoing, fmt.Errorf("handleNotifications: Unknown related type %T", c)
 		}
 	}
-	return outgoing, nil
-}
-
-func (e *Engine) generateObjectiveNotifications(o protocols.Objective) (EngineEvent, error) {
-	outgoing := EngineEvent{}
-	switch o := o.(type) {
-	case *swap.Objective:
-		swapInfo := query.SwapInfo{
-			Id:        o.Swap.Id,
-			ChannelId: o.C.Id,
-			Status:    o.SwapStatus,
-		}
-
-		outgoing.SwapUpdates = append(outgoing.SwapUpdates, swapInfo)
-	}
-
 	return outgoing, nil
 }
 

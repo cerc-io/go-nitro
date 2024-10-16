@@ -149,15 +149,12 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 				t.Fatal(err)
 			}
 
-			t.Log("DEBUG: Created virtual channel, number: ", i)
 			objectiveIds[i] = response.Id
 			virtualIds[i] = response.ChannelId
 
 		}
 		// Wait for all the virtual channels to be ready
 		waitForObjectives(t, clientA, clientB, intermediaries, objectiveIds)
-
-		t.Log("DEBUG: After Setting up virtual channels")
 
 		// Check all the virtual channels
 		for i := 0; i < len(virtualIds); i++ {
@@ -178,14 +175,10 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 			}
 		}
 
-		t.Log("DEBUG: After making payments")
-
 		// Wait for all the vouchers to be received by bob
 		for i := 0; i < len(virtualIds)*int(tc.NumOfPayments); i++ {
 			<-clientB.ReceivedVouchers()
 		}
-
-		t.Log("DEBUG: After waiting for vouchers")
 
 		// Check the payment channels have the correct outcome after the payments
 		for i := 0; i < len(virtualIds); i++ {

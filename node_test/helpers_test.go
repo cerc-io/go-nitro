@@ -256,6 +256,8 @@ func waitForObjectives(t *testing.T, a, b node.Node, intermediaries []node.Node,
 		}
 	}
 
+	t.Log("Number of objectives to wait for", len(ObjectivesToWaitFor))
+
 	for _, obj := range ObjectivesToWaitFor {
 		t.Logf("Node %s waiting for objective %s to complete", obj.address.String(), obj.objectiveId)
 		<-obj.channnel

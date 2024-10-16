@@ -27,9 +27,6 @@ import {
   ConfirmSwapAction,
   ConfirmSwapResult,
   SwapChannelInfo,
-  SwapStatus,
-  SwapUpdatedNotification,
-  SwapInfo,
 } from "./types";
 import { Transport } from "./transport";
 import { createOutcome, generateRequest } from "./utils";
@@ -135,26 +132,6 @@ export class NitroRpcClient implements RpcClientApi {
 
     const channel = await this.GetPaymentChannel(channelId);
     if (channel.Status == status) return;
-    return promise;
-  }
-
-  public async WaitForSwapStatus(channelId: string): Promise<SwapInfo> {
-    const promise = new Promise<SwapInfo>((resolve) => {
-      this.transport.Notifications.on(
-        "swap_updated",
-        (payload: SwapUpdatedNotification["params"]["payload"]) => {
-          if (channelId == payload.ChannelId) {
-            if (
-              payload.Status == SwapStatus.Accepted ||
-              payload.Status == SwapStatus.Rejected
-            ) {
-              resolve(payload);
-            }
-          }
-        }
-      );
-    });
-
     return promise;
   }
 

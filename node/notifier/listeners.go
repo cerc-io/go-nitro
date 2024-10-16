@@ -29,20 +29,12 @@ func newSwapListeners() *swapListeners {
 func (li *swapListeners) Notify(info query.SwapInfo) {
 	li.listenersLock.Lock()
 	defer li.listenersLock.Unlock()
-	if li.prev.Id == info.Id && li.prev.Status == info.Status && li.prev.ChannelId == info.ChannelId {
+	if li.prev.Id == info.Id && li.prev.ChannelId == info.ChannelId {
 		return
 	}
 
-	for i, list := range li.listeners {
+	for _, list := range li.listeners {
 		list <- info
-		marshalledInfo, err := json.Marshal(info)
-
-		if err != nil {
-			slog.Debug("DEBUG: listeners.go-Notify for swapChannelListeners error marshalling swapChannelInfo", "listenerNum", i, "error", err)
-		} else {
-			slog.Debug("DEBUG: listeners.go-Notify for swapChannelListeners", "listenerNum", i, "swapChannelInfo", string(marshalledInfo))
-		}
-
 	}
 	li.prev = info
 }

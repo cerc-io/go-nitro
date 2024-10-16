@@ -399,18 +399,12 @@ export type RPCResponse =
 export type RPCNotification =
   | ObjectiveCompleteNotification
   | PaymentChannelUpdatedNotification
-  | SwapUpdatedNotification
   | LedgerChannelUpdatedNotification;
 export type NotificationMethod = RPCNotification["method"];
 export type NotificationParams = RPCNotification["params"];
 export type PaymentChannelUpdatedNotification = JsonRpcNotification<
   "payment_channel_updated",
   PaymentChannelInfo
->;
-
-export type SwapUpdatedNotification = JsonRpcNotification<
-  "swap_updated",
-  SwapInfo
 >;
 
 export type LedgerChannelUpdatedNotification = JsonRpcNotification<
@@ -483,12 +477,6 @@ export type PaymentChannelInfo = {
   ID: string;
   Status: ChannelStatus;
   Balance: PaymentChannelBalance;
-};
-
-export type SwapInfo = {
-  Id: string;
-  ChannelId: string;
-  Status: SwapStatus;
 };
 
 export type Outcome = SingleAssetOutcome[];

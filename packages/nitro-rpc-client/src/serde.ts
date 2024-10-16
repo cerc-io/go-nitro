@@ -14,7 +14,6 @@ import {
   RPCRequestAndResponses,
   RequestMethod,
   SwapChannelInfo,
-  SwapInfo,
 } from "./types";
 
 const ajv = new Ajv();
@@ -124,16 +123,6 @@ const swapChannelSchema = {
   },
 } as const;
 type SwapChannelSchemaType = JTDDataType<typeof swapChannelSchema>;
-
-const swapInfoSchema = {
-  properties: {
-    Id: { type: "string" },
-    ChannelId: { type: "string" },
-    Status: { type: "int32" },
-  },
-} as const;
-
-type SwapInfoSchemaType = JTDDataType<typeof swapInfoSchema>;
 
 const ledgerChannelsSchema = {
   elements: {
@@ -384,8 +373,6 @@ export function getAndValidateNotification<T extends RPCNotification["method"]>(
       );
     case "objective_completed":
       return data as string;
-    case "swap_updated":
-      return convertToSwapInfoType(data as SwapInfoSchemaType);
     default:
       throw new Error(`Unknown method: ${method}`);
   }
@@ -466,13 +453,6 @@ export const convertToSwapChannelInfoType = (
   return modifiedSwapChannelInfo;
 };
 
-export const convertToSwapInfoType = (result: SwapInfoSchemaType): SwapInfo => {
-  return {
-    Id: result.Id,
-    ChannelId: result.ChannelId,
-    Status: result.Status,
-  };
-};
 function convertToCounterChallengeResultType(
   result: CounterChallengeSchemaType
 ): CounterChallengeResult {

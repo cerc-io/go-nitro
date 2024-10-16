@@ -130,7 +130,7 @@ type EngineEvent struct {
 	LedgerChannelUpdates []query.LedgerChannelInfo
 	// PaymentChannelUpdates contains channel info for payment channels that have been updated
 	PaymentChannelUpdates []query.PaymentChannelInfo
-
+	// SwapUpdates contains info for updates in swap
 	SwapUpdates []query.SwapInfo
 }
 
@@ -1080,15 +1080,9 @@ func (e *Engine) generateNotifications(o protocols.Objective) (EngineEvent, erro
 			}
 			outgoing.LedgerChannelUpdates = append(outgoing.LedgerChannelUpdates, l)
 		case *payments.Swap:
-			swapObjective, ok := o.(*swap.Objective)
-			if !ok {
-				return outgoing, fmt.Errorf("expected swap objective")
-			}
-
 			swapInfo := query.SwapInfo{
 				Id:        c.Id,
 				ChannelId: c.ChannelId,
-				Status:    swapObjective.SwapStatus,
 			}
 
 			outgoing.SwapUpdates = append(outgoing.SwapUpdates, swapInfo)

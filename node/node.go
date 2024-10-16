@@ -154,8 +154,9 @@ func (n *Node) PaymentUpdates() <-chan query.PaymentChannelInfo {
 	return n.channelNotifier.RegisterForAllPaymentUpdates()
 }
 
+// SwapUpdates returns a chan that receives swap info whenever a swap objective is updated. Not suitable fo multiple subscribers.
 func (n *Node) SwapUpdates() <-chan query.SwapInfo {
-	return n.channelNotifier.RegisterForAllSwapChannelUpdates()
+	return n.channelNotifier.RegisterForAllSwapUpdates()
 }
 
 // CompletedObjectives returns a chan that receives a objective ID whenever that objective is completed

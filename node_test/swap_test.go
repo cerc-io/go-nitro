@@ -379,11 +379,14 @@ func TestParallelSwaps(t *testing.T) {
 		}
 
 		swapInfoFromNodeA := <-nodeASwapUpdates
+		t.Log("Received swap info from node A")
 		swapInfoFromNodeB := <-nodeBSwapUpdates
+		t.Log("Received swap info from node B")
 
 		// Wait for swap channel leader (node A) to make a decision (Which swap to accept and which one to reject)
 		// The rejected objective will be completed
 		<-nodeBCompletedObjectives
+		t.Log("Received info for completed objectives in node B")
 
 		nodeAPendingSwap, err := utils.nodeA.GetPendingSwapByChannelId(nodeASwapAssetResponse.ChannelId)
 		if err != nil {
@@ -420,7 +423,9 @@ func TestParallelSwaps(t *testing.T) {
 		testhelpers.Assert(t, errors.Is(errToCheck, store.ErrNoSuchSwap), "Incorrect error")
 
 		<-nodeACompletedObjectives
+		t.Log("Completed objectives in node A")
 		<-nodeBCompletedObjectives
+		t.Log("Completed objectives in node B")
 	})
 }
 

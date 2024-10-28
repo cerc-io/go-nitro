@@ -210,17 +210,6 @@ func (b *Bridge) processCompletedObjectivesFromL1(objId protocols.ObjectiveId) e
 		return err
 	}
 
-	// Check if L2 node exists, if not then defund the L1 ledger channel
-	err = b.messageServiceL2.Ping(context.Background(), l1LedgerChannel.Leader().Hex())
-	if err != nil {
-		slog.Error(err.Error())
-		slog.Info("Node L2 not found, defunding L1 ledger channel")
-
-		_, err := b.nodeL1.CloseLedgerChannel(channelId, false)
-
-		return err
-	}
-
 	slog.Debug("Creating mirror outcome for L2", "channelId", channelId)
 	l1ledgerChannelState := l1LedgerChannel.SupportedSignedState()
 	l1ledgerChannelStateClone := l1ledgerChannelState.Clone()

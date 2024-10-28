@@ -6,7 +6,6 @@ import { readFileSync, writeFileSync } from "fs";
 
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import JSONbig from "json-bigint";
 
 import { NitroRpcClient } from "./rpc-client";
 import {
@@ -787,8 +786,7 @@ yargs(hideBin(process.argv))
         yargs.ledgerId
       );
 
-      const parsedData = JSONbig.parse(swapChannels);
-      console.log(prettyJson(parsedData));
+      console.log(swapChannels);
 
       await rpcClient.Close();
       process.exit(0);

@@ -328,7 +328,9 @@ export type GetSignedStateResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelsByLedgerResponse = JsonRpcResponse<
   PaymentChannelInfo[]
 >;
-export type GetSwapChannelsByLedgerResponse = JsonRpcResponse<string>;
+export type GetSwapChannelsByLedgerResponse = JsonRpcResponse<
+  SwapChannelInfo[]
+>;
 export type GetObjectiveResponse = JsonRpcResponse<string>;
 export type GetL2ObjectiveFromL1Response = JsonRpcResponse<string>;
 export type GetPendingBridgeTxsResponse = JsonRpcResponse<string>;

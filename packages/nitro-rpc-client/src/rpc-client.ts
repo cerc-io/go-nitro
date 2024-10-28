@@ -381,7 +381,9 @@ export class NitroRpcClient implements RpcClientApi {
     });
   }
 
-  public async GetSwapChannelsByLedger(ledgerId: string): Promise<string> {
+  public async GetSwapChannelsByLedger(
+    ledgerId: string
+  ): Promise<SwapChannelInfo[]> {
     return this.sendRequest("get_swap_channels_by_ledger", {
       LedgerId: ledgerId,
     });

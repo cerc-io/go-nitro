@@ -2,6 +2,7 @@
 package types // import "github.com/statechannels/go-nitro/types"
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -69,4 +70,9 @@ const (
 	Ledger ChannelType = iota
 	Virtual
 	Swap
+)
+
+var (
+	ErrLeftLedgerChannelNotFound  error = errors.New("could not find left ledger channel")
+	ErrRightLedgerChannelNotFound error = errors.New("could not find right ledger channel")
 )

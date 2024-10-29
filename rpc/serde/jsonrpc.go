@@ -38,6 +38,7 @@ const (
 	GetVoucherRequestMethod           RequestMethod = "get_voucher"
 	GetLedgerChannelRequestMethod     RequestMethod = "get_ledger_channel"
 	GetPaymentChannelsByLedgerMethod  RequestMethod = "get_payment_channels_by_ledger"
+	GetSwapChannelsByLedgerMethod     RequestMethod = "get_swap_channels_by_ledger"
 	GetAllLedgerChannelsMethod        RequestMethod = "get_all_ledger_channels"
 	GetNodeInfoRequestMethod          RequestMethod = "get_node_info"
 	GetPendingSwapRequestMethod       RequestMethod = "get_pending_swap"
@@ -131,6 +132,10 @@ type GetPaymentChannelsByLedgerRequest struct {
 	LedgerId types.Destination
 }
 
+type GetSwapChannelsByLedgerRequest struct {
+	LedgerId types.Destination
+}
+
 type ValidateVoucherRequest struct {
 	VoucherHash common.Hash
 	Signer      common.Address
@@ -181,6 +186,7 @@ type RequestPayload interface {
 		GetPaymentChannelRequest |
 		GetSwapChannelRequest |
 		GetPaymentChannelsByLedgerRequest |
+		GetSwapChannelsByLedgerRequest |
 		GetSignedStateRequest |
 		GetVoucherRequest |
 		NoPayloadRequest |

@@ -89,20 +89,29 @@ func initializeNodesAndInfra(t *testing.T) (TestUtils, func()) {
 	}
 
 	cleanup := func() {
-		removeTempFolder()
-		t.Log("DEBUG: Removed temporary storage folder")
-
-		nodeB.Close()
+		err := nodeB.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Log("DEBUG: Closed node B")
 
-		nodeC.Close()
+		err = nodeC.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Log("DEBUG: Closed node C")
 
-		nodeA.Close()
+		err = nodeA.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Log("DEBUG: Closed node A")
 
 		infra.Close(t)
 		t.Log("DEBUG: Closed infra")
+
+		removeTempFolder()
+		t.Log("DEBUG: Removed temporary storage folder")
 	}
 
 	return utils, cleanup
@@ -379,11 +388,14 @@ func TestParallelSwaps(t *testing.T) {
 		}
 
 		swapInfoFromNodeA := <-nodeASwapUpdates
+		t.Log("Received swap info from node A")
 		swapInfoFromNodeB := <-nodeBSwapUpdates
+		t.Log("Received swap info from node B")
 
 		// Wait for swap channel leader (node A) to make a decision (Which swap to accept and which one to reject)
 		// The rejected objective will be completed
 		<-nodeBCompletedObjectives
+		t.Log("Received info for completed objectives in node B")
 
 		nodeAPendingSwap, err := utils.nodeA.GetPendingSwapByChannelId(nodeASwapAssetResponse.ChannelId)
 		if err != nil {
@@ -420,7 +432,9 @@ func TestParallelSwaps(t *testing.T) {
 		testhelpers.Assert(t, errors.Is(errToCheck, store.ErrNoSuchSwap), "Incorrect error")
 
 		<-nodeACompletedObjectives
+		t.Log("Completed objectives in node A")
 		<-nodeBCompletedObjectives
+		t.Log("Completed objectives in node B")
 	})
 }
 

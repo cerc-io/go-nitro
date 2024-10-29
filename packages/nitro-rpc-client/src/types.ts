@@ -234,6 +234,11 @@ export type GetPaymentChannelsByLedgerRequest = JsonRpcRequest<
   GetByLedgerRequest
 >;
 
+export type GetSwapChannelsByLedgerRequest = JsonRpcRequest<
+  "get_swap_channels_by_ledger",
+  GetByLedgerRequest
+>;
+
 export type GetObjectiveRequest = JsonRpcRequest<
   "get_objective",
   {
@@ -323,6 +328,9 @@ export type GetSignedStateResponse = JsonRpcResponse<string>;
 export type GetPaymentChannelsByLedgerResponse = JsonRpcResponse<
   PaymentChannelInfo[]
 >;
+export type GetSwapChannelsByLedgerResponse = JsonRpcResponse<
+  SwapChannelInfo[]
+>;
 export type GetObjectiveResponse = JsonRpcResponse<string>;
 export type GetL2ObjectiveFromL1Response = JsonRpcResponse<string>;
 export type GetPendingBridgeTxsResponse = JsonRpcResponse<string>;
@@ -372,6 +380,10 @@ export type RPCRequestAndResponses = {
   get_payment_channels_by_ledger: [
     GetPaymentChannelsByLedgerRequest,
     GetPaymentChannelsByLedgerResponse
+  ];
+  get_swap_channels_by_ledger: [
+    GetSwapChannelsByLedgerRequest,
+    GetSwapChannelsByLedgerResponse
   ];
   get_objective: [GetObjectiveRequest, GetObjectiveResponse];
   get_l2_objective_from_l1: [

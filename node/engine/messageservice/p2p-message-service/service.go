@@ -460,3 +460,11 @@ func (ms *P2PMessageService) connectBootPeers(bootPeers []peer.AddrInfo) {
 		}
 	}
 }
+
+func (ms *P2PMessageService) Ping(ctx context.Context, scAddr string) error {
+	p, err := ms.getPeerIdFromDht(scAddr)
+	if err != nil {
+		return err
+	}
+	return ms.dht.Ping(ctx, p)
+}

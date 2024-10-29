@@ -263,6 +263,23 @@ func (nrs *NodeRpcServer) registerHandlers() (err error) {
 				}
 				return nrs.node.GetPaymentChannelsByLedger(req.LedgerId)
 			})
+		case serde.GetSwapChannelsByLedgerMethod:
+			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetSwapChannelsByLedgerRequest) (string, error) {
+				if err := serde.ValidateGetSwapChannelsByLedgerRequest(req); err != nil {
+					return "", err
+				}
+				info, err := nrs.node.GetSwapChannelsByLedger(req.LedgerId)
+				if err != nil {
+					return "", err
+				}
+
+				marshalledSwapChannelInfo, err := json.Marshal(info)
+				if err != nil {
+					return "", err
+				}
+
+				return string(marshalledSwapChannelInfo), nil
+			})
 		case serde.GetVoucherRequestMethod:
 			return processRequest(nrs.BaseRpcServer, permRead, requestData, func(req serde.GetVoucherRequest) (payments.Voucher, error) {
 				return nrs.node.GetVoucher(req.Id), nil

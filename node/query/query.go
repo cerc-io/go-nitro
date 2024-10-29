@@ -274,6 +274,10 @@ func GetPaymentChannelsByLedger(ledgerId types.Destination, s store.Store, vm *p
 
 	toReturn := []PaymentChannelInfo{}
 	for _, p := range paymentChannels {
+		if p.Type != types.Virtual {
+			continue
+		}
+
 		paid, remaining, err := GetVoucherBalance(p.Id, vm)
 		if err != nil {
 			return []PaymentChannelInfo{}, err
@@ -283,6 +287,46 @@ func GetPaymentChannelsByLedger(ledgerId types.Destination, s store.Store, vm *p
 		if err != nil {
 			return []PaymentChannelInfo{}, err
 		}
+		toReturn = append(toReturn, info)
+	}
+	return toReturn, nil
+}
+
+// GetSwapChannelsByLedger returns marshalled `SwapChannelInfo` for each active swap channel funded by the given ledger channel.
+func GetSwapChannelsByLedger(ledgerId types.Destination, s store.Store) ([]SwapChannelInfo, error) {
+	// If a ledger channel is actively funding swao channels it must be in the form of a consensus channel
+	con, err := s.GetConsensusChannelById(ledgerId)
+	// If the ledger channel is not a consensus channel we know that there are no swap channels funded by it
+	if errors.Is(err, store.ErrNoSuchChannel) {
+		return []SwapChannelInfo{}, nil
+	}
+	if err != nil {
+		return []SwapChannelInfo{}, fmt.Errorf("could not find any payment channels funded by %s: %w", ledgerId, err)
+	}
+
+	toQuery := con.ConsensusVars().Outcome.FundingTargets()
+
+	channels, err := s.GetChannelsByIds(toQuery)
+	if err != nil {
+		return []SwapChannelInfo{}, fmt.Errorf("could not query the store about ids %v: %w", toQuery, err)
+	}
+
+	toReturn := []SwapChannelInfo{}
+
+	for _, c := range channels {
+		if c.Type != types.Swap {
+			continue
+		}
+
+		swapChannel := channel.SwapChannel{
+			Channel: *c,
+		}
+
+		info, err := ConstructSwapInfo(swapChannel, *s.GetAddress())
+		if err != nil {
+			return []SwapChannelInfo{}, err
+		}
+
 		toReturn = append(toReturn, info)
 	}
 	return toReturn, nil

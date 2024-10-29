@@ -274,7 +274,7 @@ func main() {
 					VpaAddress: common.HexToAddress(vpaAddress),
 					CaAddress:  common.HexToAddress(caAddress),
 				}
-				node, _, _, _, err = nodeUtils.InitializeL2Node(chainOpts, storeOpts, messageOpts)
+				node, _, _, _, err = nodeUtils.InitializeL2Node(chainOpts, storeOpts, messageOpts, &engine.PermissivePolicy{})
 			} else {
 				chainOpts := chainservice.ChainOpts{
 					ChainUrl:           chainUrl,

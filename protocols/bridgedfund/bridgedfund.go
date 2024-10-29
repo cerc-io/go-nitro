@@ -48,7 +48,7 @@ type GetTwoPartyConsensusLedgerFunction func(counterparty types.Address) (ledger
 
 // NewObjective creates a new bridged funding objective from a given request.
 func NewObjective(request ObjectiveRequest, preApprove bool, myAddress types.Address, chainId *big.Int, getChannels GetChannelsByParticipantFunction, getTwoPartyConsensusLedger GetTwoPartyConsensusLedgerFunction) (Objective, error) {
-	channelExists, err := ChannelsExistWithCounterparty(request.CounterParty, getChannels, getTwoPartyConsensusLedger)
+	channelExists, err := OpenLedgerChannelsExistWithCounterparty(request.CounterParty, getChannels, getTwoPartyConsensusLedger)
 	if err != nil {
 		return Objective{}, fmt.Errorf("counterparty check failed: %w", err)
 	}
@@ -83,17 +83,20 @@ func NewObjective(request ObjectiveRequest, preApprove bool, myAddress types.Add
 	return objective, nil
 }
 
-// ChannelsExistWithCounterparty returns true if a channel or consensus_channel exists with the counterparty
-func ChannelsExistWithCounterparty(counterparty types.Address, getChannels GetChannelsByParticipantFunction, getTwoPartyConsensusLedger GetTwoPartyConsensusLedgerFunction) (bool, error) {
-	// check for any channels that may be in the process of bridged funding
+// OpenLedgerChannelsExistWithCounterparty returns true if a channel or consensus_channel exists with the counterparty
+func OpenLedgerChannelsExistWithCounterparty(counterparty types.Address, getChannels GetChannelsByParticipantFunction, getTwoPartyConsensusLedger GetTwoPartyConsensusLedgerFunction) (bool, error) {
+	// check for any channels that may be in the process of direct funding
 	channels, err := getChannels(counterparty)
 	if err != nil {
 		return false, err
 	}
 	for _, c := range channels {
-		// We only want to find bridged funded channels that would have two participants
-		if len(c.Participants) == 2 {
-			return true, nil
+		// We only want to find directly funded channels that would have two participants
+		if len(c.Participants) == 2 && c.Type == types.Ledger {
+			// We only want to find directly funded channels that are not finalized
+			if c.OnChain.ChannelMode != channel.Finalized {
+				return true, nil
+			}
 		}
 	}
 
@@ -227,7 +230,7 @@ func (o *Objective) Reject() (protocols.Objective, protocols.SideEffects) {
 
 	updated.Status = protocols.Rejected
 	peer := o.C.Participants[1-o.C.MyIndex]
-
+	updated.C.OnChain.ChannelMode = channel.Finalized
 	sideEffects := protocols.SideEffects{MessagesToSend: protocols.CreateRejectionNoticeMessage(o.Id(), peer)}
 	return &updated, sideEffects
 }

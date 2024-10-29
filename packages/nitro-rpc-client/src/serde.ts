@@ -1,4 +1,5 @@
 import Ajv, { JTDDataType } from "ajv/dist/jtd";
+import JSONbig from "json-bigint";
 
 import {
   Balance,
@@ -272,6 +273,12 @@ export function getAndValidateResult<T extends RequestMethod>(
         result,
         convertToSwapChannelInfoType
       );
+    case "get_swap_channels_by_ledger":
+      return validateAndConvertResult(
+        stringSchema,
+        result,
+        convertToSwapChannelsInfoType
+      );
     case "get_ledger_channel":
       return validateAndConvertResult(
         ledgerChannelSchema,
@@ -451,6 +458,24 @@ export const convertToSwapChannelInfoType = (
     })),
   };
   return modifiedSwapChannelInfo;
+};
+
+export const convertToSwapChannelsInfoType = (result: string): string => {
+  const swapChannelsInfo = JSON.parse(result);
+  const modifiedSwapChannelsInfo = swapChannelsInfo.map(
+    (sc: SwapChannelInfo) => {
+      return {
+        ...sc,
+        Balances: sc.Balances.map((balance: Balance) => ({
+          ...balance,
+          MyBalance: BigInt(balance.MyBalance),
+          TheirBalance: BigInt(balance.TheirBalance),
+        })),
+      };
+    }
+  );
+
+  return JSONbig.stringify(modifiedSwapChannelsInfo, null, 2);
 };
 
 function convertToCounterChallengeResultType(

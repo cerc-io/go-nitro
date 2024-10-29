@@ -76,6 +76,8 @@ var nonFatalErrors = []error{
 	errEmptyDroppedEvent,
 	errSwapObjectiveExists,
 	swap.ErrInvalidSwap,
+	types.ErrLeftLedgerChannelNotFound,
+	types.ErrRightLedgerChannelNotFound,
 }
 
 // Engine is the imperative part of the core business logic of a go-nitro Node

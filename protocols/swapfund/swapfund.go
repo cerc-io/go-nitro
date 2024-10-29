@@ -619,12 +619,12 @@ func ConstructObjectiveFromPayload(
 
 				leftC, ok = getTwoPartyConsensusLedger(leftOfMe)
 				if !ok {
-					return Objective{}, fmt.Errorf("could not find a left ledger channel between %v and %v", leftOfMe, myAddress)
+					return Objective{}, fmt.Errorf("%w between %v and %v", types.ErrLeftLedgerChannelNotFound, leftOfMe, myAddress)
 				}
 
 				rightC, ok = getTwoPartyConsensusLedger(rightOfMe)
 				if !ok {
-					return Objective{}, fmt.Errorf("could not find a right ledger channel between %v and %v", myAddress, rightOfMe)
+					return Objective{}, fmt.Errorf("%w between %v and %v", types.ErrRightLedgerChannelNotFound, myAddress, rightOfMe)
 				}
 
 				break

@@ -50,9 +50,10 @@ type Bridge struct {
 	storeL1        store.Store
 	chainServiceL1 chainservice.ChainService
 
-	nodeL2         *node.Node
-	storeL2        store.Store
-	chainServiceL2 chainservice.ChainService
+	nodeL2           *node.Node
+	storeL2          store.Store
+	chainServiceL2   chainservice.ChainService
+	messageServiceL2 *p2pms.P2PMessageService
 
 	cancel                context.CancelFunc
 	mirrorChannelMap      map[types.Destination]MirrorChannelDetails
@@ -135,7 +136,7 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
 	}
 
-	nodeL2, storeL2, msgServiceL2, chainServiceL2, err := nodeutils.InitializeL2Node(chainOptsL2, storeOptsL2, messageOptsL2)
+	nodeL2, storeL2, msgServiceL2, chainServiceL2, err := nodeutils.InitializeL2Node(chainOptsL2, storeOptsL2, messageOptsL2, &NodeL2PermissivePolicy{})
 	if err != nil {
 		return nil, nil, nodeL1MultiAddress, nodeL2MultiAddress, err
 	}
@@ -146,6 +147,7 @@ func (b *Bridge) Start(configOpts BridgeConfig) (nodeL1 *node.Node, nodeL2 *node
 	b.nodeL2 = nodeL2
 	b.storeL2 = *storeL2
 	b.chainServiceL2 = chainServiceL2
+	b.messageServiceL2 = msgServiceL2
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	b.cancel = cancelFunc
@@ -203,12 +205,23 @@ func (b *Bridge) processCompletedObjectivesFromL1(objId protocols.ObjectiveId) e
 	}
 
 	channelId := ddFo.OwnsChannel()
-	slog.Debug("Creating mirror outcome for L2", "channelId", channelId)
 	l1LedgerChannel, err := b.storeL1.GetConsensusChannelById(channelId)
 	if err != nil {
 		return err
 	}
 
+	// Check if L2 node exists, if not then defund the L1 ledger channel
+	err = b.messageServiceL2.Ping(context.Background(), l1LedgerChannel.Leader().Hex())
+	if err != nil {
+		slog.Error(err.Error())
+		slog.Info("Node L2 not found, defunding L1 ledger channel")
+
+		_, err := b.nodeL1.CloseLedgerChannel(channelId, false)
+
+		return err
+	}
+
+	slog.Debug("Creating mirror outcome for L2", "channelId", channelId)
 	l1ledgerChannelState := l1LedgerChannel.SupportedSignedState()
 	l1ledgerChannelStateClone := l1ledgerChannelState.Clone()
 	// Put NodeBPrime's allocation at index 0 as it creates mirrored ledger channel
@@ -225,7 +238,6 @@ func (b *Bridge) processCompletedObjectivesFromL1(objId protocols.ObjectiveId) e
 	l1ChannelCloneOutcome := l1ledgerChannelStateClone.State().Outcome
 
 	// Create mirrored ledger channel between node BPrime and APrime
-	// TODO: Support mirrored ledger channel creation with multiple assets
 	l2LedgerChannelResponse, err := b.nodeL2.CreateBridgeChannel(l1ledgerChannelStateClone.State().Participants[0], l1ledgerChannelStateClone.State().ChallengeDuration, l1ChannelCloneOutcome)
 	if err != nil {
 		return err

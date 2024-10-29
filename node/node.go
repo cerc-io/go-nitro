@@ -367,7 +367,7 @@ func (n *Node) CreateBridgeChannel(Counterparty types.Address, ChallengeDuration
 	)
 
 	// Check store to see if there is an existing channel with this counterparty
-	channelExists, err := bridgedfund.ChannelsExistWithCounterparty(Counterparty, n.store.GetChannelsByParticipant, n.store.GetConsensusChannel)
+	channelExists, err := bridgedfund.OpenLedgerChannelsExistWithCounterparty(Counterparty, n.store.GetChannelsByParticipant, n.store.GetConsensusChannel)
 	if err != nil {
 		slog.Error("bridge fund error", "error", err)
 		return bridgedfund.ObjectiveResponse{}, fmt.Errorf("counterparty check failed: %w", err)
@@ -434,8 +434,14 @@ func (n *Node) GetPaymentChannel(id types.Destination) (query.PaymentChannelInfo
 	return query.GetPaymentChannelInfo(id, n.store, n.vm)
 }
 
+// GetSwapChannel returns the swap channel with the given id.
 func (n *Node) GetSwapChannel(id types.Destination) (string, error) {
 	return query.GetSwapChannelInfo(id, n.store)
+}
+
+// GetSwapChannelsByLedger returns all active swap channels that are funded by the given ledger channel.
+func (n *Node) GetSwapChannelsByLedger(ledgerId types.Destination) ([]query.SwapChannelInfo, error) {
+	return query.GetSwapChannelsByLedger(ledgerId, n.store)
 }
 
 // GetPaymentChannelsByLedger returns all active payment channels that are funded by the given ledger channel.
@@ -496,13 +502,16 @@ func (n *Node) Close() error {
 	if err := n.engine.Close(); err != nil {
 		return err
 	}
+	slog.Debug("DEBUG: node.go-close closed engine")
 	if err := n.channelNotifier.Close(); err != nil {
 		return err
 	}
+	slog.Debug("DEBUG: node.go-close closed channelNotifier")
 
 	if err := n.completedObjectivesNotifier.Close(); err != nil {
 		return err
 	}
+	slog.Debug("DEBUG: node.go-close closed completedObjectivesNotifier")
 
 	return n.store.Close()
 }

@@ -251,6 +251,7 @@ func (o *Objective) Reject() (protocols.Objective, protocols.SideEffects) {
 
 	updated.Status = protocols.Rejected
 	peer := o.C.Participants[1-o.C.MyIndex]
+	updated.C.OnChain.ChannelMode = channel.Finalized
 
 	sideEffects := protocols.SideEffects{MessagesToSend: protocols.CreateRejectionNoticeMessage(o.Id(), peer)}
 	return &updated, sideEffects

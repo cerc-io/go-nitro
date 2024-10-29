@@ -89,20 +89,29 @@ func initializeNodesAndInfra(t *testing.T) (TestUtils, func()) {
 	}
 
 	cleanup := func() {
-		removeTempFolder()
-		t.Log("DEBUG: Removed temporary storage folder")
-
-		nodeB.Close()
+		err := nodeB.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Log("DEBUG: Closed node B")
 
-		nodeC.Close()
+		err = nodeC.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Log("DEBUG: Closed node C")
 
-		nodeA.Close()
+		err = nodeA.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Log("DEBUG: Closed node A")
 
 		infra.Close(t)
 		t.Log("DEBUG: Closed infra")
+
+		removeTempFolder()
+		t.Log("DEBUG: Removed temporary storage folder")
 	}
 
 	return utils, cleanup

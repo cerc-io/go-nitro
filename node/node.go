@@ -502,13 +502,16 @@ func (n *Node) Close() error {
 	if err := n.engine.Close(); err != nil {
 		return err
 	}
+	slog.Debug("DEBUG: node.go-close closed engine")
 	if err := n.channelNotifier.Close(); err != nil {
 		return err
 	}
+	slog.Debug("DEBUG: node.go-close closed channelNotifier")
 
 	if err := n.completedObjectivesNotifier.Close(); err != nil {
 		return err
 	}
+	slog.Debug("DEBUG: node.go-close closed completedObjectivesNotifier")
 
 	return n.store.Close()
 }

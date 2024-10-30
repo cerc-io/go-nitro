@@ -226,9 +226,11 @@ func (e *Engine) run(ctx context.Context) {
 		var err error
 
 		var blockTicker <-chan time.Time
+		var ticker *time.Ticker
 		_, isEthChainService := e.chain.(*chainservice.EthChainService)
 		if isEthChainService {
-			blockTicker = time.NewTicker(5 * time.Second).C
+			ticker = time.NewTicker(5 * time.Second)
+			blockTicker = ticker.C
 		}
 
 		select {
@@ -275,6 +277,10 @@ func (e *Engine) run(ctx context.Context) {
 				err = e.processStoreChannels(chainServiceBlock)
 			}
 		case <-ctx.Done():
+			if ticker != nil {
+				ticker.Stop()
+			}
+
 			e.wg.Done()
 			return
 		}

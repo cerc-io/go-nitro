@@ -93,19 +93,19 @@ func initializeNodesAndInfra(t *testing.T) (TestUtils, func()) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Log("DEBUG: Closed node B")
+		t.Log("DEBUG: Closed node B", nodeB.Address.String())
 
 		err = nodeC.Close()
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Log("DEBUG: Closed node C")
+		t.Log("DEBUG: Closed node C", nodeC.Address.String())
 
 		err = nodeA.Close()
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Log("DEBUG: Closed node A")
+		t.Log("DEBUG: Closed node A", nodeA.Address.String())
 
 		infra.Close(t)
 		t.Log("DEBUG: Closed infra")

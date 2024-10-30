@@ -388,9 +388,9 @@ func TestParallelSwaps(t *testing.T) {
 		}
 
 		swapInfoFromNodeA := <-nodeASwapUpdates
-		t.Log("Received swap info from node A")
+		t.Log("Received swap info from node A", swapInfoFromNodeA.Id)
 		swapInfoFromNodeB := <-nodeBSwapUpdates
-		t.Log("Received swap info from node B")
+		t.Log("Received swap info from node B", swapInfoFromNodeB.Id)
 
 		// Wait for swap channel leader (node A) to make a decision (Which swap to accept and which one to reject)
 		// The rejected objective will be completed

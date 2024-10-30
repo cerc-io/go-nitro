@@ -1,6 +1,6 @@
 {
   "name": "@cerc-io/nitro-rpc-client",
-  "version": "0.0.9",
+  "version": "0.1.6",
   "description": "Typescript RPC client for go-nitro",
   "repository": "https://github.com/statechannels/nitro-rpc-client.git",
   "license": "MIT",

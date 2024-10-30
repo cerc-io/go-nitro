@@ -25,7 +25,9 @@ jobs:
         run: |
           cd ./packages/nitro-protocol
           npm publish
+        continue-on-error: true
       - name: Publish nitro-rpc-client package
         run: |
           cd ./packages/nitro-rpc-client
           npm publish
+        continue-on-error: true

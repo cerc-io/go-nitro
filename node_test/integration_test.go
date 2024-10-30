@@ -191,6 +191,13 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 
 		t.Log("DEBUG: After checking payment channels")
 
+		var objCompleteChannels []<-chan protocols.ObjectiveId
+		objCompleteChannels = append(objCompleteChannels, clientA.CompletedObjectives(), clientB.CompletedObjectives())
+
+		for _, i := range intermediaries {
+			objCompleteChannels = append(objCompleteChannels, i.CompletedObjectives())
+		}
+
 		// Close virtual channels
 		closeVirtualIds := make([]protocols.ObjectiveId, len(virtualIds))
 		for i := 0; i < len(virtualIds); i++ {
@@ -209,7 +216,11 @@ func RunIntegrationTestCase(tc TestCase, t *testing.T) {
 			}
 		}
 
-		waitForObjectives(t, clientA, clientB, intermediaries, closeVirtualIds)
+		for _, c := range objCompleteChannels {
+			for range virtualIds {
+				<-c
+			}
+		}
 
 		t.Log("DEBUG: After closing virtual channels")
 

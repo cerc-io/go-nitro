@@ -74,6 +74,9 @@ func TestChallenge(t *testing.T) {
 		t.Log(err)
 	}
 
+	chA := nodeA.ObjectiveCompleteChan(response)
+	chB := nodeB.ObjectiveCompleteChan(response)
+
 	// Wait for Bob's objective to be in challenge mode
 	time.Sleep(5 * time.Second)
 	objectiveA, _ := storeA.GetObjectiveByChannelId(ledgerChannel)
@@ -85,8 +88,6 @@ func TestChallenge(t *testing.T) {
 	testhelpers.Assert(t, objB.C.OnChain.ChannelMode == channel.Challenge, "Expected channel status to be challenge")
 
 	// Wait for objectives to complete
-	chA := nodeA.ObjectiveCompleteChan(response)
-	chB := nodeB.ObjectiveCompleteChan(response)
 	<-chA
 	<-chB
 

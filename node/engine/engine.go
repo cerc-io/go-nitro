@@ -1534,7 +1534,7 @@ func (e *Engine) rejectSwapIfPendingExists(currentSwapObjective *swap.Objective)
 		return nil, err
 	}
 
-	slog.Debug("DEBUG: engine.go-rejectObjective", "pendingHash", currentHash.String(), "myIndex", swapChannel.MyIndex)
+	slog.Debug("DEBUG: engine.go-rejectObjective", "pendingHash", pendingHash.String(), "myIndex", swapChannel.MyIndex)
 
 	// Do not enter if pending swap and current swap are same and this node is not the swap channel leader
 	if pendingSwap != nil && strings.Compare(pendingHash.String(), currentHash.String()) != 0 && swapChannel.MyIndex == 0 {

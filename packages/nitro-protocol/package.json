@@ -1,6 +1,6 @@
 {
   "name": "@cerc-io/nitro-protocol",
-  "version": "2.1.0-alpha.0",
+  "version": "2.1.0-alpha.1",
   "description": "Smart contracts and typescript libraries for nitro state channel protocol.",
   "keywords": [],
   "homepage": "https://github.com/statechannels/go-nitro",
